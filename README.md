@@ -1,175 +1,175 @@
 # Save A Stray
 
-_An application that connects Shelter Animals to their Furever homes._
+A pet adoption platform that connects animal shelters with potential adopters through a unified, searchable database.
 
-## Background and Overview
+---
 
-**Save A Stray** is a new age solution for a problem that is at historically high levels.  It tackles the following *three obstacles* faced by *Animal Shelters*: 
+## Overview
 
-- Reach: _Without a dynamic website and a social media presence its next to impossible for Shelters to get their Animals the exposure they need in order to be adopted._
-- Cost: _In order for Animal Shelters to build their online presence there can be significant upfront costs for building websites, marketing, etc.  Save A Stray has no upfront costs and only charges a small fee with each successful adoption._
-- Convenience:  _Potential adopters have to search through multiple websites in order to find all the potential pets in the area.  With Save A Stray you have to search one website to see all the animals in your specified area._ 
+Save A Stray addresses three key challenges faced by animal shelters:
 
+- **Reach**: Provides shelters with an online presence without building their own websites
+- **Cost**: No upfront costs - only a small fee on successful adoptions
+- **Convenience**: One platform to search all available animals in your area
 
-**Save A Stray** is primarily built with the **MERN** stack, a combination of the following technologies: **MongoDB, Node, React, Express** and **Apollo**.
+### Key Features
 
-## Functionality & MVP
+- **Animal Listings**: Browse adoptable pets with photos and details
+- **Shelter Management**: Shelters can add and manage their animals
+- **Adoption Applications**: Submit applications directly through the platform
+- **Location Search**: Find animals near you
+- **OAuth Authentication**: Sign in with Google or Facebook
 
-- [ ] Web and Mobile Application
-- [ ] Allow payment processing
-- [ ] Shelters can create an account and add their animals
-- [ ] Share with Facebook
-- [ ] Sign up with Facebook / Google
-- [ ] Search for animals by location / type
-- [ ] Donate directly to Shelters
+---
 
+## Tech Stack
 
-### Bonus Features
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 16, Apollo Client |
+| Backend | Node.js, Express |
+| API | GraphQL with Apollo Server |
+| Database | MongoDB (Mongoose ODM) |
+| Auth | Passport.js (Google, Facebook OAuth) |
+| Styling | SCSS |
 
-- [ ] Sign up for volunteering
-- [ ] Volunteer schedules
-- [ ] "Love" an Animal
-- [ ] Set up additional payment processing
+---
 
+## Project Structure
 
-## Schema
+```
+save-a-stray/
+├── client/                    # React frontend
+│   ├── src/
+│   │   ├── components/        # React components
+│   │   ├── graphql/           # Apollo queries/mutations
+│   │   ├── css/               # Stylesheets
+│   │   └── util/              # Utilities
+├── server/                    # Express backend
+│   ├── models/                # Mongoose schemas
+│   ├── schema/                # GraphQL schema
+│   │   ├── types/             # GraphQL type definitions
+│   │   ├── mutations.js       # Mutation resolvers
+│   │   └── schema.js          # Schema composition
+│   └── services/              # Auth services
+├── config/                    # Configuration
+├── docs/                      # Documentation
+└── package.json               # Dependencies
+```
 
-### `users`
-column name       | data type | details
-------------------|-----------|-----------------------
-`id `             | integer   | not null, primary key
-`name`            | string    | not null, unique
-`email`            | string    | not null, unique
-`password` | string    | not null
-`sessionToken`   | string    | not null, indexed, unique
-`userRole`       | string    | includes [ admin , endUser , volunteer ] 
-`paymentEmail  `  | string    | 
---- 
-<!--  -->
-### `Animal`
-column name     | data type | details
-----------------|-----------|-----------------------
-`id`            | integer   | not null, primary key
-`type`          | string    | not null  
-`name`          | string    | not null
-`age`           | integer   | not null
-`sex`           | string    | not null
-`color `        | string    | not null
-`description`   | string    | not null
-`image`         | string    | 
-`video`         | string    | 
-`applications`   | array      | 
---- 
+---
 
+## Getting Started
 
-### `Shelter`
-column name     | data type | details
-----------------|-----------|-----------------------
-`id `           | integer   | not null, primary key
-`name  `        | string    | not null
-`location  `    | string    | not null 
-`users  `       | array     | not null 
-`paymentEmail  `| string    | not null 
-`animals  `     | string    | not null 
+### Prerequisites
 
---- 
+- Node.js 12.x or higher
+- MongoDB (local or Atlas cluster)
+- Google OAuth credentials
+- Facebook OAuth credentials
 
- 
-## Graphql Schema
+### Installation
 
-    shelter:
-        location/address
-        contact info
-        animals: [
-            [Dogs], [Cats]
-        ]
-        users:
-            [userId]    
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/save-a-stray.git
+cd save-a-stray
 
-    animal:
-        type
-        age
-        breed
-        sex
-        color
-        description
-        [image]
-        [video]
-        application
+# Install dependencies
+npm install
 
-    application:
-        animalId:
-        userId:
-        applicationData:
+# Set up environment variables
+cp config/keys_dev.example.js config/keys_dev.js
+# Edit keys_dev.js with your configuration
+```
 
-## Frontend Routes
+### Configuration
 
+Create `config/keys_dev.js`:
+```javascript
+module.exports = {
+  MONGO_URI: 'mongodb+srv://your-cluster-url',
+  secretOrKey: 'your-jwt-secret',
+  googleClientId: 'your-google-client-id',
+  googleClientSecret: 'your-google-secret',
+  facebookAppId: 'your-facebook-app-id',
+  facebookAppSecret: 'your-facebook-secret'
+};
+```
 
-Our components are organized as follows:
+### Running the Application
 
-- `Root`
-	 - `App `
-		- ` NavBar`
-		- ` (main component goes here)`
+```bash
+# Development mode (frontend + backend)
+npm run dev
 
-The following routes, defined in App.
+# Backend only
+npm run server
 
- 1.   `/`
-	    -   `splash`
-  
- 2.   `/login`
-	    -   `SessionForm`
-  
- 3.   `/signup`
-	    -   `SessionForm`
+# Frontend only
+npm run client
+```
 
- 4.  `/user/:userId`
-		-   `ProfileComponent`
-			  -   `feed`
-	    
- 5.  `/shelter/new`
-	    -   `shelterForm`
+Note: Frontend requires `NODE_OPTIONS=--openssl-legacy-provider` due to OpenSSL 3.0 compatibility.
 
- 6.  `/shelter/:userId`
-	    -   `home component`
+---
 
-    
- 8.  `/animal/new`
-	    -   `animalForm`
-    
- 9.  `/application/new`
-	    -   `applicationForm`
+## GraphQL API
 
- 10.   `/animal/:animalId/edit`
-	    -   `animalForm`
+### Queries
 
- 11.   `/user/:userId/edit`
-	    -   `userForm`
+| Query | Description |
+|-------|-------------|
+| `animals(shelter: ID, species: String)` | List animals with optional filters |
+| `animal(id: ID!)` | Get single animal by ID |
+| `shelters` | List all shelters |
+| `shelter(id: ID!)` | Get shelter details |
+| `user(id: ID!)` | Get user profile |
 
- 12.   `/donation/:shelterId`
-	    -   `donationForm`
-## Technologies & Challenges
+### Mutations
 
-### Architecture
-The overall application architecture is geared toward rapid development and maintainability of an application that is deployed on both web and mobile.
+| Mutation | Description |
+|----------|-------------|
+| `createApplication(animalId: ID!)` | Submit adoption application |
+| `updateApplicationStatus(id: ID!, status: String!)` | Update application status |
+| `registerUser(email: String!, password: String!)` | Register new user |
 
-To that end, **Save A Stray** is built with the **MERN** stack (**MongoDB, Express, React, and Node**).
+---
 
-Additionally, **Apollo** is used for front-end devlopment with **React**, bundling of **client-side javascript** is accomplished by **Webpack**, and **Babel** is used to transpile **ES6+ Javascript** for backward browser compatibility.
+## Documentation
 
-Finally, the app will be deployed to **Heroku** with **Docker**.
+| Document | Description |
+|----------|-------------|
+| [Index](./docs/INDEX.md) | Documentation overview |
+| [Architecture](./docs/ARCHITECTURE.md) | System design and patterns |
+| [Roadmap](./docs/ROADMAP.md) | Modernization backlog |
+| [Coding Standards](./docs/CODING_STANDARDS.md) | Code style guidelines |
 
-### Backend: Node, Express, MongoDB, GraphQL
-The backend will be entirely platform agnostic with the exception of potential performance optimizations per platform. The separation of the back and front allows for either to be modified, built, updated, or swapped out entirely with minimal impact to the other.
+---
 
-### Frontend: React and Apollo
-Docker React Apollo
+## Status
 
-## UI/UX
-Tom
+**Current State**: Requires modernization
 
-## Group Members & Work Breakdown
+This project was built in 2019-2020. It requires:
+- MongoDB Atlas cluster recreation
+- OAuth credential setup (Google, Facebook)
+- React modernization (16 → 18)
+- Apollo Client upgrade (2 → 3)
+- Testing infrastructure setup
 
-- **Chas Huggins** => Backend and Frontend
-- **Daniel Hernandez** => Backend and Frontend
-- **Tom Driscoll** => Frontend and UI/UX
+See [ROADMAP.md](./docs/ROADMAP.md) for detailed modernization plan.
+
+---
+
+## Original Team
+
+- Daniel Hernandez - Backend and Frontend
+- Chas Huggins - Backend and Frontend
+- Tom Driscoll - Frontend and UI/UX
+
+---
+
+## License
+
+MIT License

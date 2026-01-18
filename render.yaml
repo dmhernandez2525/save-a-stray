@@ -1,0 +1,46 @@
+# Render.com Infrastructure as Code
+# Note: Requires modernization and OAuth setup before deployment
+
+services:
+  # Frontend - React Static Site
+  - type: web
+    name: save-a-stray-client
+    runtime: static
+    buildCommand: cd client && npm install && npm run build
+    staticPublishPath: client/build
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: REACT_APP_API_URL
+        fromService:
+          name: save-a-stray-api
+          type: web
+          property: hostport
+
+  # Backend - Express + GraphQL API
+  - type: web
+    name: save-a-stray-api
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGO_URI
+        sync: false
+      - key: SECRET_OR_KEY
+        generateValue: true
+      - key: GOOG_CLIENT
+        sync: false
+      - key: GOOG_SECRET
+        sync: false
+      - key: FBOOK_KEY
+        sync: false
+      - key: FBOOK_CLIENT
+        sync: false
