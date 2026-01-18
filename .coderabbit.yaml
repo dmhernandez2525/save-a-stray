@@ -1,0 +1,42 @@
+# CodeRabbit Configuration
+# https://docs.coderabbit.ai/guides/configure-coderabbit
+
+language: en-US
+
+reviews:
+  request_changes_workflow: true
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  path_instructions:
+    - path: "client/src/components/**/*.js"
+      instructions: |
+        Review React components for:
+        - Proper Apollo Client hook usage (useQuery, useMutation)
+        - Component reusability
+        - Performance (unnecessary re-renders)
+        - Accessibility (ARIA, semantic HTML)
+    - path: "server/schema/**"
+      instructions: |
+        Review GraphQL schema for:
+        - Proper type definitions
+        - Consistent naming conventions
+        - Input validation in mutations
+        - N+1 query prevention
+    - path: "server/models/**"
+      instructions: |
+        Review Mongoose models for:
+        - Schema validation
+        - Proper indexing
+        - Data integrity
+
+auto_review:
+  enabled: true
+  drafts: false
+  base_branches:
+    - main
+    - develop
+
+chat:
+  auto_reply: true
