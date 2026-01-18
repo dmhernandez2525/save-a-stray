@@ -2,7 +2,7 @@ import React from "react";
 import {Query,ApolloConsumer} from "react-apollo";
 import Querys from "../graphql/queries";
 import UserShow from "./UserLanding";
-import ShelterShow from "./ShelterLanding.js";
+import ShelterShow from "./ShelterLanding";
 const { FETCH_USER,USER_ID} = Querys;
 
 
