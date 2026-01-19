@@ -1,5 +1,6 @@
 import React, { Component } from "react";
-import { Mutation,ApolloConsumer } from "@apollo/client";
+import { Mutation } from "@apollo/client/react/components";
+import { ApolloConsumer } from "@apollo/client";
 import Mutations from "../graphql/mutations"
 import './css/auth.css'
 import { Link } from 'react-router-dom';

@@ -1,7 +1,7 @@
 import React, { Component } from "react";
 import { Link } from 'react-router-dom';
 import { withRouter } from '../util/withRouter';
-import {Query} from "@apollo/client";
+import { Query } from "@apollo/client/react/components";
 import Queries from "../graphql/queries"
 import AnimalFeedItem from './AnimalFeedItem'
 import './css/userLanding.css'
