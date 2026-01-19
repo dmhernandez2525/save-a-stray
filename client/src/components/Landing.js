@@ -22,36 +22,34 @@ class Landing extends React.Component{
 render(){
     return (
     <ApolloConsumer>{client => {
-        
-        
+
+
                 const user = client.readQuery({
                     query: USER_ID
                     })
-                    
+
                     this.userId = user.userId
     return(
         <Query
         query={FETCH_USER}
         variables={{ _id: this.userId }}
-        // onCompleted={data => {            
-
-        // }}
         update={(client, data) => this.updateCache(client, data)}
 
-        >                        
+        >
             {({ loading, error, data }) => {
-                
+
                 if (loading){
-                    return <h1>Loading</h1>
+                    return (
+                        <div className="flex items-center justify-center min-h-[200px]">
+                            <h1 className="text-white font-capriola text-2xl animate-pulse">Loading</h1>
+                        </div>
+                    )
                 }else{
                     if (data.user.userRole === "shelter") {
-                        console.log("render the shelter conponint with the shelter info as a prop")
-                        
                         return <ShelterShow shelterInfo={data.user.shelter}/>
                     } else if (data.user.userRole === "endUser") {
-                        console.log("render the User conponint with the user info as a prop")
                         return <UserShow user={data.user}/>
-                    }   
+                    }
                 }
         }}
         </Query>

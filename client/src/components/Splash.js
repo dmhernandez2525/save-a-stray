@@ -21,23 +21,40 @@ function openFeed(e){
 const Splash = props => {
 
   return (
-    <div id='splash'>
-        <div id='splash-top'>   
-            <button  className='closed' id='splash-button'>
-            <h2 id='browse' onClick={e => openFeed(e)}>Browse Animals</h2>
-            {/* <h2 id='browse' onClick={e => openFeed(e)}>Browse Local Animals</h2> mark rfq */}
-              <div id='splash-feed-wrapper' className='hidden'>
-                <p id='splash-feed-exit' onClick={e => openFeed(e)}>X</p>
-                < UserLanding splash={"splash"}/>
-                {/* <div id='google-maps-wrapper'>
-                    <div id='mock-map'></div>
-                    <input id='splash-slider' type='range' min='1' max='400'/>
-                </div> mark rfq */}
-                 
-              </div>
-            </button>
-            
-        </div>
+    <div
+      id='splash'
+      className="col-start-3 col-end-5 row-start-2 row-end-3 bg-cover grid grid-cols-[15%_70%_15%]"
+    >
+      <div
+        id='splash-top'
+        className="col-start-1 col-end-4 rounded-[20px] bg-[url('./css/adorable-animal-black-and-white-207903.jpg')] bg-no-repeat bg-cover bg-center grid grid-rows-[75%_10%_15%] grid-cols-[35%_30%_35%]"
+      >
+        <button
+          className='closed'
+          id='splash-button'
+        >
+          <h2
+            id='browse'
+            onClick={e => openFeed(e)}
+            className="text-white text-[calc(1vh+2vw)] m-auto transition-all duration-[800ms] ease-in cursor-pointer"
+          >
+            Browse Animals
+          </h2>
+          <div
+            id='splash-feed-wrapper'
+            className='hidden w-full h-full animate-droop'
+          >
+            <p
+              id='splash-feed-exit'
+              onClick={e => openFeed(e)}
+              className="no-underline text-white text-[4em] m-0 font-capriola float-left ml-[2%] cursor-pointer"
+            >
+              X
+            </p>
+            <UserLanding splash={"splash"}/>
+          </div>
+        </button>
+      </div>
     </div>
   );
 };
