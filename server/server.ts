@@ -45,6 +45,11 @@ passport.deserializeUser((obj: Express.User, cb) => {
 
 const app = express();
 
+// Health check endpoint for Render.com
+app.get('/health', (_req: Request, res: Response) => {
+  res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
+});
+
 app.use((_req: Request, res: Response, next: NextFunction) => {
   res.header('Access-Control-Allow-Origin', '*');
   next();
@@ -52,10 +57,6 @@ app.use((_req: Request, res: Response, next: NextFunction) => {
 
 app.use(cors());
 app.use(passport.initialize());
-
-if (!db) {
-  throw new Error("You must provide a string to connect to MongoDB Atlas");
-}
 
 app.use(passport.session());
 
@@ -77,9 +78,13 @@ app.get(
 );
 
 // Connect to MongoDB
-mongoose
-  .connect(db)
-  .then(() => console.log("Connected to MongoDB successfully"))
-  .catch(err => console.log(err));
+if (db) {
+  mongoose
+    .connect(db)
+    .then(() => console.log("Connected to MongoDB successfully"))
+    .catch(err => console.error("MongoDB connection error:", err));
+} else {
+  console.warn("WARNING: MONGO_URI not configured. Database features will not work.");
+}
 
 export default app;
