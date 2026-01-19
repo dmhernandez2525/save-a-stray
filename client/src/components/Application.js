@@ -2,7 +2,7 @@ import React, { Component } from "react";
 import { Mutation } from "@apollo/client";
 import Mutations from "../graphql/mutations"
 import './css/application.css'
-import { withRouter } from "react-router";
+import { withRouter } from "../util/withRouter";
 
 const { CREATE_APPLICATION } = Mutations
 

@@ -1,7 +1,7 @@
 import React, { Component } from "react";
 import { Query } from "@apollo/client";
 import Mutations from "../graphql/mutations"
-import { withRouter } from "react-router";
+import { withRouter } from "../util/withRouter";
 import './css/AnimalFeedItem.css'
 class AnimalFeedItem extends Component {
   constructor(props) {

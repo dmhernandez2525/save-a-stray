@@ -2,7 +2,8 @@ import { Query } from "@apollo/client";
 import Queries from "../graphql/queries";
 import { ApolloConsumer } from '@apollo/client';
 import React from 'react';
-import { Link, withRouter } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { withRouter } from '../util/withRouter';
 import './css/slug.css'
 const { IS_LOGGED_IN } = Queries;
 
