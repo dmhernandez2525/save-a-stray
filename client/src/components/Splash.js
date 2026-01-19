@@ -1,8 +1,9 @@
-import { Query } from "react-apollo";
+import { Query } from "@apollo/client/react/components";
 import Queries from "../graphql/queries";
-import { ApolloConsumer } from 'react-apollo';
+import { ApolloConsumer } from '@apollo/client';
 import React from 'react';
-import { Link, withRouter } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { withRouter } from '../util/withRouter';
 import './css/splash.css'
 import UserLanding from "./UserLanding";
 const { IS_LOGGED_IN } = Queries;

@@ -1,5 +1,5 @@
 import React, { Component } from "react";
-import { Mutation } from "react-apollo";
+import { Mutation } from "@apollo/client/react/components";
 import Mutations from "../graphql/mutations"
 import { Link } from 'react-router-dom';
 import RegisterShelter from "./RegisterShelter";

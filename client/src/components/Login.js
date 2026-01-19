@@ -1,14 +1,12 @@
 import React, { Component } from "react";
-import {
-  Mutation,
-  ApolloConsumer,
-  Query
-} from "react-apollo";
+import { Mutation, Query } from "@apollo/client/react/components";
+import { ApolloConsumer } from "@apollo/client";
 import FacebookLogin from "./FacebookLogin";
 import Mutations from "../graphql/mutations";
 import Querys from "../graphql/queries";
 import './css/auth.css';
-import { Link, withRouter } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { withRouter } from '../util/withRouter';
 import ShelterLanding from "./ShelterLanding" ;
 const { LOGIN_USER } = Mutations;
 const { FETCH_USER,USER_ID} = Querys;

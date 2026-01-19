@@ -1,5 +1,6 @@
 import React, { Component } from "react";
-import { Mutation,ApolloConsumer } from "react-apollo";
+import { Mutation } from "@apollo/client/react/components";
+import { ApolloConsumer } from "@apollo/client";
 import FacebookLogin from "./FacebookLogin";
 import Mutations from "../graphql/mutations"
 import './css/auth.css'
