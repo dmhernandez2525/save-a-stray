@@ -4,23 +4,26 @@
   "description": "An online platform connecting pets in need with potential adopters.",
   "main": "index.js",
   "scripts": {
+    "heroku-postbuild": "NPM_CONFIG_PRODUCTION=false npm install --prefix client && npm run build --prefix client",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "client-install": "npm install --prefix client",
     "client": "npm start --prefix client",
     "server": "nodemon index.js",
     "start": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "author": "Chas Huggins",
   "license": "ISC",
   "dependencies": {
+    "@faker-js/faker": "^9.3.0",
     "bcryptjs": "^2.4.3",
     "concurrently": "^9.1.2",
     "connect-ensure-login": "^0.1.1",
     "cors": "^2.8.5",
     "ejs": "^3.1.10",
     "express": "^4.21.2",
-    "@faker-js/faker": "^9.3.0",
     "firebase-admin": "^13.0.2",
     "google-auth-library": "^9.15.0",
     "graphql": "^16.10.0",
@@ -34,7 +37,9 @@
     "validator": "^13.12.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.9"
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.9",
+    "supertest": "^7.0.0"
   },
   "engines": {
     "node": ">=20.0.0"
