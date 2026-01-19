@@ -1,6 +1,6 @@
 import React, { Component } from "react";
 import { Link } from 'react-router-dom';
-import { withRouter, Switch, Route ,Redirect} from 'react-router-dom';
+import { withRouter } from '../util/withRouter';
 import {Query} from "@apollo/client";
 import Queries from "../graphql/queries"
 import AnimalFeedItem from './AnimalFeedItem'
