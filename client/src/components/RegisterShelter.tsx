@@ -1,6 +1,6 @@
 import React, { Component, FormEvent } from "react";
 import { Mutation } from "@apollo/client/react/components";
-import { ApolloConsumer, ApolloClient, NormalizedCacheObject, FetchResult } from "@apollo/client";
+import { ApolloConsumer, ApolloClient, ApolloCache, FetchResult } from "@apollo/client";
 import Mutations from "../graphql/mutations";
 import Queries from "../graphql/queries";
 import { Link } from "react-router-dom";
@@ -34,15 +34,15 @@ class RegisterShelter extends Component<RegisterShelterProps, RegisterShelterSta
   }
 
   updateCache(
-    client: ApolloClient<NormalizedCacheObject>,
+    cache: ApolloCache<unknown>,
     { data }: FetchResult<RegisterResponse>
   ) {
     if (data?.register) {
-      client.writeQuery({
+      cache.writeQuery({
         query: IS_LOGGED_IN,
         data: { isLoggedIn: data.register.loggedIn },
       });
-      client.writeQuery({
+      cache.writeQuery({
         query: USER_ID,
         data: { userId: data.register._id },
       });
@@ -52,7 +52,7 @@ class RegisterShelter extends Component<RegisterShelterProps, RegisterShelterSta
   render() {
     return (
       <ApolloConsumer>
-        {(client: ApolloClient<NormalizedCacheObject>) => (
+        {(client: ApolloClient<object>) => (
           <Mutation<RegisterResponse>
             mutation={REGISTER_USER}
             onCompleted={(data) => {
@@ -60,7 +60,7 @@ class RegisterShelter extends Component<RegisterShelterProps, RegisterShelterSta
               localStorage.setItem("auth-token", token);
               this.props.history.push("/Landing");
             }}
-            update={(client, data) => this.updateCache(client, data)}
+            update={(cache, data) => this.updateCache(cache, data)}
           >
             {(registerUser, { loading, error }) => {
               if (loading)
