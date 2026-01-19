@@ -1,5 +1,5 @@
 import React, { Component } from "react";
-import { Mutation } from "react-apollo";
+import { Mutation } from "@apollo/client/react/components";
 import Mutations from "../graphql/mutations"
 import './css/Animal.css'
 const { CREATE_ANIMAL } = Mutations
