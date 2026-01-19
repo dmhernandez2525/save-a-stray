@@ -4,16 +4,16 @@ const Animal = require('./models/Animal');
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs')
-const faker = require('faker');
+const { faker } = require('@faker-js/faker');
 
-const randomFirstName = faker.name.firstName; // Rowan
-const randomEmail = faker.internet.email; 
-const randomZipCode = faker.address.zipCode;
-const randomParagraph = faker.lorem.paragraph;
-const randomAnimalPic = faker.image.animals;
-const randomCatPic = faker.image.cats;
-const randomAnimalColor = faker.commerce.color;
-const randomAnimalAge = faker.random.number;
+const randomFirstName = () => faker.person.firstName();
+const randomEmail = () => faker.internet.email();
+const randomZipCode = () => faker.location.zipCode();
+const randomParagraph = () => faker.lorem.paragraph();
+const randomAnimalPic = () => faker.image.urlLoremFlickr({ category: 'animals' });
+const randomCatPic = () => faker.image.urlLoremFlickr({ category: 'cats' });
+const randomAnimalColor = () => faker.color.human();
+const randomAnimalAge = () => faker.number.int({ min: 1, max: 15 });
 
 router.get('/newAnimal', (req, res) => {
     const allName = [];
