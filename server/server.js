@@ -82,7 +82,7 @@
 const models = require("./models");
 const express = require("express");
 const db = require("../config/keys.js").MONGO_URI;
-const expressGraphQL = require("express-graphql");
+const { createHandler } = require("graphql-http/lib/use/express");
 const schema = require("./schema/schema");
 const cors = require("cors");
 const mongoose = require("mongoose");
@@ -160,13 +160,9 @@ if (!db) {
   throw new Error("You must provide a string to connect to MongoDB Atlas");
 }
 app.use(passport.session());
-app.use(
-  "/graphql",
-  expressGraphQL({
-    schema,
-    graphiql: true
-  })
-);
+
+// GraphQL endpoint using graphql-http (replacement for deprecated express-graphql)
+app.all("/graphql", createHandler({ schema }));
 // remember we use bodyParser to parse requests into json
 app.use(bodyParser.json());
 
@@ -188,11 +184,9 @@ app.get(
 );
 
 
+// Mongoose 8+ no longer requires useNewUrlParser or useUnifiedTopology options
 mongoose
-  .connect(db, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-  })
+  .connect(db)
   .then(() => console.log("Connected to MongoDB successfully"))
   .catch(err => console.log(err));
 
