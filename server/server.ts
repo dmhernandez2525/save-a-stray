@@ -16,24 +16,29 @@ interface UserStuff {
   token: string;
 }
 
-passport.use(
-  new FacebookStrategy({
-    clientID: keys.fbookClient,
-    clientSecret: keys.fbookKey,
-    callbackURL: 'https://save-a-stray.herokuapp.com/auth/facebook/callback',
-    profileFields: ['id', 'displayName', 'photos', 'email']
-  },
-    async (accessToken: string, refreshToken: string, profile: Profile, cb: (error: Error | null, user?: UserStuff) => void) => {
-      try {
-        const userData = await facebookRegister(profile);
-        const userStuff: UserStuff = { userId: userData._id, token: userData.token };
-        cb(null, userStuff);
-      } catch (error) {
-        cb(error as Error);
-      }
+// Only initialize Facebook OAuth if credentials are configured
+if (keys.fbookClient && keys.fbookKey) {
+  passport.use(
+    new FacebookStrategy({
+      clientID: keys.fbookClient,
+      clientSecret: keys.fbookKey,
+      callbackURL: 'https://save-a-stray.herokuapp.com/auth/facebook/callback',
+      profileFields: ['id', 'displayName', 'photos', 'email']
     },
-  ),
-);
+      async (accessToken: string, refreshToken: string, profile: Profile, cb: (error: Error | null, user?: UserStuff) => void) => {
+        try {
+          const userData = await facebookRegister(profile);
+          const userStuff: UserStuff = { userId: userData._id, token: userData.token };
+          cb(null, userStuff);
+        } catch (error) {
+          cb(error as Error);
+        }
+      },
+    ),
+  );
+} else {
+  console.warn("WARNING: Facebook OAuth not configured. FBOOK_CLIENT and FBOOK_KEY env vars required.");
+}
 
 passport.serializeUser((user, cb) => {
   cb(null, user);
