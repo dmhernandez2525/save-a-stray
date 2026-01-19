@@ -1,43 +1,47 @@
 {
   "name": "save-a-stray",
   "version": "1.0.0",
-  "description": "An online store where users can browse products and add them to their cart.",
+  "description": "An online platform connecting pets in need with potential adopters.",
   "main": "index.js",
   "scripts": {
     "heroku-postbuild": "NPM_CONFIG_PRODUCTION=false npm install --prefix client && npm run build --prefix client",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "client-install": "npm install --prefix client",
     "client": "npm start --prefix client",
     "server": "nodemon index.js",
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "author": "Chas Huggins",
   "license": "ISC",
   "dependencies": {
+    "@faker-js/faker": "^9.3.0",
     "bcryptjs": "^2.4.3",
-    "body-parser": "^1.20.3",
-    "concurrently": "^9.1.0",
+    "concurrently": "^9.1.2",
     "connect-ensure-login": "^0.1.1",
     "cors": "^2.8.5",
     "ejs": "^3.1.10",
-    "express": "^4.21.0",
-    "graphql": "^16.9.0",
-    "graphql-http": "^1.22.1",
+    "express": "^4.21.2",
+    "firebase-admin": "^13.0.2",
+    "google-auth-library": "^9.15.0",
+    "graphql": "^16.10.0",
+    "graphql-http": "^1.22.3",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.9.0",
+    "mongoose": "^8.9.5",
     "mongoose-findorcreate": "^4.0.0",
-    "nodemon": "^3.1.7",
     "passport": "^0.7.0",
     "passport-facebook": "^3.0.0",
-    "passport-google": "^0.3.0",
-    "uuid": "^11.0.3",
+    "uuid": "^11.0.5",
     "validator": "^13.12.0"
   },
   "devDependencies": {
     "jest": "^29.7.0",
+    "nodemon": "^3.1.9",
     "supertest": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }
