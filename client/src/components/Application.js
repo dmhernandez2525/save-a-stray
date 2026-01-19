@@ -1,5 +1,5 @@
 import React, { Component } from "react";
-import { Mutation } from "@apollo/client";
+import { Mutation } from "@apollo/client/react/components";
 import Mutations from "../graphql/mutations"
 import './css/application.css'
 import { withRouter } from "../util/withRouter";

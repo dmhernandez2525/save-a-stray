@@ -1,4 +1,4 @@
-import { Query } from "@apollo/client";
+import { Query } from "@apollo/client/react/components";
 import Queries from "../graphql/queries";
 import { ApolloConsumer } from '@apollo/client';
 import React from 'react';

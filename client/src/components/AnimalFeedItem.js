@@ -1,5 +1,5 @@
 import React, { Component } from "react";
-import { Query } from "@apollo/client";
+import { Query } from "@apollo/client/react/components";
 import Mutations from "../graphql/mutations"
 import { withRouter } from "../util/withRouter";
 import './css/AnimalFeedItem.css'
