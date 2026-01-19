@@ -1,6 +1,6 @@
 import React from "react";
-import { HashRouter, Switch, Route } from 'react-router-dom';
-import Splash from './Splash'
+import { HashRouter, Routes, Route } from "react-router-dom";
+import Splash from "./Splash";
 import Login from "./Login";
 import Register from "./Register";
 import RegisterShelter from "./RegisterShelter";
@@ -11,38 +11,35 @@ import Shelter from "./Shelter";
 import ShelterLanding from "./ShelterLanding";
 import Landing from "./Landing";
 import UserLanding from "./UserLanding";
-import AuthRoute from '../util/route_util'
-import ProRoute from '../util/protected_route'
+import AuthRoute from "../util/route_util";
+import ProtectedRoute from "../util/protected_route";
 import Nav from "./Nav";
-import Slug from './slug'
-import './css/App.css'
+import Slug from "./slug";
+import "./css/App.css";
 import Privacy from "./Privacy";
 import TermsOfService from "./TermsOfService";
+
 const App = () => {
   return (
     <HashRouter>
-      <div id='root-div1'>
-        <AuthRoute exact path='/' component={Slug} routeType="auth" />
-        {/* <Slug/> */}
-        <Nav id='navbar' />
-          <Route exact path="/newAnimal" component={Animal} routeType=""  />
-          <Route exact path="/RegisterShelter/:id" component={RegisterShelter} routeType=""  />
-          <Route exact path="/AnimalShow/:id" component={AnimalShow} routeType=""  />
-          <Route exact path="/Landing" component={Landing} routeType=""  />
-          <Route exact path="/User" component={UserLanding} routeType=""  />
-          <Route exact path="/Shelter" component={ShelterLanding} routeType=""  />
-          <Route exact path="/newApplication" component={Application}  routeType="" />
-
-          <ProRoute exact path="/" component={UserLanding} routeType="" />
-          <AuthRoute exact path='/' component={Splash} routeType="auth" />
-        <Switch>
-          <Route exact path="/User" component={UserLanding} routeType=""  />
-          <Route exact path="/newShelter" component={Shelter} routeType="auth" />
-          <AuthRoute exact path="/register" component={Register} routeType="auth" />
-          <AuthRoute exact path="/login" component={Login} routeType="auth" />
-          <Route exact path="/privacy" component ={Privacy} />
-          <Route exact path="/tos" component={TermsOfService} />
-        </Switch>
+      <div id="root-div1">
+        <Nav id="navbar" />
+        <Routes>
+          <Route path="/" element={<AuthRoute element={<Slug />} routeType="auth" />} />
+          <Route path="/splash" element={<AuthRoute element={<Splash />} routeType="auth" />} />
+          <Route path="/newAnimal" element={<Animal />} />
+          <Route path="/RegisterShelter/:id" element={<RegisterShelter />} />
+          <Route path="/AnimalShow/:id" element={<AnimalShow />} />
+          <Route path="/Landing" element={<Landing />} />
+          <Route path="/User" element={<ProtectedRoute element={<UserLanding />} />} />
+          <Route path="/Shelter" element={<ProtectedRoute element={<ShelterLanding />} />} />
+          <Route path="/newApplication" element={<Application />} />
+          <Route path="/newShelter" element={<AuthRoute element={<Shelter />} routeType="auth" />} />
+          <Route path="/register" element={<AuthRoute element={<Register />} routeType="auth" />} />
+          <Route path="/login" element={<AuthRoute element={<Login />} routeType="auth" />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/tos" element={<TermsOfService />} />
+        </Routes>
       </div>
     </HashRouter>
   );
