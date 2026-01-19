@@ -1,0 +1,220 @@
+const request = require('supertest');
+
+// Mock mongoose to prevent actual DB connections
+jest.mock('mongoose', () => {
+  const originalModule = jest.requireActual('mongoose');
+  return {
+    ...originalModule,
+    connect: jest.fn().mockResolvedValue(true),
+    model: jest.fn().mockImplementation((modelName) => {
+      const mockModels = {
+        user: {
+          find: jest.fn().mockResolvedValue([]),
+          findOne: jest.fn().mockResolvedValue(null),
+          findById: jest.fn().mockResolvedValue(null)
+        },
+        animal: {
+          find: jest.fn().mockResolvedValue([]),
+          findById: jest.fn().mockResolvedValue(null)
+        },
+        shelter: {
+          find: jest.fn().mockResolvedValue([]),
+          findById: jest.fn().mockResolvedValue(null)
+        },
+        application: {
+          find: jest.fn().mockResolvedValue([]),
+          findById: jest.fn().mockResolvedValue(null)
+        }
+      };
+      return mockModels[modelName] || {};
+    }),
+    Schema: originalModule.Schema
+  };
+});
+
+// Mock passport
+jest.mock('passport', () => ({
+  use: jest.fn(),
+  serializeUser: jest.fn(),
+  deserializeUser: jest.fn(),
+  initialize: jest.fn().mockReturnValue((req, res, next) => next()),
+  session: jest.fn().mockReturnValue((req, res, next) => next()),
+  authenticate: jest.fn().mockReturnValue((req, res, next) => next())
+}));
+
+// Mock passport-facebook
+jest.mock('passport-facebook', () => ({
+  Strategy: jest.fn().mockImplementation(() => ({}))
+}));
+
+// Mock config keys
+jest.mock('../config/keys', () => ({
+  MONGO_URI: 'mongodb://mock-db',
+  secretOrKey: 'test-secret',
+  fbookClient: 'mock-fb-client',
+  fbookKey: 'mock-fb-key'
+}));
+
+// Mock auth service
+jest.mock('../server/services/auth', () => ({
+  register: jest.fn(),
+  login: jest.fn(),
+  logout: jest.fn(),
+  verifyUser: jest.fn(),
+  facebookRegister: jest.fn(),
+  userId: jest.fn()
+}));
+
+describe('API Integration Tests', () => {
+  let app;
+
+  beforeAll(() => {
+    // Import app after mocks are set up
+    app = require('../server/server');
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('GraphQL Endpoint', () => {
+    it('should respond to GraphQL endpoint', async () => {
+      const response = await request(app)
+        .post('/graphql')
+        .set('Content-Type', 'application/json')
+        .send({
+          query: '{ __typename }'
+        });
+
+      // GraphQL endpoint should be accessible
+      expect(response.status).toBeLessThan(500);
+    });
+
+    it('should handle introspection query', async () => {
+      const response = await request(app)
+        .post('/graphql')
+        .set('Content-Type', 'application/json')
+        .send({
+          query: `
+            query IntrospectionQuery {
+              __schema {
+                types {
+                  name
+                }
+              }
+            }
+          `
+        });
+
+      expect(response.status).toBeLessThan(500);
+    });
+
+    it('should respond with correct content type', async () => {
+      const response = await request(app)
+        .post('/graphql')
+        .set('Content-Type', 'application/json')
+        .send({
+          query: '{ __typename }'
+        });
+
+      expect(response.headers['content-type']).toMatch(/json/);
+    });
+  });
+
+  describe('CORS Configuration', () => {
+    it('should include CORS headers in response', async () => {
+      const response = await request(app)
+        .post('/graphql')
+        .set('Content-Type', 'application/json')
+        .send({
+          query: '{ __typename }'
+        });
+
+      expect(response.headers['access-control-allow-origin']).toBeDefined();
+    });
+
+    it('should allow all origins', async () => {
+      const response = await request(app)
+        .options('/graphql')
+        .set('Origin', 'http://localhost:3000');
+
+      expect(response.status).toBeLessThan(500);
+    });
+  });
+
+  describe('Server Configuration', () => {
+    it('should export express app', () => {
+      expect(app).toBeDefined();
+      expect(typeof app).toBe('function');
+    });
+
+    it('should have graphql route configured', async () => {
+      const response = await request(app)
+        .post('/graphql')
+        .set('Content-Type', 'application/json')
+        .send({ query: '{ __typename }' });
+
+      expect(response.status).not.toBe(404);
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should handle malformed GraphQL queries gracefully', async () => {
+      const response = await request(app)
+        .post('/graphql')
+        .set('Content-Type', 'application/json')
+        .send({
+          query: 'this is not valid graphql'
+        });
+
+      expect(response.status).toBeLessThan(500);
+    });
+
+    it('should handle missing query gracefully', async () => {
+      const response = await request(app)
+        .post('/graphql')
+        .set('Content-Type', 'application/json')
+        .send({});
+
+      expect(response.status).toBeLessThan(500);
+    });
+
+    it('should handle invalid JSON gracefully', async () => {
+      const response = await request(app)
+        .post('/graphql')
+        .set('Content-Type', 'application/json')
+        .send('not json');
+
+      expect(response.status).toBeLessThan(500);
+    });
+  });
+});
+
+describe('GraphQL Schema Tests', () => {
+  it('should have Query type defined', () => {
+    const schema = require('../server/schema/schema');
+
+    expect(schema).toBeDefined();
+    expect(schema._queryType).toBeDefined();
+  });
+
+  it('should have Mutation type defined', () => {
+    const schema = require('../server/schema/schema');
+
+    expect(schema._mutationType).toBeDefined();
+  });
+
+  it('should have correct query fields', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type');
+    const fields = RootQueryType.getFields();
+
+    expect(fields.users).toBeDefined();
+    expect(fields.user).toBeDefined();
+    expect(fields.animals).toBeDefined();
+    expect(fields.animal).toBeDefined();
+    expect(fields.shelters).toBeDefined();
+    expect(fields.shelter).toBeDefined();
+    expect(fields.applications).toBeDefined();
+    expect(fields.findAnimals).toBeDefined();
+  });
+});

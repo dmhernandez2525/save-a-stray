@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
@@ -10,4 +14,19 @@ body {
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
+}
+
+/* Custom utility classes for gradual Tailwind migration */
+@layer components {
+  .btn-primary {
+    @apply bg-sky-blue text-white font-capriola px-4 py-2 rounded-lg hover:bg-salmon transition-colors duration-300;
+  }
+
+  .btn-secondary {
+    @apply bg-transparent text-sky-blue font-capriola border-none cursor-pointer hover:underline decoration-salmon;
+  }
+
+  .link-nav {
+    @apply text-sky-blue font-capriola no-underline hover:underline decoration-salmon;
+  }
 }
