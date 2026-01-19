@@ -2,7 +2,7 @@ import React, {
   Component
 } from 'react';
 import querystring from 'querystring';
-import { graphql } from 'react-apollo';
+import { graphql } from '@apollo/client';
 import gql from "graphql-tag";
 
 class FacebookSignIn extends Component {

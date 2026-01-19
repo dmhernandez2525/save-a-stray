@@ -1,5 +1,5 @@
 import React from "react";
-import {Query,ApolloConsumer} from "react-apollo";
+import {Query,ApolloConsumer} from "@apollo/client";
 import Querys from "../graphql/queries";
 import UserShow from "./UserLanding";
 import ShelterShow from "./ShelterLanding.js";

@@ -1,6 +1,6 @@
-import { Query } from "react-apollo";
+import { Query } from "@apollo/client";
 import Queries from "../graphql/queries";
-import { ApolloConsumer } from 'react-apollo';
+import { ApolloConsumer } from '@apollo/client';
 import React from 'react';
 import { Link, withRouter } from 'react-router-dom';
 import './css/splash.css'
