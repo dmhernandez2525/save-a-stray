@@ -1,6 +1,6 @@
 import React, { Component, FormEvent } from "react";
 import { Mutation } from "@apollo/client/react/components";
-import { ApolloClient, NormalizedCacheObject, FetchResult } from "@apollo/client";
+import { ApolloCache, FetchResult } from "@apollo/client";
 import Mutations from "../graphql/mutations";
 import Queries from "../graphql/queries";
 import { Link } from "react-router-dom";
@@ -32,15 +32,15 @@ class Login extends Component<LoginProps, LoginState> {
   }
 
   updateCache(
-    client: ApolloClient<NormalizedCacheObject>,
+    cache: ApolloCache<unknown>,
     { data }: FetchResult<LoginResponse>
   ) {
     if (data?.login) {
-      client.writeQuery({
+      cache.writeQuery({
         query: IS_LOGGED_IN,
         data: { isLoggedIn: data.login.loggedIn },
       });
-      client.writeQuery({
+      cache.writeQuery({
         query: USER_ID,
         data: { userId: data.login._id },
       });
@@ -56,7 +56,7 @@ class Login extends Component<LoginProps, LoginState> {
           localStorage.setItem("auth-token", token);
           this.props.history.push("/Landing");
         }}
-        update={(client, data) => this.updateCache(client, data)}
+        update={(cache, data) => this.updateCache(cache, data)}
       >
         {(loginUser, { loading, error }) => {
           if (loading)

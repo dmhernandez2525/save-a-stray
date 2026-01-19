@@ -1,6 +1,6 @@
 import React from "react";
 import { Query } from "@apollo/client/react/components";
-import { ApolloConsumer, ApolloClient, NormalizedCacheObject } from "@apollo/client";
+import { ApolloConsumer, ApolloClient } from "@apollo/client";
 import Queries from "../graphql/queries";
 import UserShow from "./UserLanding";
 import ShelterShow from "./ShelterLanding";
@@ -27,7 +27,7 @@ class Landing extends React.Component<LandingProps, LandingState> {
   render() {
     return (
       <ApolloConsumer>
-        {(client: ApolloClient<NormalizedCacheObject>) => {
+        {(client: ApolloClient<object>) => {
           const user = client.readQuery<UserIdData>({
             query: USER_ID,
           });

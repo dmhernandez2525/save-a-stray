@@ -1,7 +1,7 @@
 import React from "react";
 import { Query } from "@apollo/client/react/components";
 import Queries from "../graphql/queries";
-import { ApolloConsumer, ApolloClient, NormalizedCacheObject } from "@apollo/client";
+import { ApolloConsumer, ApolloClient } from "@apollo/client";
 import { Link } from "react-router-dom";
 import { withRouter, WithRouterProps } from "../util/withRouter";
 import { Button } from "./ui/button";
@@ -33,7 +33,7 @@ const Nav: React.FC<NavProps> = (props) => {
     <div className="col-start-3 col-end-5 row-start-1 row-end-2 z-10 grid grid-rows-nav relative">
       <div className="row-start-2 flex justify-self-end">
         <ApolloConsumer>
-          {(client: ApolloClient<NormalizedCacheObject>) => (
+          {(client: ApolloClient<object>) => (
             <Query<IsLoggedInData> query={IS_LOGGED_IN}>
               {({ data }) => {
                 if (data?.isLoggedIn) {
