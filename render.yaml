@@ -6,7 +6,7 @@
 services:
   # Frontend - React/Vite Static Site (FREE)
   - type: web
-    name: save-a-stray-client
+    name: save-a-stray-site
     runtime: static
     buildCommand: cd client && npm ci && npm run build
     staticPublishPath: client/dist
