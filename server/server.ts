@@ -16,24 +16,29 @@ interface UserStuff {
   token: string;
 }
 
-passport.use(
-  new FacebookStrategy({
-    clientID: keys.fbookClient,
-    clientSecret: keys.fbookKey,
-    callbackURL: 'https://save-a-stray.herokuapp.com/auth/facebook/callback',
-    profileFields: ['id', 'displayName', 'photos', 'email']
-  },
-    async (accessToken: string, refreshToken: string, profile: Profile, cb: (error: Error | null, user?: UserStuff) => void) => {
-      try {
-        const userData = await facebookRegister(profile);
-        const userStuff: UserStuff = { userId: userData._id, token: userData.token };
-        cb(null, userStuff);
-      } catch (error) {
-        cb(error as Error);
-      }
+// Only initialize Facebook OAuth if credentials are configured
+if (keys.fbookClient && keys.fbookKey) {
+  passport.use(
+    new FacebookStrategy({
+      clientID: keys.fbookClient,
+      clientSecret: keys.fbookKey,
+      callbackURL: 'https://save-a-stray.herokuapp.com/auth/facebook/callback',
+      profileFields: ['id', 'displayName', 'photos', 'email']
     },
-  ),
-);
+      async (accessToken: string, refreshToken: string, profile: Profile, cb: (error: Error | null, user?: UserStuff) => void) => {
+        try {
+          const userData = await facebookRegister(profile);
+          const userStuff: UserStuff = { userId: userData._id, token: userData.token };
+          cb(null, userStuff);
+        } catch (error) {
+          cb(error as Error);
+        }
+      },
+    ),
+  );
+} else {
+  console.warn("WARNING: Facebook OAuth not configured. FBOOK_CLIENT and FBOOK_KEY env vars required.");
+}
 
 passport.serializeUser((user, cb) => {
   cb(null, user);
@@ -45,6 +50,11 @@ passport.deserializeUser((obj: Express.User, cb) => {
 
 const app = express();
 
+// Health check endpoint for Render.com
+app.get('/health', (_req: Request, res: Response) => {
+  res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
+});
+
 app.use((_req: Request, res: Response, next: NextFunction) => {
   res.header('Access-Control-Allow-Origin', '*');
   next();
@@ -52,10 +62,6 @@ app.use((_req: Request, res: Response, next: NextFunction) => {
 
 app.use(cors());
 app.use(passport.initialize());
-
-if (!db) {
-  throw new Error("You must provide a string to connect to MongoDB Atlas");
-}
 
 app.use(passport.session());
 
@@ -77,9 +83,13 @@ app.get(
 );
 
 // Connect to MongoDB
-mongoose
-  .connect(db)
-  .then(() => console.log("Connected to MongoDB successfully"))
-  .catch(err => console.log(err));
+if (db) {
+  mongoose
+    .connect(db)
+    .then(() => console.log("Connected to MongoDB successfully"))
+    .catch(err => console.error("MongoDB connection error:", err));
+} else {
+  console.warn("WARNING: MONGO_URI not configured. Database features will not work.");
+}
 
 export default app;
