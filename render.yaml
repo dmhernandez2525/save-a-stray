@@ -1,3 +1,4 @@
+# Build fix: Testing Render builds
 # Render.com Infrastructure as Code
 # Cost: $0/month (Free tier)
 # Note: Free web services spin down after 15 min inactivity
@@ -9,7 +10,7 @@ services:
     name: save-a-stray-client
     runtime: static
     buildCommand: cd client && npm ci && npm run build
-    staticPublishPath: client/dist
+    staticPublishPath: client/build
     headers:
       - path: /assets/*
         name: Cache-Control
