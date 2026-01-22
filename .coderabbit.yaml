@@ -10,26 +10,36 @@ reviews:
   review_status: true
   collapse_walkthrough: false
   path_instructions:
-    - path: "client/src/components/**/*.js"
+    - path: "client/src/components/**/*.{ts,tsx}"
       instructions: |
         Review React components for:
+        - Proper TypeScript types (no `any`, proper interfaces)
         - Proper Apollo Client hook usage (useQuery, useMutation)
-        - Component reusability
-        - Performance (unnecessary re-renders)
+        - Component reusability and proper prop typing
+        - Performance (unnecessary re-renders, missing useCallback/useMemo)
         - Accessibility (ARIA, semantic HTML)
-    - path: "server/schema/**"
+        - Use of cn() utility for Tailwind classes
+    - path: "client/src/graphql/**/*.{ts,tsx}"
+      instructions: |
+        Review GraphQL operations for:
+        - Proper TypeScript typing of query/mutation variables and responses
+        - Consistent naming conventions (GET_*, CREATE_*, UPDATE_*, DELETE_*)
+        - Proper error handling patterns
+    - path: "server/schema/**/*.{ts,js}"
       instructions: |
         Review GraphQL schema for:
         - Proper type definitions
         - Consistent naming conventions
         - Input validation in mutations
         - N+1 query prevention
-    - path: "server/models/**"
+        - TypeScript types for resolver arguments
+    - path: "server/models/**/*.{ts,js}"
       instructions: |
         Review Mongoose models for:
-        - Schema validation
-        - Proper indexing
-        - Data integrity
+        - Schema validation rules
+        - Proper TypeScript interfaces extending Document
+        - Proper indexing for common queries
+        - Data integrity constraints
 
 auto_review:
   enabled: true

@@ -1,25 +1,41 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-config/keys_dev.js
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
+# Dependencies
+node_modules/
+client/node_modules/
 
+# Build output
+dist/
+build/
+client/build/
 
-# testing
-/coverage
-
-# production
-/build
-
-# misc
-.DS_Store
+# Environment variables
+.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
+# Configuration secrets
+config/keys_dev.js
+config/keys_dev.ts
+
+# Testing
+coverage/
+client/coverage/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.gitignore
+
+# SSL certificates (development)
+cert/
