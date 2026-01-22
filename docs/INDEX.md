@@ -70,6 +70,20 @@ Save A Stray is a pet adoption platform that connects animal shelters with poten
 | [sdd/phase-1/REAL_TIME_SYNC_SDD.md](./sdd/phase-1/REAL_TIME_SYNC_SDD.md) | Listing sync architecture |
 | [sdd/phase-1/COMMUNICATION_SYSTEM_SDD.md](./sdd/phase-1/COMMUNICATION_SYSTEM_SDD.md) | Auto-acknowledgment system |
 
+### Quality Checklists
+
+| Document | Purpose |
+|----------|---------|
+| [checklists/CODE_REVIEW_CHECKLIST.md](./checklists/CODE_REVIEW_CHECKLIST.md) | PR code review checklist |
+| [checklists/PRE_COMMIT_CHECKLIST.md](./checklists/PRE_COMMIT_CHECKLIST.md) | Pre-commit quality checks |
+| [checklists/PRE_MR_CHECKLIST.md](./checklists/PRE_MR_CHECKLIST.md) | Pre-merge request checklist |
+
+### Research
+
+| Document | Purpose |
+|----------|---------|
+| [research/COMPETITIVE_RESEARCH_PROMPT.md](./research/COMPETITIVE_RESEARCH_PROMPT.md) | Competitor analysis prompt |
+
 ### Work Tracking
 
 | Document | Purpose |

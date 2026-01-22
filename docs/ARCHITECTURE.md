@@ -62,7 +62,6 @@
 | State/Data | Apollo Client | 3.12.5 |
 | Routing | React Router | 7.1.1 |
 | UI Components | Custom Shadcn-style + Radix | - |
-| Forms | React Hook Form | - |
 | Testing | Vitest + Testing Library | 2.1.8 |
 
 ### Backend (server/)
@@ -84,6 +83,8 @@
 | Deployment | Render.com (IaC via render.yaml) |
 | CI/CD | GitHub Actions |
 | Code Quality | ESLint, Prettier |
+| Code Review | CodeRabbit (automated PR reviews) |
+| Static Analysis | SonarCloud |
 | Coverage | Codecov (85% target) |
 
 ---
@@ -102,6 +103,7 @@ save-a-stray/
 │   │   │   ├── Nav.tsx               # Navigation
 │   │   │   ├── Login.tsx             # Login form
 │   │   │   ├── Register.tsx          # Registration form
+│   │   │   ├── RegisterShelter.tsx   # Shelter registration
 │   │   │   ├── Shelter.tsx           # Shelter creation
 │   │   │   ├── Animal.tsx            # Animal creation
 │   │   │   ├── AnimalShow.tsx        # Animal details
@@ -111,6 +113,11 @@ save-a-stray/
 │   │   │   ├── ShelterLanding.tsx    # Shelter dashboard
 │   │   │   ├── Landing.tsx           # Browse animals
 │   │   │   ├── Splash.tsx            # Home page
+│   │   │   ├── FacebookLogin.tsx     # Facebook OAuth component
+│   │   │   ├── Privacy.tsx           # Privacy policy page
+│   │   │   ├── TermsOfService.tsx    # Terms of service page
+│   │   │   ├── slug.tsx              # URL slug utility component
+│   │   │   ├── css/                  # Component stylesheets
 │   │   │   └── ui/                   # Shadcn-style components
 │   │   │       ├── button.tsx
 │   │   │       ├── card.tsx
@@ -121,14 +128,21 @@ save-a-stray/
 │   │   │   └── mutations.ts
 │   │   ├── util/                     # Utilities
 │   │   │   ├── route_util.tsx
-│   │   │   └── protected_route.tsx
+│   │   │   ├── protected_route.tsx
+│   │   │   └── withRouter.tsx
 │   │   ├── types/                    # TypeScript types
+│   │   │   └── index.ts
 │   │   ├── test/                     # Component tests
 │   │   ├── lib/                      # Helper libraries
+│   │   │   └── utils.ts             # cn() utility
 │   │   ├── main.jsx                  # Entry point (Apollo setup)
 │   │   └── index.css                 # Tailwind styles
 │   ├── vite.config.ts
 │   ├── tailwind.config.js
+│   ├── tsconfig.json
+│   ├── tsconfig.node.json
+│   ├── postcss.config.js
+│   ├── eslint.config.js
 │   └── package.json
 │
 ├── server/                           # Express + GraphQL Backend
@@ -140,7 +154,7 @@ save-a-stray/
 │   │   └── index.ts
 │   ├── schema/                       # GraphQL schema
 │   │   ├── schema.ts
-│   │   ├── mutations.js
+│   │   ├── mutations.ts
 │   │   └── types/
 │   │       ├── root_query_type.ts
 │   │       ├── user_type.ts
@@ -156,13 +170,21 @@ save-a-stray/
 │   ├── server.ts                     # Express app
 │   └── seeds.js                      # Database seeding
 │
+├── tests/                            # Backend tests
+│   ├── models.test.js
+│   ├── auth.test.js
+│   ├── validation.test.js
+│   ├── graphql-queries.test.js
+│   ├── graphql-mutations.test.js
+│   └── api-integration.test.js
+│
 ├── shared/                           # Shared types
 │   └── types/
 │       └── index.ts
 │
 ├── config/                           # Configuration
-│   ├── keys.js
-│   ├── keys_prod.js
+│   ├── keys.ts
+│   ├── keys_prod.ts
 │   └── google_signin.json
 │
 ├── docs/                             # Documentation
@@ -171,6 +193,12 @@ save-a-stray/
 │   ├── ROADMAP.md
 │   ├── FEATURE_BACKLOG.md
 │   ├── CODING_STANDARDS.md
+│   ├── checklists/                   # Quality checklists
+│   │   ├── CODE_REVIEW_CHECKLIST.md
+│   │   ├── PRE_COMMIT_CHECKLIST.md
+│   │   └── PRE_MR_CHECKLIST.md
+│   ├── research/                     # Research documentation
+│   │   └── COMPETITIVE_RESEARCH_PROMPT.md
 │   └── sdd/
 │       ├── FEATURE_SDD_TEMPLATE.md
 │       ├── MODERNIZATION_SDD.md
@@ -185,8 +213,13 @@ save-a-stray/
 ├── tsconfig.json                     # TypeScript config
 ├── render.yaml                       # Render deployment
 ├── jest.config.js                    # Test configuration
-└── codecov.yml                       # Coverage config
+├── codecov.yml                       # Coverage config
+├── .prettierrc                       # Prettier config
+├── .coderabbit.yaml                  # CodeRabbit config
+└── sonar-project.properties          # SonarCloud config
 ```
+
+**Note:** The codebase is in a TypeScript migration state. Some server files have both `.ts` and legacy `.js` versions. The `.ts` files are the source of truth; `.js` files will be removed as migration completes.
 
 ---
 
@@ -335,31 +368,36 @@ Frontend (save-a-stray-site):
 
 Backend (save-a-stray-api):
   Type: Web service (Node.js, free tier)
-  Build: npm ci && npm run build
-  Start: npm start
+  Build: NODE_ENV=development npm ci && npm run build
+  Start: NODE_ENV=production npm start
   Port: 10000
   Health: /health
   Features:
     - Auto-deploy on push
     - Spins down after 15 min inactivity (free tier)
+  Note: NODE_ENV is set inline in commands (not as env var)
+        to prevent npm ci from skipping devDependencies
 ```
 
 ### Environment Variables
 
 ```bash
-# Backend
-NODE_ENV=production
+# Backend (set in Render dashboard, NOT in render.yaml for secrets)
 PORT=10000
 MONGO_URI=<MongoDB Atlas connection string>
-SECRET_OR_KEY=<JWT secret>
+SECRET_OR_KEY=<JWT secret (auto-generated)>
 GOOG_CLIENT=<Google OAuth client ID>
 GOOG_SECRET=<Google OAuth secret>
 FBOOK_KEY=<Facebook App ID>
 FBOOK_CLIENT=<Facebook App Secret>
 CORS_ORIGIN=<Frontend URL>
 
-# Frontend (build-time)
+# Frontend (build-time, set in Render dashboard)
 VITE_API_URL=<Backend URL>
+
+# NOTE: NODE_ENV is NOT set as an environment variable.
+# It is set inline in build/start commands to avoid
+# npm ci skipping TypeScript devDependencies during build.
 ```
 
 ---

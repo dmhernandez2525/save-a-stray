@@ -17,6 +17,16 @@ coverage:
         target: 85%
         threshold: 2%
 
+flags:
+  backend:
+    paths:
+      - server/
+    carryforward: true
+  frontend:
+    paths:
+      - client/src/
+    carryforward: true
+
 parsers:
   javascript:
     enable_partials: true
@@ -28,11 +38,13 @@ comment:
 
 ignore:
   - "node_modules/**"
-  - "**/*.test.js"
-  - "**/*.test.jsx"
+  - "**/*.test.{js,jsx,ts,tsx}"
+  - "**/*.spec.{js,jsx,ts,tsx}"
   - "**/test/**"
   - "**/tests/**"
   - "coverage/**"
   - "dist/**"
   - "build/**"
   - "client/build/**"
+  - "config/**"
+  - "docs/**"
