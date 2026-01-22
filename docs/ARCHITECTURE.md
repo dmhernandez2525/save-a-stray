@@ -1,77 +1,90 @@
-# Save a Stray - Architecture
+# Save A Stray - Architecture
 
-**Version:** 1.0.0
-**Last Updated:** January 2026
+**Version:** 2.0.0
+**Last Updated:** January 22, 2026
 
 ---
 
 ## System Overview
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    FRONTEND (React)                          │
-│  ┌─────────────┐  ┌──────────────┐  ┌─────────────────────┐ │
-│  │   React     │  │   Apollo     │  │   OAuth (Google,    │ │
-│  │   Router    │  │   Client     │  │   Facebook)         │ │
-│  └──────┬──────┘  └──────┬───────┘  └─────────────────────┘ │
-│         │                │                                   │
-│         └────────────────┼───────────────────────────────────┤
-│                          │                                   │
-│                     GraphQL API                              │
-└──────────────────────────┼───────────────────────────────────┘
-                           │
-┌──────────────────────────┼───────────────────────────────────┐
-│               BACKEND (Express + GraphQL)                    │
-│  ┌─────────────┐  ┌──────────────┐  ┌─────────────────────┐ │
-│  │   Schema    │  │   Resolvers  │  │    Mutations        │ │
-│  │   Types     │  │              │  │                     │ │
-│  └──────┬──────┘  └──────┬───────┘  └─────────────────────┘ │
-│         │                │                                   │
-└─────────┼────────────────┼───────────────────────────────────┘
-          │                │
-   ┌──────┴────────────────┴──────┐
-   │         MongoDB              │
-   └──────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                         CLIENT (React + Vite)                                 │
+│                         Production: save-a-stray-site.onrender.com            │
+│                         Port: 3000 (dev)                                      │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌─────────────────────────────┐ │
+│  │    Marketing     │  │   Auth System    │  │      Dashboard              │ │
+│  │   Splash Page    │  │   OAuth (FB/G)   │  │  - Shelter Management       │ │
+│  │   Animal Search  │  │   JWT Auth       │  │  - Animal CRUD              │ │
+│  │   Privacy/ToS    │  │                  │  │  - Application Tracking     │ │
+│  └──────────────────┘  └──────────────────┘  └─────────────────────────────┘ │
+└───────────────────────────────┬──────────────────────────────────────────────┘
+                                │ GraphQL API
+                                │
+    ┌───────────────────────────▼──────────────────────────────────────────┐
+    │    EXPRESS + GRAPHQL SERVER                                           │
+    │    Production: save-a-stray-api.onrender.com                         │
+    │    Port: 10000 (prod) / 5000 (dev)                                   │
+    │                                                                      │
+    │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────┐  │
+    │  │   GraphQL API   │  │   Auth Service  │  │   Business Logic    │  │
+    │  │   - Queries     │  │   - Register    │  │   - Animal mgmt     │  │
+    │  │   - Mutations   │  │   - Login       │  │   - Shelter mgmt    │  │
+    │  │   - Types       │  │   - OAuth       │  │   - Applications    │  │
+    │  └─────────────────┘  │   - JWT tokens  │  └─────────────────────┘  │
+    │                       └─────────────────┘                            │
+    └───────────────────────────┬──────────────────────────────────────────┘
+                                │
+                       ┌────────▼──────────┐
+                       │    MongoDB Atlas   │
+                       │    Database        │
+                       │                    │
+                       │  Collections:      │
+                       │  - users           │
+                       │  - shelters        │
+                       │  - animals         │
+                       │  - applications    │
+                       └────────────────────┘
 ```
 
 ---
 
-## GraphQL Schema
+## Technology Stack
 
-### Types
+### Frontend (client/)
 
-```graphql
-type Animal {
-  id: ID!
-  name: String!
-  species: String!
-  breed: String
-  age: Int
-  shelter: Shelter!
-  photos: [String]
-  status: AdoptionStatus!
-}
+| Category | Technology | Version |
+|----------|-----------|---------|
+| Framework | React | 18.3.1 |
+| Build Tool | Vite | 6.0.7 |
+| Language | TypeScript | Strict mode |
+| Styling | Tailwind CSS | 3.4.17 |
+| State/Data | Apollo Client | 3.12.5 |
+| Routing | React Router | 7.1.1 |
+| UI Components | Custom Shadcn-style + Radix | - |
+| Forms | React Hook Form | - |
+| Testing | Vitest + Testing Library | 2.1.8 |
 
-type Shelter {
-  id: ID!
-  name: String!
-  location: String!
-  animals: [Animal]!
-}
+### Backend (server/)
 
-type User {
-  id: ID!
-  email: String!
-  applications: [Application]!
-}
+| Category | Technology | Version |
+|----------|-----------|---------|
+| Runtime | Node.js | 20+ |
+| Framework | Express | 4.21.2 |
+| API | GraphQL via graphql-http | 16.10.0 / 1.22.3 |
+| Database | MongoDB via Mongoose | 8.9.5 |
+| Auth | Passport.js + JWT + bcryptjs | 0.7.0 |
+| OAuth | Facebook, Google | - |
+| Validation | validator.js | 13.12.0 |
 
-type Application {
-  id: ID!
-  user: User!
-  animal: Animal!
-  status: ApplicationStatus!
-}
-```
+### DevOps
+
+| Category | Technology |
+|----------|-----------|
+| Deployment | Render.com (IaC via render.yaml) |
+| CI/CD | GitHub Actions |
+| Code Quality | ESLint, Prettier |
+| Coverage | Codecov (85% target) |
 
 ---
 
@@ -79,36 +92,341 @@ type Application {
 
 ```
 save-a-stray/
-├── client/                 # React frontend
+├── .github/
+│   └── workflows/
+│       └── ci.yml                    # CI/CD pipeline
+├── client/                           # React + Vite Frontend
 │   ├── src/
-│   │   ├── components/     # 20+ React components
-│   │   ├── graphql/        # Apollo queries
-│   │   └── css/            # Stylesheets
+│   │   ├── components/               # React components
+│   │   │   ├── App.tsx               # Main router
+│   │   │   ├── Nav.tsx               # Navigation
+│   │   │   ├── Login.tsx             # Login form
+│   │   │   ├── Register.tsx          # Registration form
+│   │   │   ├── Shelter.tsx           # Shelter creation
+│   │   │   ├── Animal.tsx            # Animal creation
+│   │   │   ├── AnimalShow.tsx        # Animal details
+│   │   │   ├── AnimalFeedItem.tsx    # Animal card
+│   │   │   ├── Application.tsx       # Adoption application
+│   │   │   ├── UserLanding.tsx       # User dashboard
+│   │   │   ├── ShelterLanding.tsx    # Shelter dashboard
+│   │   │   ├── Landing.tsx           # Browse animals
+│   │   │   ├── Splash.tsx            # Home page
+│   │   │   └── ui/                   # Shadcn-style components
+│   │   │       ├── button.tsx
+│   │   │       ├── card.tsx
+│   │   │       ├── input.tsx
+│   │   │       └── label.tsx
+│   │   ├── graphql/                  # Apollo queries/mutations
+│   │   │   ├── queries.ts
+│   │   │   └── mutations.ts
+│   │   ├── util/                     # Utilities
+│   │   │   ├── route_util.tsx
+│   │   │   └── protected_route.tsx
+│   │   ├── types/                    # TypeScript types
+│   │   ├── test/                     # Component tests
+│   │   ├── lib/                      # Helper libraries
+│   │   ├── main.jsx                  # Entry point (Apollo setup)
+│   │   └── index.css                 # Tailwind styles
+│   ├── vite.config.ts
+│   ├── tailwind.config.js
 │   └── package.json
-├── server/                 # Express + GraphQL
-│   ├── models/             # Mongoose models
-│   ├── schema/             # GraphQL schema
-│   │   ├── types/
+│
+├── server/                           # Express + GraphQL Backend
+│   ├── models/                       # Mongoose schemas
+│   │   ├── User.ts
+│   │   ├── Animal.ts
+│   │   ├── Shelter.ts
+│   │   ├── Application.ts
+│   │   └── index.ts
+│   ├── schema/                       # GraphQL schema
+│   │   ├── schema.ts
 │   │   ├── mutations.js
-│   │   └── schema.js
-│   ├── services/           # Auth services
-│   └── seeds.js
-├── config/                 # Configuration
-├── docs/                   # Documentation
-└── package.json
+│   │   └── types/
+│   │       ├── root_query_type.ts
+│   │       ├── user_type.ts
+│   │       ├── animal_type.ts
+│   │       ├── shelter_type.ts
+│   │       └── application_type.ts
+│   ├── services/                     # Business logic
+│   │   └── auth.ts
+│   ├── validation/                   # Input validation
+│   │   ├── register.ts
+│   │   ├── login.ts
+│   │   └── valid-text.ts
+│   ├── server.ts                     # Express app
+│   └── seeds.js                      # Database seeding
+│
+├── shared/                           # Shared types
+│   └── types/
+│       └── index.ts
+│
+├── config/                           # Configuration
+│   ├── keys.js
+│   ├── keys_prod.js
+│   └── google_signin.json
+│
+├── docs/                             # Documentation
+│   ├── INDEX.md
+│   ├── ARCHITECTURE.md
+│   ├── ROADMAP.md
+│   ├── FEATURE_BACKLOG.md
+│   ├── CODING_STANDARDS.md
+│   └── sdd/
+│       ├── FEATURE_SDD_TEMPLATE.md
+│       ├── MODERNIZATION_SDD.md
+│       └── phase-1/
+│
+├── roadmap/                          # Work tracking
+│   ├── WORK_STATUS.md
+│   └── AGENT_LOGS/
+│
+├── index.ts                          # Main entry point
+├── package.json                      # Root dependencies
+├── tsconfig.json                     # TypeScript config
+├── render.yaml                       # Render deployment
+├── jest.config.js                    # Test configuration
+└── codecov.yml                       # Coverage config
 ```
 
 ---
 
-## API Queries & Mutations
+## Database Models
+
+### User
+
+```typescript
+{
+  _id: ObjectId,
+  name: string,              // Required
+  email: string,             // Required, unique
+  userRole: 'shelter' | 'endUser',  // Required
+  paymentEmail?: string,     // For shelter payment
+  password: string,          // Required, 8-32 chars, hashed
+  date: Date,                // Auto: creation date
+  fbookId?: string,          // Facebook OAuth ID
+  shelterId?: ObjectId,      // Reference to shelter
+  varId?: ObjectId           // Variable ID
+}
+```
+
+### Animal
+
+```typescript
+{
+  _id: ObjectId,
+  name: string,              // Required
+  type: string,              // Required: 'dog', 'cat', etc.
+  age: number,               // Required
+  sex: string,               // Required
+  color: string,             // Required
+  description: string,       // Required
+  image: string,             // Required: URL
+  video: string,             // Required: URL
+  applications: ObjectId[]   // References to applications
+}
+```
+
+### Shelter
+
+```typescript
+{
+  _id: ObjectId,
+  name: string,              // Required
+  location: string,          // Required
+  users: ObjectId[],         // References to users (staff)
+  paymentEmail: string,      // Required: for adoption fees
+  animals: ObjectId[]        // References to animals
+}
+```
+
+### Application
+
+```typescript
+{
+  _id: ObjectId,
+  animalId: string,          // Required
+  userId: string,            // Required
+  applicationData: string    // Required: JSON stringified form data
+}
+```
+
+---
+
+## GraphQL API
 
 ### Queries
-- `animals(shelter: ID, species: String): [Animal]`
-- `animal(id: ID!): Animal`
-- `shelters: [Shelter]`
-- `user(id: ID!): User`
+
+| Query | Parameters | Returns |
+|-------|------------|---------|
+| `users` | - | All users |
+| `user` | `_id: ID!` | Single user |
+| `animals` | - | All animals |
+| `findAnimals` | `type: String!` | Filtered animals |
+| `animal` | `_id: ID!` | Single animal |
+| `applications` | - | All applications |
+| `shelters` | - | All shelters |
+| `shelter` | `_id: ID` | Single shelter |
 
 ### Mutations
-- `createApplication(animalId: ID!): Application`
-- `updateApplicationStatus(id: ID!, status: String!): Application`
-- `registerUser(email: String!, password: String!): User`
+
+| Mutation | Purpose |
+|----------|---------|
+| `register` | Create user account |
+| `login` | Authenticate user |
+| `logout` | Log out user |
+| `verifyUser` | Verify JWT token |
+| `userId` | Get user ID from token |
+| `newAnimal` | Create animal listing |
+| `deleteAnimal` | Remove animal |
+| `updateAnimal` | Edit animal |
+| `newApplication` | Submit adoption application |
+| `deleteApplication` | Cancel application |
+| `editApplication` | Update application status |
+| `newShelter` | Create shelter |
+| `deleteShelter` | Remove shelter |
+| `editShelter` | Update shelter |
+
+---
+
+## Authentication Flow
+
+```
+┌──────────┐     ┌──────────┐     ┌──────────┐
+│  Client   │────▶│  Server  │────▶│ MongoDB  │
+│           │     │          │     │          │
+│ 1. Login  │     │ 2. Verify│     │ 3. Find  │
+│    Form   │     │    creds │     │    User  │
+│           │◀────│          │◀────│          │
+│ 5. Store  │     │ 4. Sign  │     │          │
+│    JWT    │     │    JWT   │     │          │
+└──────────┘     └──────────┘     └──────────┘
+
+Subsequent Requests:
+- JWT sent in Authorization header
+- Server verifies token via Passport.js
+- Token contains user ID for database lookup
+```
+
+### OAuth Flow (Google/Facebook)
+
+1. Client redirects to OAuth provider
+2. User authorizes on provider
+3. Provider redirects back with auth code
+4. Server exchanges code for token
+5. Server creates/finds user with provider ID
+6. Server issues JWT to client
+
+---
+
+## Deployment Architecture
+
+### Render.com Configuration
+
+```yaml
+# render.yaml defines infrastructure as code
+
+Frontend (save-a-stray-site):
+  Type: Static site
+  Build: cd client && npm ci && npm run build
+  Publish: client/build
+  Features:
+    - SPA routing (/* → /index.html)
+    - Asset caching (1 year immutable)
+
+Backend (save-a-stray-api):
+  Type: Web service (Node.js, free tier)
+  Build: npm ci && npm run build
+  Start: npm start
+  Port: 10000
+  Health: /health
+  Features:
+    - Auto-deploy on push
+    - Spins down after 15 min inactivity (free tier)
+```
+
+### Environment Variables
+
+```bash
+# Backend
+NODE_ENV=production
+PORT=10000
+MONGO_URI=<MongoDB Atlas connection string>
+SECRET_OR_KEY=<JWT secret>
+GOOG_CLIENT=<Google OAuth client ID>
+GOOG_SECRET=<Google OAuth secret>
+FBOOK_KEY=<Facebook App ID>
+FBOOK_CLIENT=<Facebook App Secret>
+CORS_ORIGIN=<Frontend URL>
+
+# Frontend (build-time)
+VITE_API_URL=<Backend URL>
+```
+
+---
+
+## Future Architecture (Phase 2+)
+
+### Planned Additions
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    PLANNED SERVICES                               │
+│                                                                   │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
+│  │  Redis       │  │  Email Svc   │  │  Cloud Storage       │  │
+│  │  (Bull Queue)│  │  (SendGrid)  │  │  (S3/Cloudinary)     │  │
+│  │              │  │              │  │                      │  │
+│  │  - Sync jobs │  │  - Auto-ack  │  │  - Animal photos     │  │
+│  │  - Rate limit│  │  - Notifs    │  │  - Videos            │  │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘  │
+│                                                                   │
+│  ┌──────────────┐  ┌──────────────┐                             │
+│  │  Petfinder   │  │  Adopt-a-Pet │                             │
+│  │  Sync        │  │  Sync        │                             │
+│  │  Adapter     │  │  Adapter     │                             │
+│  └──────────────┘  └──────────────┘                             │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Data Flow
+
+### Animal Listing Creation
+
+```
+Shelter Staff → Dashboard → GraphQL Mutation → MongoDB → Response
+                                   │
+                                   ├──▶ Sync Queue (future)
+                                   │        ├──▶ Petfinder
+                                   │        └──▶ Adopt-a-Pet
+                                   │
+                                   └──▶ Search Index Update
+```
+
+### Adoption Application Flow
+
+```
+Adopter → Application Form → GraphQL Mutation → MongoDB
+                                    │
+                                    ├──▶ Auto-Acknowledgment Email (future)
+                                    │
+                                    └──▶ Shelter Dashboard Notification
+```
+
+---
+
+## Document History
+
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 1.0.0 | Jan 2026 | Original | Basic architecture overview |
+| 2.0.0 | Jan 22, 2026 | Claude Code | Complete rewrite to match current codebase |
+
+---
+
+**Related Documents:**
+- [ROADMAP.md](./ROADMAP.md) - Implementation phases
+- [FEATURE_BACKLOG.md](./FEATURE_BACKLOG.md) - Complete feature list
+- [CODING_STANDARDS.md](./CODING_STANDARDS.md) - Development guidelines
+- [docs/sdd/](./sdd/) - Feature specifications
