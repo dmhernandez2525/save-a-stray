@@ -18,6 +18,8 @@ import ShelterAnalyticsType from './shelter_analytics_type';
 import ReviewType from './review_type';
 import NotificationType from './notification_type';
 import { NotificationDocument } from '../../models/Notification';
+import EventType from './event_type';
+import { EventDocument } from '../../models/Event';
 import { ApplicationDocument } from '../../models/Application';
 import { AnimalDocument } from '../../models/Animal';
 import { UserDocument } from '../../models/User';
@@ -32,6 +34,7 @@ const Shelter = mongoose.model<ShelterDocument>('shelter');
 const SuccessStoryModel = mongoose.model<SuccessStoryDocument>('successStory');
 const ReviewModel = mongoose.model<ReviewDocument>('review');
 const NotificationModel = mongoose.model<NotificationDocument>('notification');
+const EventModel = mongoose.model<EventDocument>('event');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -147,6 +150,13 @@ const RootQueryType = new GraphQLObjectType({
         const shelter = await Shelter.findById(args.shelterId);
         if (!shelter || !shelter.users || shelter.users.length === 0) return [];
         return User.find({ _id: { $in: shelter.users } });
+      }
+    },
+    shelterEvents: {
+      type: new GraphQLList(EventType),
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { shelterId: string }) {
+        return EventModel.find({ shelterId: args.shelterId }).sort({ date: 1 });
       }
     },
     successStories: {

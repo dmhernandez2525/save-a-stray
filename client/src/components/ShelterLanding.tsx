@@ -12,6 +12,7 @@ import ShelterApplications from "./ShelterApplications";
 import ShelterAnalytics from "./ShelterAnalytics";
 import StaffManagement from "./StaffManagement";
 import BulkImport from "./BulkImport";
+import EventCalendar from "./EventCalendar";
 import { exportAnimalsCsv } from "../util/exportCsv";
 
 const { FETCH_SHELTER } = Queries;
@@ -327,6 +328,10 @@ class ShelterLanding extends Component<ShelterLandingProps, ShelterLandingState>
 
                   <div className="mt-6">
                     <BulkImport shelterId={shelterId} />
+                  </div>
+
+                  <div className="mt-6">
+                    <EventCalendar shelterId={shelterId} />
                   </div>
                 </>
               );
