@@ -685,4 +685,44 @@ describe('GraphQL Schema Tests', () => {
     const argNames = fields.deleteEvent.args.map(a => a.name);
     expect(argNames).toContain('_id');
   });
+
+  it('should have DonationType with correct fields', () => {
+    const DonationType = require('../server/schema/types/donation_type').default;
+    const fields = DonationType.getFields();
+    expect(fields._id).toBeDefined();
+    expect(fields.shelterId).toBeDefined();
+    expect(fields.donorName).toBeDefined();
+    expect(fields.amount).toBeDefined();
+    expect(fields.message).toBeDefined();
+    expect(fields.createdAt).toBeDefined();
+  });
+
+  it('should have shelterDonations query with shelterId arg', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+    expect(fields.shelterDonations).toBeDefined();
+    expect(fields.shelterDonations.args).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'shelterId' })
+      ])
+    );
+  });
+
+  it('should have createDonation mutation with correct args', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const fields = mutation.getFields();
+    expect(fields.createDonation).toBeDefined();
+    const argNames = fields.createDonation.args.map(a => a.name);
+    expect(argNames).toContain('shelterId');
+    expect(argNames).toContain('donorName');
+    expect(argNames).toContain('amount');
+    expect(argNames).toContain('message');
+  });
+
+  it('should return DonationType from createDonation mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const DonationType = require('../server/schema/types/donation_type').default;
+    const fields = mutation.getFields();
+    expect(fields.createDonation.type).toBe(DonationType);
+  });
 });
