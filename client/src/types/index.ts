@@ -77,6 +77,15 @@ export interface FetchUserResponse {
   };
 }
 
+export interface FindAnimalsVariables {
+  type?: string;
+  sex?: string;
+  color?: string;
+  name?: string;
+  minAge?: number;
+  maxAge?: number;
+}
+
 export interface FindAnimalsResponse {
   findAnimals: Animal[];
 }
