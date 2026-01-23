@@ -94,6 +94,16 @@ const RootQueryType = new GraphQLObjectType({
         return Animal.find({ _id: { $in: user.favorites } });
       }
     },
+    shelterApplications: {
+      type: new GraphQLList(ApplicationType),
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      async resolve(_, args: { shelterId: string }) {
+        const shelter = await Shelter.findById(args.shelterId);
+        if (!shelter || !shelter.animals || shelter.animals.length === 0) return [];
+        const animalIds = shelter.animals.map((id) => id.toString());
+        return Application.find({ animalId: { $in: animalIds } });
+      }
+    },
     shelters: {
       type: new GraphQLList(ShelterType),
       resolve() {

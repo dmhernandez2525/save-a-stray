@@ -88,6 +88,10 @@ export interface FetchShelterResponse {
   shelter: Shelter;
 }
 
+export interface ShelterApplicationsResponse {
+  shelterApplications: Application[];
+}
+
 export interface FindAnimalsVariables {
   type?: string;
   breed?: string;

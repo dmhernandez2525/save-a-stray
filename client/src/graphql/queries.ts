@@ -5,6 +5,7 @@ interface Queries {
   USER_ID: DocumentNode;
   FETCH_USER: DocumentNode;
   FETCH_SHELTER: DocumentNode;
+  SHELTER_APPLICATIONS: DocumentNode;
   FIND_ANIMALS: DocumentNode;
   FETCH_ANIMAL: DocumentNode;
   USER_FAVORITES: DocumentNode;
@@ -72,6 +73,23 @@ const queries: Queries = {
           age
           sex
           status
+          image
+        }
+      }
+    }
+  `,
+  SHELTER_APPLICATIONS: gql`
+    query ShelterApplications($shelterId: ID!) {
+      shelterApplications(shelterId: $shelterId) {
+        _id
+        animalId
+        userId
+        applicationData
+        status
+        submittedAt
+        animal {
+          _id
+          name
           image
         }
       }
