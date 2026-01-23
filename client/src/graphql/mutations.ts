@@ -8,6 +8,7 @@ interface Mutations {
   CREATE_ANIMAL: DocumentNode;
   UPDATE_ANIMAL_STATUS: DocumentNode;
   UPDATE_APPLICATION_STATUS: DocumentNode;
+  UPDATE_USER: DocumentNode;
   ADD_FAVORITE: DocumentNode;
   REMOVE_FAVORITE: DocumentNode;
   CREATE_APPLICATION: DocumentNode;
@@ -118,6 +119,15 @@ const mutations: Mutations = {
         _id
         status
         submittedAt
+      }
+    }
+  `,
+  UPDATE_USER: gql`
+    mutation UpdateUser($_id: ID!, $name: String, $email: String) {
+      updateUser(_id: $_id, name: $name, email: $email) {
+        _id
+        name
+        email
       }
     }
   `,

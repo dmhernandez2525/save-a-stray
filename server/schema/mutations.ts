@@ -291,6 +291,24 @@ const mutation = new GraphQLObjectType({
         return null;
       }
     },
+    updateUser: {
+      type: UserType,
+      args: {
+        _id: { type: GraphQLID },
+        name: { type: GraphQLString },
+        email: { type: GraphQLString }
+      },
+      async resolve(_, args: { _id: string; name?: string; email?: string }) {
+        const user = await User.findById(args._id);
+        if (user) {
+          if (args.name) user.name = args.name;
+          if (args.email) user.email = args.email;
+          await user.save();
+          return user;
+        }
+        return null;
+      }
+    },
     addFavorite: {
       type: UserType,
       args: {
