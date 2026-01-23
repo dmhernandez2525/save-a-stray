@@ -6,6 +6,7 @@ interface Queries {
   FETCH_USER: DocumentNode;
   FETCH_SHELTER: DocumentNode;
   SHELTER_APPLICATIONS: DocumentNode;
+  SHELTER_ANALYTICS: DocumentNode;
   USER_APPLICATIONS: DocumentNode;
   FIND_ANIMALS: DocumentNode;
   FETCH_ANIMAL: DocumentNode;
@@ -156,6 +157,23 @@ const queries: Queries = {
         images
         video
         status
+      }
+    }
+  `,
+  SHELTER_ANALYTICS: gql`
+    query ShelterAnalytics($shelterId: ID!) {
+      shelterAnalytics(shelterId: $shelterId) {
+        totalAnimals
+        availableAnimals
+        pendingAnimals
+        adoptedAnimals
+        adoptionRate
+        totalApplications
+        submittedApplications
+        underReviewApplications
+        approvedApplications
+        rejectedApplications
+        recentApplications
       }
     }
   `,

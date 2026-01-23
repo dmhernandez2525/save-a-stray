@@ -398,4 +398,30 @@ describe('GraphQL Schema Tests', () => {
     expect(args).toContain('story');
     expect(args).toContain('image');
   });
+
+  it('should have shelterAnalytics query with shelterId arg', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.shelterAnalytics).toBeDefined();
+    const args = fields.shelterAnalytics.args.map(a => a.name);
+    expect(args).toContain('shelterId');
+  });
+
+  it('should have ShelterAnalyticsType with all analytics fields', () => {
+    const ShelterAnalyticsType = require('../server/schema/types/shelter_analytics_type').default;
+    const fields = ShelterAnalyticsType.getFields();
+
+    expect(fields.totalAnimals).toBeDefined();
+    expect(fields.availableAnimals).toBeDefined();
+    expect(fields.pendingAnimals).toBeDefined();
+    expect(fields.adoptedAnimals).toBeDefined();
+    expect(fields.adoptionRate).toBeDefined();
+    expect(fields.totalApplications).toBeDefined();
+    expect(fields.submittedApplications).toBeDefined();
+    expect(fields.underReviewApplications).toBeDefined();
+    expect(fields.approvedApplications).toBeDefined();
+    expect(fields.rejectedApplications).toBeDefined();
+    expect(fields.recentApplications).toBeDefined();
+  });
 });
