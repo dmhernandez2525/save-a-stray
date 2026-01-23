@@ -33,12 +33,30 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({ filters, onFiltersChange 
         ))}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <div>
           <Input
             placeholder="Search by name..."
             value={filters.name || ""}
             onChange={(e) => updateFilter("name", e.target.value || undefined)}
+            className="bg-white/90"
+          />
+        </div>
+
+        <div>
+          <Input
+            placeholder="Breed..."
+            value={filters.breed || ""}
+            onChange={(e) => updateFilter("breed", e.target.value || undefined)}
+            className="bg-white/90"
+          />
+        </div>
+
+        <div>
+          <Input
+            placeholder="Color..."
+            value={filters.color || ""}
+            onChange={(e) => updateFilter("color", e.target.value || undefined)}
             className="bg-white/90"
           />
         </div>
@@ -83,15 +101,6 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({ filters, onFiltersChange 
             min={0}
             value={filters.maxAge ?? ""}
             onChange={(e) => updateFilter("maxAge", e.target.value ? Number(e.target.value) : undefined)}
-            className="bg-white/90"
-          />
-        </div>
-
-        <div>
-          <Input
-            placeholder="Color..."
-            value={filters.color || ""}
-            onChange={(e) => updateFilter("color", e.target.value || undefined)}
             className="bg-white/90"
           />
         </div>

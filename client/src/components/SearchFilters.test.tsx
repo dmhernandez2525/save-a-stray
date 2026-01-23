@@ -147,6 +147,21 @@ describe("SearchFilters", () => {
     expect(mockOnChange).toHaveBeenCalledWith({ status: undefined });
   });
 
+  it("renders breed filter input", () => {
+    render(<SearchFilters filters={defaultFilters} onFiltersChange={mockOnChange} />);
+
+    expect(screen.getByPlaceholderText("Breed...")).toBeInTheDocument();
+  });
+
+  it("calls onFiltersChange when breed is entered", () => {
+    render(<SearchFilters filters={defaultFilters} onFiltersChange={mockOnChange} />);
+
+    fireEvent.change(screen.getByPlaceholderText("Breed..."), {
+      target: { value: "Labrador" },
+    });
+    expect(mockOnChange).toHaveBeenCalledWith({ breed: "Labrador" });
+  });
+
   it("preserves existing filters when updating a single field", () => {
     const filters: FindAnimalsVariables = { type: "Dogs", sex: "Male" };
     render(<SearchFilters filters={filters} onFiltersChange={mockOnChange} />);

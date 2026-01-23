@@ -12,6 +12,10 @@ const AnimalSchema = new Schema<AnimalDocument>({
     type: String,
     required: true
   },
+  breed: {
+    type: String,
+    default: ''
+  },
   age: {
     type: Number,
     required: true
