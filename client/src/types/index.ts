@@ -79,6 +79,9 @@ export interface VerifyUserResponse {
 
 export interface FetchUserResponse {
   user: {
+    _id: string;
+    name: string;
+    email: string;
     userRole: string;
     shelter?: Shelter;
   };
@@ -90,6 +93,10 @@ export interface FetchShelterResponse {
 
 export interface ShelterApplicationsResponse {
   shelterApplications: Application[];
+}
+
+export interface UserApplicationsResponse {
+  userApplications: Application[];
 }
 
 export interface FindAnimalsVariables {

@@ -310,4 +310,13 @@ describe('GraphQL Schema Tests', () => {
     const args = fields.shelterApplications.args.map(a => a.name);
     expect(args).toContain('shelterId');
   });
+
+  it('should have userApplications query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.userApplications).toBeDefined();
+    const args = fields.userApplications.args.map(a => a.name);
+    expect(args).toContain('userId');
+  });
 });

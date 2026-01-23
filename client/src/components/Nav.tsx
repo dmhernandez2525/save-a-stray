@@ -54,6 +54,12 @@ const Nav: React.FC<NavProps> = (props) => {
                       >
                         Logout
                       </Button>
+                      <Link
+                        to="/profile"
+                        className="font-capriola text-sky-blue no-underline self-center hover:underline hover:decoration-salmon text-sm"
+                      >
+                        Profile
+                      </Link>
                       {BackButton}
                     </div>
                   );

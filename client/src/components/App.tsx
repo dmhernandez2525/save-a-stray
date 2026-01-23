@@ -10,6 +10,7 @@ import Application from "./Application";
 import Shelter from "./Shelter";
 import ShelterLanding from "./ShelterLanding";
 import Landing from "./Landing";
+import ProfilePage from "./ProfilePage";
 import UserLanding from "./UserLanding";
 import AuthRoute from "../util/route_util";
 import ProtectedRoute from "../util/protected_route";
@@ -39,6 +40,10 @@ const App: React.FC = () => {
           <Route
             path="/User"
             element={<ProtectedRoute element={<UserLanding />} />}
+          />
+          <Route
+            path="/profile"
+            element={<ProtectedRoute element={<ProfilePage />} />}
           />
           <Route
             path="/Shelter"
