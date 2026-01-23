@@ -140,6 +140,35 @@ const RootQueryType = new GraphQLObjectType({
         return SuccessStoryModel.find({}).sort({ createdAt: -1 });
       }
     },
+    similarAnimals: {
+      type: new GraphQLList(AnimalType),
+      args: {
+        animalId: { type: new GraphQLNonNull(GraphQLID) },
+        limit: { type: GraphQLInt }
+      },
+      async resolve(_, args: { animalId: string; limit?: number }) {
+        const animal = await Animal.findById(args.animalId);
+        if (!animal) return [];
+        const limit = args.limit || 4;
+        // Find animals of same type, excluding current, preferring same breed
+        const sameBreed = await Animal.find({
+          _id: { $ne: args.animalId },
+          type: animal.type,
+          breed: animal.breed,
+          status: 'available'
+        }).limit(limit);
+        if (sameBreed.length >= limit) return sameBreed;
+        // Fill remaining slots with same type
+        const existingIds = sameBreed.map(a => a._id.toString());
+        existingIds.push(args.animalId);
+        const sameType = await Animal.find({
+          _id: { $nin: existingIds },
+          type: animal.type,
+          status: 'available'
+        }).limit(limit - sameBreed.length);
+        return [...sameBreed, ...sameType];
+      }
+    },
     shelterAnalytics: {
       type: ShelterAnalyticsType,
       args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
