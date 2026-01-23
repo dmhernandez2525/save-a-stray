@@ -12,6 +12,7 @@ interface Mutations {
   REMOVE_FAVORITE: DocumentNode;
   CREATE_APPLICATION: DocumentNode;
   CREATE_SHELTER: DocumentNode;
+  EDIT_SHELTER: DocumentNode;
   CREATE_SUCCESS_STORY: DocumentNode;
 }
 
@@ -167,6 +168,41 @@ const mutations: Mutations = {
         location
         paymentEmail
         _id
+      }
+    }
+  `,
+  EDIT_SHELTER: gql`
+    mutation EditShelter(
+      $_id: ID!
+      $name: String
+      $location: String
+      $paymentEmail: String
+      $phone: String
+      $email: String
+      $website: String
+      $hours: String
+      $description: String
+    ) {
+      editShelter(
+        _id: $_id
+        name: $name
+        location: $location
+        paymentEmail: $paymentEmail
+        phone: $phone
+        email: $email
+        website: $website
+        hours: $hours
+        description: $description
+      ) {
+        _id
+        name
+        location
+        paymentEmail
+        phone
+        email
+        website
+        hours
+        description
       }
     }
   `,
