@@ -6,6 +6,7 @@ const User = require('../server/models/User').default;
 const Shelter = require('../server/models/Shelter').default;
 const ActivityLog = require('../server/models/ActivityLog').default;
 const TerminalReader = require('../server/models/TerminalReader').default;
+const Message = require('../server/models/Message').default;
 
 describe('Mongoose Models Schema Tests', () => {
   describe('Animal Model', () => {
@@ -243,6 +244,32 @@ describe('Mongoose Models Schema Tests', () => {
       expect(schema.deviceType.default).toBe('simulated');
       expect(schema.serialNumber.default).toBe('');
       expect(schema.location.default).toBe('');
+    });
+  });
+
+  describe('Message Model', () => {
+    it('should have required fields defined in schema', () => {
+      const schema = Message.schema.obj;
+      expect(schema.senderId).toBeDefined();
+      expect(schema.senderId.required).toBe(true);
+      expect(schema.recipientId).toBeDefined();
+      expect(schema.recipientId.required).toBe(true);
+      expect(schema.shelterId).toBeDefined();
+      expect(schema.shelterId.required).toBe(true);
+      expect(schema.content).toBeDefined();
+      expect(schema.content.required).toBe(true);
+    });
+
+    it('should have read field defaulting to false', () => {
+      const schema = Message.schema.obj;
+      expect(schema.read).toBeDefined();
+      expect(schema.read.default).toBe(false);
+    });
+
+    it('should have createdAt field with Date type', () => {
+      const schema = Message.schema.obj;
+      expect(schema.createdAt).toBeDefined();
+      expect(schema.createdAt.type).toBe(Date);
     });
   });
 });

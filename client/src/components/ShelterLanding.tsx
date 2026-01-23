@@ -19,6 +19,7 @@ import ApplicationTemplateManager from "./ApplicationTemplateManager";
 import VerificationBadge from "./VerificationBadge";
 import ActivityFeed from "./ActivityFeed";
 import TerminalReaderManager from "./TerminalReaderManager";
+import MessagingPanel from "./MessagingPanel";
 import { exportAnimalsCsv } from "../util/exportCsv";
 
 const { FETCH_SHELTER } = Queries;
@@ -364,6 +365,10 @@ class ShelterLanding extends Component<ShelterLandingProps, ShelterLandingState>
 
                   <div className="mt-6">
                     <TerminalReaderManager shelterId={shelterId} />
+                  </div>
+
+                  <div className="mt-6">
+                    <MessagingPanel shelterId={shelterId} currentUserId={shelterId} />
                   </div>
                 </>
               );

@@ -30,6 +30,7 @@ import SavedSearchType from './types/saved_search_type';
 import ApplicationTemplateType from './types/application_template_type';
 import ActivityLogType from './types/activity_log_type';
 import TerminalReaderType from './types/terminal_reader_type';
+import MessageType from './types/message_type';
 import PaymentIntentType from './types/payment_intent_type';
 import * as stripeTerminal from '../services/stripeTerminal';
 import { EventDocument } from '../models/Event';
@@ -39,6 +40,7 @@ import { SavedSearchDocument } from '../models/SavedSearch';
 import { ApplicationTemplateDocument } from '../models/ApplicationTemplate';
 import { ActivityLogDocument } from '../models/ActivityLog';
 import { TerminalReaderDocument } from '../models/TerminalReader';
+import { MessageDocument } from '../models/Message';
 import { ReviewDocument } from '../models/Review';
 import { NotificationDocument } from '../models/Notification';
 
@@ -56,6 +58,7 @@ const SavedSearchModel = mongoose.model<SavedSearchDocument>('savedSearch');
 const ApplicationTemplateModel = mongoose.model<ApplicationTemplateDocument>('applicationTemplate');
 const ActivityLogModel = mongoose.model<ActivityLogDocument>('activityLog');
 const TerminalReaderModel = mongoose.model<TerminalReaderDocument>('terminalReader');
+const MessageModel = mongoose.model<MessageDocument>('message');
 
 interface RegisterArgs {
   name: string;
@@ -954,6 +957,47 @@ const mutation = new GraphQLObjectType({
           description: paymentIntent.description || '',
           clientSecret: paymentIntent.client_secret || ''
         };
+      }
+    },
+    sendMessage: {
+      type: MessageType,
+      args: {
+        senderId: { type: GraphQLString },
+        recipientId: { type: GraphQLString },
+        shelterId: { type: GraphQLString },
+        content: { type: GraphQLString }
+      },
+      async resolve(_, args: { senderId: string; recipientId: string; shelterId: string; content: string }) {
+        const message = new MessageModel({
+          senderId: args.senderId,
+          recipientId: args.recipientId,
+          shelterId: args.shelterId,
+          content: args.content,
+          read: false,
+          createdAt: new Date()
+        });
+        await message.save();
+        return message;
+      }
+    },
+    markMessagesRead: {
+      type: GraphQLBoolean,
+      args: {
+        shelterId: { type: GraphQLString },
+        userId: { type: GraphQLString },
+        readerId: { type: GraphQLString }
+      },
+      async resolve(_, args: { shelterId: string; userId: string; readerId: string }) {
+        await MessageModel.updateMany(
+          {
+            shelterId: args.shelterId,
+            senderId: args.userId,
+            recipientId: args.readerId,
+            read: false
+          },
+          { $set: { read: true } }
+        );
+        return true;
       }
     }
   })
