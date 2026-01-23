@@ -234,6 +234,16 @@ describe('GraphQL Schema Tests', () => {
     expect(argNames).toContain('maxAge');
   });
 
+  it('should have pagination args (limit, offset) on findAnimals', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+    const findAnimalsArgs = fields.findAnimals.args;
+
+    const argNames = findAnimalsArgs.map(arg => arg.name);
+    expect(argNames).toContain('limit');
+    expect(argNames).toContain('offset');
+  });
+
   it('should have updateAnimalStatus mutation', () => {
     const schema = require('../server/schema/schema').default;
     const mutationFields = schema._mutationType.getFields();

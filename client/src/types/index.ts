@@ -108,6 +108,8 @@ export interface FindAnimalsVariables {
   status?: string;
   minAge?: number;
   maxAge?: number;
+  limit?: number;
+  offset?: number;
 }
 
 export interface FindAnimalsResponse {

@@ -46,8 +46,8 @@ const queries: Queries = {
     }
   `,
   FIND_ANIMALS: gql`
-    query FindAnimals($type: String, $breed: String, $sex: String, $color: String, $name: String, $status: String, $minAge: Int, $maxAge: Int) {
-      findAnimals(type: $type, breed: $breed, sex: $sex, color: $color, name: $name, status: $status, minAge: $minAge, maxAge: $maxAge) {
+    query FindAnimals($type: String, $breed: String, $sex: String, $color: String, $name: String, $status: String, $minAge: Int, $maxAge: Int, $limit: Int, $offset: Int) {
+      findAnimals(type: $type, breed: $breed, sex: $sex, color: $color, name: $name, status: $status, minAge: $minAge, maxAge: $maxAge, limit: $limit, offset: $offset) {
         _id
         name
         type
