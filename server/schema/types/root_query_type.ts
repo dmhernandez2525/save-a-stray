@@ -94,6 +94,13 @@ const RootQueryType = new GraphQLObjectType({
         return Animal.find({ _id: { $in: user.favorites } });
       }
     },
+    userApplications: {
+      type: new GraphQLList(ApplicationType),
+      args: { userId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { userId: string }) {
+        return Application.find({ userId: args.userId });
+      }
+    },
     shelterApplications: {
       type: new GraphQLList(ApplicationType),
       args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
