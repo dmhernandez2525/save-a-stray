@@ -26,6 +26,13 @@ describe('Mongoose Models Schema Tests', () => {
       expect(animalSchema.image).toBeDefined();
     });
 
+    it('should have status field with enum and default', () => {
+      const animalSchema = Animal.schema.obj;
+      expect(animalSchema.status).toBeDefined();
+      expect(animalSchema.status.enum).toEqual(['available', 'pending', 'adopted']);
+      expect(animalSchema.status.default).toBe('available');
+    });
+
     it('should have applications reference field', () => {
       const animalSchema = Animal.schema.obj;
       expect(animalSchema.applications).toBeDefined();

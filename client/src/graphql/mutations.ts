@@ -6,6 +6,7 @@ interface Mutations {
   VERIFY_USER: DocumentNode;
   USER_ID: DocumentNode;
   CREATE_ANIMAL: DocumentNode;
+  UPDATE_ANIMAL_STATUS: DocumentNode;
   CREATE_APPLICATION: DocumentNode;
   CREATE_SHELTER: DocumentNode;
 }
@@ -86,6 +87,14 @@ const mutations: Mutations = {
         sex
         color
         description
+      }
+    }
+  `,
+  UPDATE_ANIMAL_STATUS: gql`
+    mutation UpdateAnimalStatus($_id: ID!, $status: String!) {
+      updateAnimalStatus(_id: $_id, status: $status) {
+        _id
+        status
       }
     }
   `,

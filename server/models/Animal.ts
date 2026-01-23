@@ -36,6 +36,11 @@ const AnimalSchema = new Schema<AnimalDocument>({
     type: String,
     required: true
   },
+  status: {
+    type: String,
+    enum: ['available', 'pending', 'adopted'],
+    default: 'available'
+  },
   applications: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'application'

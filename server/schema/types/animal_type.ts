@@ -22,6 +22,7 @@ interface AnimalParentValue {
   image: string;
   video: string;
   description: string;
+  status: string;
 }
 
 const AnimalType: GraphQLObjectType = new GraphQLObjectType({
@@ -37,6 +38,7 @@ const AnimalType: GraphQLObjectType = new GraphQLObjectType({
     image: { type: GraphQLString },
     video: { type: GraphQLString },
     description: { type: GraphQLString },
+    status: { type: GraphQLString },
     applications: {
       type: new GraphQLList(require("./application_type").default),
       resolve(parentValue: AnimalParentValue) {

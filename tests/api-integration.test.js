@@ -228,7 +228,25 @@ describe('GraphQL Schema Tests', () => {
     expect(argNames).toContain('sex');
     expect(argNames).toContain('color');
     expect(argNames).toContain('name');
+    expect(argNames).toContain('status');
     expect(argNames).toContain('minAge');
     expect(argNames).toContain('maxAge');
+  });
+
+  it('should have updateAnimalStatus mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.updateAnimalStatus).toBeDefined();
+    const args = mutationFields.updateAnimalStatus.args.map(a => a.name);
+    expect(args).toContain('_id');
+    expect(args).toContain('status');
+  });
+
+  it('should have status field on AnimalType', () => {
+    const AnimalType = require('../server/schema/types/animal_type').default;
+    const fields = AnimalType.getFields();
+
+    expect(fields.status).toBeDefined();
   });
 });
