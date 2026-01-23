@@ -44,6 +44,7 @@
                        │  - shelters        │
                        │  - animals         │
                        │  - applications    │
+                       │  - successstories  │
                        └────────────────────┘
 ```
 
@@ -114,6 +115,7 @@ save-a-stray/
 │   │   │   ├── Landing.tsx           # Browse animals
 │   │   │   ├── Splash.tsx            # Home page
 │   │   │   ├── FacebookLogin.tsx     # Facebook OAuth component
+│   │   │   ├── SuccessStories.tsx    # Adoption success stories
 │   │   │   ├── Privacy.tsx           # Privacy policy page
 │   │   │   ├── TermsOfService.tsx    # Terms of service page
 │   │   │   ├── slug.tsx              # URL slug utility component
@@ -151,6 +153,7 @@ save-a-stray/
 │   │   ├── Animal.ts
 │   │   ├── Shelter.ts
 │   │   ├── Application.ts
+│   │   ├── SuccessStory.ts
 │   │   └── index.ts
 │   ├── schema/                       # GraphQL schema
 │   │   ├── schema.ts
@@ -160,7 +163,8 @@ save-a-stray/
 │   │       ├── user_type.ts
 │   │       ├── animal_type.ts
 │   │       ├── shelter_type.ts
-│   │       └── application_type.ts
+│   │       ├── application_type.ts
+│   │       └── success_story_type.ts
 │   ├── services/                     # Business logic
 │   │   └── auth.ts
 │   ├── validation/                   # Input validation
@@ -255,7 +259,8 @@ save-a-stray/
   sex: string,               // Required
   color: string,             // Required
   description: string,       // Required
-  image: string,             // Required: URL
+  image: string,             // Required: primary image URL
+  images: string[],          // Additional image URLs (default: [])
   video: string,             // Required: URL
   status: 'available' | 'pending' | 'adopted',  // Default: 'available'
   applications: ObjectId[]   // References to applications
@@ -288,6 +293,21 @@ save-a-stray/
 }
 ```
 
+### SuccessStory
+
+```typescript
+{
+  _id: ObjectId,
+  userId: string,            // Required: author's user ID
+  animalName: string,        // Required: adopted pet's name
+  animalType: string,        // Required: 'Dog', 'Cat', etc.
+  title: string,             // Required: story title
+  story: string,             // Required: full story text
+  image: string,             // Optional photo URL (default: '')
+  createdAt: Date            // Default: Date.now
+}
+```
+
 ---
 
 ## GraphQL API
@@ -307,6 +327,7 @@ save-a-stray/
 | `userFavorites` | `userId: ID!` | User's favorited animals |
 | `shelterApplications` | `shelterId: ID!` | Applications for shelter's animals |
 | `userApplications` | `userId: ID!` | User's submitted applications |
+| `successStories` | - | All success stories (sorted by newest) |
 
 ### Mutations
 
@@ -330,6 +351,7 @@ save-a-stray/
 | `newShelter` | Create shelter |
 | `deleteShelter` | Remove shelter |
 | `editShelter` | Update shelter |
+| `createSuccessStory` | Create adoption success story (userId, animalName, animalType, title, story, image) |
 
 ---
 

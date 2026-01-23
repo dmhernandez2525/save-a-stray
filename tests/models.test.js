@@ -117,6 +117,46 @@ describe('Mongoose Models Schema Tests', () => {
     });
   });
 
+  describe('SuccessStory Model', () => {
+    const SuccessStory = require('../server/models/SuccessStory').default;
+
+    it('should be a valid mongoose model', () => {
+      expect(SuccessStory).toBeDefined();
+      expect(SuccessStory.modelName).toBe('successStory');
+    });
+
+    it('should have required fields defined in schema', () => {
+      const schema = SuccessStory.schema.obj;
+
+      expect(schema.userId).toBeDefined();
+      expect(schema.userId.required).toBe(true);
+
+      expect(schema.animalName).toBeDefined();
+      expect(schema.animalName.required).toBe(true);
+
+      expect(schema.animalType).toBeDefined();
+      expect(schema.animalType.required).toBe(true);
+
+      expect(schema.title).toBeDefined();
+      expect(schema.title.required).toBe(true);
+
+      expect(schema.story).toBeDefined();
+      expect(schema.story.required).toBe(true);
+    });
+
+    it('should have optional image field with default', () => {
+      const schema = SuccessStory.schema.obj;
+      expect(schema.image).toBeDefined();
+      expect(schema.image.default).toBe('');
+    });
+
+    it('should have createdAt field with Date type', () => {
+      const schema = SuccessStory.schema.obj;
+      expect(schema.createdAt).toBeDefined();
+      expect(schema.createdAt.type).toBe(Date);
+    });
+  });
+
   describe('Shelter Model', () => {
     it('should be a valid mongoose model', () => {
       expect(Shelter).toBeDefined();
