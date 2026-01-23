@@ -163,6 +163,13 @@ const queries: Queries = {
         images
         video
         status
+        medicalRecords {
+          _id
+          date
+          recordType
+          description
+          veterinarian
+        }
       }
     }
   `,

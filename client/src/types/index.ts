@@ -14,6 +14,14 @@ export interface User {
 // Animal Types
 export type AnimalStatus = 'available' | 'pending' | 'adopted';
 
+export interface MedicalRecord {
+  _id?: string;
+  date: string;
+  recordType: string;
+  description: string;
+  veterinarian?: string;
+}
+
 export interface Animal {
   _id: string;
   name: string;
@@ -27,6 +35,7 @@ export interface Animal {
   images?: string[];
   video: string;
   status: AnimalStatus;
+  medicalRecords?: MedicalRecord[];
   applications?: Application[];
 }
 

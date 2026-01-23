@@ -35,6 +35,14 @@ export interface UserAuthPayload {
 // Animal Types
 export type AnimalStatus = 'available' | 'pending' | 'adopted';
 
+export interface IMedicalRecord {
+  _id?: Types.ObjectId | string;
+  date: string;
+  recordType: string;
+  description: string;
+  veterinarian?: string;
+}
+
 export interface IAnimal {
   _id: Types.ObjectId | string;
   name: string;
@@ -48,6 +56,7 @@ export interface IAnimal {
   images: string[];
   video: string;
   status: AnimalStatus;
+  medicalRecords: IMedicalRecord[];
   applications: (Types.ObjectId | string)[];
 }
 
