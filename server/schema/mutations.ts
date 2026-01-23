@@ -3,6 +3,7 @@ import {
   GraphQLString,
   GraphQLInt,
   GraphQLID,
+  GraphQLList,
   GraphQLFieldConfigMap
 } from 'graphql';
 import mongoose from 'mongoose';
@@ -55,6 +56,7 @@ interface AnimalArgs {
   color: string;
   description: string;
   image: string;
+  images?: string[];
   video: string;
   status?: string;
   applications?: string;
@@ -143,13 +145,14 @@ const mutation = new GraphQLObjectType({
         color: { type: GraphQLString },
         description: { type: GraphQLString },
         image: { type: GraphQLString },
+        images: { type: new GraphQLList(GraphQLString) },
         video: { type: GraphQLString },
         status: { type: GraphQLString },
         applications: { type: GraphQLID }
       },
       async resolve(_, args: AnimalArgs) {
-        const { name, type, breed, age, sex, color, description, image, video, status } = args;
-        const newAnimal = new Animal({ name, type, breed: breed || '', age, sex, color, description, image, video, status: status || 'available' });
+        const { name, type, breed, age, sex, color, description, image, images, video, status } = args;
+        const newAnimal = new Animal({ name, type, breed: breed || '', age, sex, color, description, image, images: images || [], video, status: status || 'available' });
         await newAnimal.save();
         return newAnimal;
       }
@@ -175,12 +178,13 @@ const mutation = new GraphQLObjectType({
         color: { type: GraphQLString },
         description: { type: GraphQLString },
         image: { type: GraphQLString },
+        images: { type: new GraphQLList(GraphQLString) },
         video: { type: GraphQLString },
         status: { type: GraphQLString },
         applications: { type: GraphQLID }
       },
       async resolve(_, args: AnimalArgs & { _id: string }) {
-        const { _id, name, type, breed, age, sex, color, description, image, video, status } = args;
+        const { _id, name, type, breed, age, sex, color, description, image, images, video, status } = args;
         const animal = await Animal.findById(_id);
         if (animal) {
           animal.name = name;
@@ -191,6 +195,7 @@ const mutation = new GraphQLObjectType({
           animal.color = color;
           animal.description = description;
           animal.image = image;
+          if (images !== undefined) animal.images = images;
           animal.video = video;
           if (status) animal.status = status as typeof animal.status;
           await animal.save();

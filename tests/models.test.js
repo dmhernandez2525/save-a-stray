@@ -40,6 +40,12 @@ describe('Mongoose Models Schema Tests', () => {
       expect(animalSchema.status.default).toBe('available');
     });
 
+    it('should have images array field with default empty array', () => {
+      const animalSchema = Animal.schema.obj;
+      expect(animalSchema.images).toBeDefined();
+      expect(animalSchema.images.type).toEqual([String]);
+    });
+
     it('should have applications reference field', () => {
       const animalSchema = Animal.schema.obj;
       expect(animalSchema.applications).toBeDefined();

@@ -36,6 +36,7 @@ const AnimalType: GraphQLObjectType = new GraphQLObjectType({
     sex: { type: GraphQLString },
     color: { type: GraphQLString },
     image: { type: GraphQLString },
+    images: { type: new GraphQLList(GraphQLString) },
     video: { type: GraphQLString },
     description: { type: GraphQLString },
     status: { type: GraphQLString },

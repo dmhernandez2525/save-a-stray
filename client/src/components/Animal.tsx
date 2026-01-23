@@ -25,14 +25,15 @@ class NewAnimal extends Component<AnimalProps, AnimalState> {
       color: "",
       description: "",
       image: "",
+      images: [],
       video: "",
       application: "",
     };
   }
 
-  update(field: keyof AnimalState) {
+  update(field: keyof Omit<AnimalState, 'images'>) {
     return (e: React.ChangeEvent<HTMLInputElement>) =>
-      this.setState({ [field]: e.target.value } as Pick<AnimalState, keyof AnimalState>);
+      this.setState({ [field]: e.target.value } as unknown as Pick<AnimalState, keyof AnimalState>);
   }
 
   render() {
@@ -74,6 +75,7 @@ class NewAnimal extends Component<AnimalProps, AnimalState> {
                           color: this.state.color,
                           description: this.state.description,
                           image: this.state.image,
+                          images: this.state.images.filter(url => url.trim() !== ""),
                           video: this.state.video,
                           applications: this.state.application,
                         },
@@ -161,14 +163,52 @@ class NewAnimal extends Component<AnimalProps, AnimalState> {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="image">Image URL</Label>
+                      <Label htmlFor="image">Primary Image URL</Label>
                       <Input
                         id="image"
                         value={this.state.image}
                         onChange={this.update("image")}
-                        placeholder="Image URL"
+                        placeholder="Primary Image URL"
                         className="bg-blue-50"
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Additional Images</Label>
+                      {this.state.images.map((url, idx) => (
+                        <div key={idx} className="flex gap-2">
+                          <Input
+                            value={url}
+                            onChange={(e) => {
+                              const newImages = [...this.state.images];
+                              newImages[idx] = e.target.value;
+                              this.setState({ images: newImages });
+                            }}
+                            placeholder={`Image URL ${idx + 2}`}
+                            className="bg-blue-50 flex-1"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const newImages = this.state.images.filter((_, i) => i !== idx);
+                              this.setState({ images: newImages });
+                            }}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => this.setState({ images: [...this.state.images, ""] })}
+                        className="text-sky-blue"
+                      >
+                        + Add Image
+                      </Button>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="video">Video URL</Label>

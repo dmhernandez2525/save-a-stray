@@ -36,6 +36,10 @@ const AnimalSchema = new Schema<AnimalDocument>({
     type: String,
     required: true
   },
+  images: {
+    type: [String],
+    default: []
+  },
   video: {
     type: String,
     required: true

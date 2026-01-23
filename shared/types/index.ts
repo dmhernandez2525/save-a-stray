@@ -45,6 +45,7 @@ export interface IAnimal {
   color: string;
   description: string;
   image: string;
+  images: string[];
   video: string;
   status: AnimalStatus;
   applications: (Types.ObjectId | string)[];
