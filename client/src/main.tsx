@@ -43,10 +43,10 @@ const cache = new InMemoryCache({
 const httpLink = createHttpLink({
   uri:
     import.meta.env.MODE === "production"
-      ? "https://save-a-stray.herokuapp.com/graphql"
+      ? "https://save-a-stray-api.onrender.com/graphql"
       : "http://localhost:5000/graphql",
   headers: {
-    authorization: localStorage.getItem("auth-token"),
+    authorization: localStorage.getItem("auth-token") || "",
   },
 });
 
@@ -88,7 +88,7 @@ const Root = () => {
   );
 };
 
-const container = document.getElementById("root");
+const container = document.getElementById("root")!;
 const root = createRoot(container);
 
 verifyUser().then(() => {

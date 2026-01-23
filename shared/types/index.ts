@@ -27,6 +27,7 @@ export interface UserAuthPayload {
   token: string;
   loggedIn: boolean;
   userRole: string;
+  shelterId?: string;
   shelter?: IShelter | null;
 }
 
@@ -104,6 +105,7 @@ export interface Keys {
   secretOrKey: string;
   fbookKey: string;
   fbookClient: string;
+  fbookCallbackURL?: string;
   googClient: string;
   googkey: string;
 }

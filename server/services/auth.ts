@@ -59,7 +59,8 @@ export const register = async (data: RegisterInput): Promise<UserAuthPayload> =>
       _id: user._id.toString(),
       name: user.name,
       email: user.email,
-      userRole: user.userRole
+      userRole: user.userRole,
+      shelterId: user.shelterId?.toString()
     };
   } catch (err) {
     throw err;
@@ -94,7 +95,8 @@ export const facebookRegister = async (data: FacebookProfile): Promise<UserAuthP
         _id: user._id.toString(),
         name: user.name,
         email: user.email,
-        userRole: user.userRole
+        userRole: user.userRole,
+        shelterId: user.shelterId?.toString()
       };
     }
 
@@ -152,7 +154,8 @@ export const login = async (data: LoginInput): Promise<UserAuthPayload> => {
       _id: user._id.toString(),
       name: user.name,
       email: user.email,
-      userRole: user.userRole
+      userRole: user.userRole,
+      shelterId: user.shelterId?.toString()
     };
   } catch (err) {
     throw err;
@@ -174,7 +177,8 @@ export const logout = async (data: IdTokenData): Promise<UserAuthPayload> => {
       _id: user._id.toString(),
       name: user.name,
       email: user.email,
-      userRole: user.userRole
+      userRole: user.userRole,
+      shelterId: user.shelterId?.toString()
     };
   } catch (err) {
     throw err;
@@ -211,7 +215,8 @@ export const userId = async (data: TokenData): Promise<Partial<UserAuthPayload>>
         _id: user._id.toString(),
         name: user.name,
         email: user.email,
-        userRole: user.userRole
+        userRole: user.userRole,
+        shelterId: user.shelterId?.toString()
       };
     }
     return { loggedIn: false };

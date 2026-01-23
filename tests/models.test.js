@@ -1,9 +1,9 @@
 const mongoose = require('mongoose');
 
-// Import models
-const Animal = require('../server/models/Animal');
-const User = require('../server/models/User');
-const Shelter = require('../server/models/Shelter');
+// Import models (TypeScript default exports)
+const Animal = require('../server/models/Animal').default;
+const User = require('../server/models/User').default;
+const Shelter = require('../server/models/Shelter').default;
 
 describe('Mongoose Models Schema Tests', () => {
   describe('Animal Model', () => {
