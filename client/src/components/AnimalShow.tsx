@@ -5,51 +5,35 @@ import NewApplication from "./Application";
 import { withRouter, WithRouterProps } from "../util/withRouter";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { FetchAnimalResponse, AnimalFormState } from "../types";
+import { FetchAnimalResponse, AnimalStatus } from "../types";
 
 const { FETCH_ANIMAL } = Queries;
 
+const STATUS_STYLES: Record<AnimalStatus, string> = {
+  available: "bg-green-500 text-white",
+  pending: "bg-yellow-500 text-white",
+  adopted: "bg-blue-500 text-white",
+};
+
+const STATUS_LABELS: Record<AnimalStatus, string> = {
+  available: "Available for Adoption",
+  pending: "Adoption Pending",
+  adopted: "Adopted",
+};
+
 interface AnimalShowProps extends WithRouterProps {}
 
-interface AnimalShowState extends AnimalFormState {
-  show: boolean;
+interface AnimalShowState {
+  showApplication: boolean;
 }
 
 class AnimalShow extends React.Component<AnimalShowProps, AnimalShowState> {
   constructor(props: AnimalShowProps) {
     super(props);
-    this.handleClick = this.handleClick.bind(this);
-    this.showForm = this.showForm.bind(this);
-    this.state = {
-      name: "",
-      type: "",
-      age: "",
-      sex: "",
-      color: "",
-      description: "",
-      image: "",
-      video: "",
-      application: "",
-      show: false,
-    };
-  }
-
-  handleClick() {}
-
-  showForm() {
-    const app = document.getElementById("show-application-wrapper");
-    if (app) {
-      app.classList.toggle("hidden", false);
-      window.scrollTo({
-        top: app.offsetHeight + 50,
-        behavior: "smooth",
-      });
-    }
+    this.state = { showApplication: false };
   }
 
   render() {
-    const backText = "<-- Back to other pets";
-
     return (
       <Query<FetchAnimalResponse>
         query={FETCH_ANIMAL}
@@ -58,90 +42,124 @@ class AnimalShow extends React.Component<AnimalShowProps, AnimalShowState> {
         {({ loading, error, data }) => {
           if (loading) {
             return (
-              <div className="flex items-center justify-center min-h-screen">
-                <h1 className="text-white font-capriola text-2xl animate-pulse">
-                  Loading
-                </h1>
+              <div className="flex items-center justify-center min-h-[50vh]">
+                <p className="text-white font-capriola text-2xl animate-pulse">
+                  Loading...
+                </p>
               </div>
             );
           }
 
           if (error || !data?.animal) {
             return (
-              <div className="flex items-center justify-center min-h-screen">
-                <h1 className="text-red-500 font-capriola text-2xl">
+              <div className="flex items-center justify-center min-h-[50vh]">
+                <p className="text-red-500 font-capriola text-2xl">
                   Error loading animal
-                </h1>
+                </p>
               </div>
             );
           }
 
           const animal = data.animal;
+          const status = (animal.status || "available") as AnimalStatus;
 
           return (
-            <div className="col-start-2 col-end-5 row-start-2 p-4">
+            <div className="max-w-4xl mx-auto p-4">
               <div className="flex items-center justify-between mb-6">
                 <a
                   href="/#/Landing"
                   className="text-sky-blue font-capriola hover:text-salmon transition-colors"
                 >
-                  {backText}
+                  &larr; Back to browsing
                 </a>
-                <h1 className="text-white font-capriola text-4xl">
-                  {animal.name}
-                </h1>
+                <span className={`text-sm font-semibold px-3 py-1 rounded-full ${STATUS_STYLES[status]}`}>
+                  {STATUS_LABELS[status]}
+                </span>
               </div>
 
               <Card className="bg-white overflow-hidden">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <CardContent className="p-6">
-                    <CardTitle className="text-sky-blue font-capriola text-2xl mb-4">
-                      About {animal.name}
-                    </CardTitle>
-                    <div className="space-y-3 text-gray-700">
-                      <p>
-                        Hi, my name is{" "}
-                        <span className="font-bold text-sky-blue">
-                          {animal.name}
-                        </span>
-                        .
-                      </p>
-                      <p>
-                        I am a{" "}
-                        <span className="font-bold">{animal.age}</span> year old{" "}
-                        <span className="font-bold">{animal.sex}</span>.
-                      </p>
-                      <p>
-                        My coat is{" "}
-                        <span className="font-bold">{animal.color}</span>.
-                      </p>
-                      <p>
-                        People say:{" "}
-                        <span className="italic">{animal.description}</span>
-                      </p>
-                    </div>
-                    <Button
-                      variant="salmon"
-                      size="lg"
-                      className="mt-6 w-full"
-                      onClick={this.showForm}
-                    >
-                      Apply to adopt {animal.name}
-                    </Button>
-                  </CardContent>
-                  <div className="h-full min-h-[300px]">
+                <div className="grid grid-cols-1 md:grid-cols-2">
+                  <div className="min-h-[300px] md:min-h-[400px]">
                     <img
                       src={animal.image}
                       alt={animal.name}
                       className="w-full h-full object-cover"
                     />
                   </div>
+                  <div className="p-6 flex flex-col">
+                    <CardHeader className="p-0 mb-4">
+                      <CardTitle className="text-sky-blue font-capriola text-3xl">
+                        {animal.name}
+                      </CardTitle>
+                      {animal.breed && (
+                        <p className="text-muted-foreground text-sm mt-1">{animal.breed}</p>
+                      )}
+                    </CardHeader>
+                    <CardContent className="p-0 flex-1">
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        <div className="bg-gray-50 rounded-lg p-3 text-center">
+                          <p className="text-xs text-muted-foreground uppercase">Type</p>
+                          <p className="font-semibold text-gray-800">{animal.type}</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-3 text-center">
+                          <p className="text-xs text-muted-foreground uppercase">Age</p>
+                          <p className="font-semibold text-gray-800">{animal.age} yrs</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-3 text-center">
+                          <p className="text-xs text-muted-foreground uppercase">Sex</p>
+                          <p className="font-semibold text-gray-800">{animal.sex}</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-3 text-center">
+                          <p className="text-xs text-muted-foreground uppercase">Color</p>
+                          <p className="font-semibold text-gray-800">{animal.color}</p>
+                        </div>
+                      </div>
+                      <p className="text-gray-700 italic mb-4">{animal.description}</p>
+                    </CardContent>
+                    {status === "available" && (
+                      <Button
+                        variant="salmon"
+                        size="lg"
+                        className="w-full mt-auto"
+                        onClick={() => this.setState({ showApplication: true })}
+                      >
+                        Apply to Adopt {animal.name}
+                      </Button>
+                    )}
+                    {status === "pending" && (
+                      <p className="text-center text-yellow-600 font-capriola text-sm mt-auto">
+                        This animal has a pending adoption application.
+                      </p>
+                    )}
+                    {status === "adopted" && (
+                      <p className="text-center text-blue-600 font-capriola text-sm mt-auto">
+                        This animal has been adopted!
+                      </p>
+                    )}
+                  </div>
                 </div>
               </Card>
 
-              <div id="show-application-wrapper" className="hidden mt-6">
-                <NewApplication animalId={animal._id} />
-              </div>
+              {animal.video && (
+                <Card className="bg-white mt-4 overflow-hidden">
+                  <CardContent className="p-4">
+                    <h3 className="font-capriola text-sky-blue text-lg mb-3">Video</h3>
+                    <video
+                      src={animal.video}
+                      controls
+                      className="w-full rounded-lg max-h-[400px]"
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                  </CardContent>
+                </Card>
+              )}
+
+              {this.state.showApplication && status === "available" && (
+                <div className="mt-6">
+                  <NewApplication animalId={animal._id} />
+                </div>
+              )}
             </div>
           );
         }}
