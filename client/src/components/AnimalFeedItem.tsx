@@ -2,6 +2,7 @@ import React, { Component } from "react";
 import { withRouter, WithRouterProps } from "../util/withRouter";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
+import FavoriteButton from "./FavoriteButton";
 import { Animal, AnimalStatus } from "../types";
 
 const STATUS_STYLES: Record<AnimalStatus, string> = {
@@ -41,9 +42,12 @@ class AnimalFeedItem extends Component<AnimalFeedItemProps> {
             <CardTitle className="text-sky-blue font-capriola text-xl">
               {animal.name}
             </CardTitle>
-            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLES[status]}`}>
-              {STATUS_LABELS[status]}
-            </span>
+            <div className="flex items-center gap-1">
+              <FavoriteButton animalId={animal._id} />
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLES[status]}`}>
+                {STATUS_LABELS[status]}
+              </span>
+            </div>
           </div>
           <span className="text-muted-foreground text-sm">
             {animal.breed && `${animal.breed} · `}{animal.age} yrs · {animal.sex}

@@ -7,6 +7,8 @@ interface Mutations {
   USER_ID: DocumentNode;
   CREATE_ANIMAL: DocumentNode;
   UPDATE_ANIMAL_STATUS: DocumentNode;
+  ADD_FAVORITE: DocumentNode;
+  REMOVE_FAVORITE: DocumentNode;
   CREATE_APPLICATION: DocumentNode;
   CREATE_SHELTER: DocumentNode;
 }
@@ -95,6 +97,22 @@ const mutations: Mutations = {
       updateAnimalStatus(_id: $_id, status: $status) {
         _id
         status
+      }
+    }
+  `,
+  ADD_FAVORITE: gql`
+    mutation AddFavorite($userId: ID!, $animalId: ID!) {
+      addFavorite(userId: $userId, animalId: $animalId) {
+        _id
+        favoriteIds
+      }
+    }
+  `,
+  REMOVE_FAVORITE: gql`
+    mutation RemoveFavorite($userId: ID!, $animalId: ID!) {
+      removeFavorite(userId: $userId, animalId: $animalId) {
+        _id
+        favoriteIds
       }
     }
   `,

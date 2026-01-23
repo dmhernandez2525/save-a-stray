@@ -14,6 +14,7 @@ export interface IUser {
   fbookId?: string;
   shelterId?: Types.ObjectId | string;
   varId?: Types.ObjectId | string;
+  favorites: (Types.ObjectId | string)[];
 }
 
 export interface IUserDocument extends IUser {

@@ -6,6 +6,8 @@ interface Queries {
   FETCH_USER: DocumentNode;
   FIND_ANIMALS: DocumentNode;
   FETCH_ANIMAL: DocumentNode;
+  USER_FAVORITES: DocumentNode;
+  USER_FAVORITE_IDS: DocumentNode;
 }
 
 const queries: Queries = {
@@ -51,6 +53,29 @@ const queries: Queries = {
         image
         video
         status
+      }
+    }
+  `,
+  USER_FAVORITES: gql`
+    query UserFavorites($userId: ID!) {
+      userFavorites(userId: $userId) {
+        _id
+        name
+        type
+        breed
+        age
+        sex
+        color
+        image
+        status
+      }
+    }
+  `,
+  USER_FAVORITE_IDS: gql`
+    query UserFavoriteIds($_id: ID!) {
+      user(_id: $_id) {
+        _id
+        favoriteIds
       }
     }
   `,
