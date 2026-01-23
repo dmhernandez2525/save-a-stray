@@ -3,12 +3,13 @@ import { Query } from "@apollo/client/react/components";
 import Queries from "../graphql/queries";
 import AnimalFeedItem from "./AnimalFeedItem";
 import SearchFilters from "./SearchFilters";
+import SavedSearches from "./SavedSearches";
 import { withRouter, WithRouterProps } from "../util/withRouter";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
-import { FindAnimalsResponse, FindAnimalsVariables, Animal } from "../types";
+import { FindAnimalsResponse, FindAnimalsVariables, Animal, UserIdData } from "../types";
 
-const { FIND_ANIMALS } = Queries;
+const { FIND_ANIMALS, USER_ID } = Queries;
 
 const PAGE_SIZE = 12;
 const DEBOUNCE_MS = 300;
@@ -104,6 +105,30 @@ class UserLanding extends Component<UserLandingProps, UserLandingState> {
         <h1 className="text-white font-capriola text-3xl mb-6">
           Browse Animals
         </h1>
+        <Query<UserIdData> query={USER_ID}>
+          {({ data: userIdData }) => {
+            const currentUserId = userIdData?.userId;
+            if (!currentUserId) return null;
+            return (
+              <div className="w-full max-w-4xl mb-4">
+                <SavedSearches
+                  userId={currentUserId}
+                  onRunSearch={(filters) => {
+                    const newFilters: FindAnimalsVariables = {};
+                    if (filters.type) newFilters.type = filters.type as string;
+                    if (filters.breed) newFilters.breed = filters.breed as string;
+                    if (filters.sex) newFilters.sex = filters.sex as string;
+                    if (filters.color) newFilters.color = filters.color as string;
+                    if (filters.status) newFilters.status = filters.status as string;
+                    if (filters.minAge !== undefined && filters.minAge !== null) newFilters.minAge = filters.minAge as number;
+                    if (filters.maxAge !== undefined && filters.maxAge !== null) newFilters.maxAge = filters.maxAge as number;
+                    this.setState({ filters: newFilters, queryFilters: newFilters, hasMore: true });
+                  }}
+                />
+              </div>
+            );
+          }}
+        </Query>
         <SearchFilters
           filters={this.state.filters}
           onFiltersChange={this.handleFiltersChange}

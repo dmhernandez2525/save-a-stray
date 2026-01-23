@@ -25,9 +25,11 @@ import NotificationType from './types/notification_type';
 import EventType from './types/event_type';
 import DonationType from './types/donation_type';
 import FosterType from './types/foster_type';
+import SavedSearchType from './types/saved_search_type';
 import { EventDocument } from '../models/Event';
 import { DonationDocument } from '../models/Donation';
 import { FosterDocument } from '../models/Foster';
+import { SavedSearchDocument } from '../models/SavedSearch';
 import { ReviewDocument } from '../models/Review';
 import { NotificationDocument } from '../models/Notification';
 
@@ -41,6 +43,7 @@ const NotificationModel = mongoose.model<NotificationDocument>('notification');
 const EventModel = mongoose.model<EventDocument>('event');
 const DonationModel = mongoose.model<DonationDocument>('donation');
 const FosterModel = mongoose.model<FosterDocument>('foster');
+const SavedSearchModel = mongoose.model<SavedSearchDocument>('savedSearch');
 
 interface RegisterArgs {
   name: string;
@@ -670,6 +673,44 @@ const mutation = new GraphQLObjectType({
           return foster;
         }
         return null;
+      }
+    },
+    createSavedSearch: {
+      type: SavedSearchType,
+      args: {
+        userId: { type: GraphQLID },
+        name: { type: GraphQLString },
+        type: { type: GraphQLString },
+        breed: { type: GraphQLString },
+        sex: { type: GraphQLString },
+        color: { type: GraphQLString },
+        status: { type: GraphQLString },
+        minAge: { type: GraphQLInt },
+        maxAge: { type: GraphQLInt }
+      },
+      async resolve(_, args: { userId: string; name: string; type?: string; breed?: string; sex?: string; color?: string; status?: string; minAge?: number; maxAge?: number }) {
+        const filters: Record<string, unknown> = {};
+        if (args.type) filters.type = args.type;
+        if (args.breed) filters.breed = args.breed;
+        if (args.sex) filters.sex = args.sex;
+        if (args.color) filters.color = args.color;
+        if (args.status) filters.status = args.status;
+        if (args.minAge !== undefined) filters.minAge = args.minAge;
+        if (args.maxAge !== undefined) filters.maxAge = args.maxAge;
+        const savedSearch = new SavedSearchModel({
+          userId: args.userId,
+          name: args.name,
+          filters
+        });
+        await savedSearch.save();
+        return savedSearch;
+      }
+    },
+    deleteSavedSearch: {
+      type: SavedSearchType,
+      args: { _id: { type: GraphQLID } },
+      resolve(_, args: { _id: string }) {
+        return SavedSearchModel.findByIdAndDelete(args._id);
       }
     },
     bulkCreateAnimals: {

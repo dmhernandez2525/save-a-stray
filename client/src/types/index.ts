@@ -295,6 +295,29 @@ export interface ShelterFostersResponse {
   shelterFosters: Foster[];
 }
 
+// Saved Search Types
+export interface SavedSearchFilters {
+  type?: string;
+  breed?: string;
+  sex?: string;
+  color?: string;
+  status?: string;
+  minAge?: number;
+  maxAge?: number;
+}
+
+export interface SavedSearch {
+  _id: string;
+  userId: string;
+  name: string;
+  filters: SavedSearchFilters;
+  createdAt: string;
+}
+
+export interface UserSavedSearchesResponse {
+  userSavedSearches: SavedSearch[];
+}
+
 // Local State Types
 export interface IsLoggedInData {
   isLoggedIn: boolean;
