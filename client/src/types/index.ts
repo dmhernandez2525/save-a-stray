@@ -80,6 +80,10 @@ export interface FetchUserResponse {
   };
 }
 
+export interface FetchShelterResponse {
+  shelter: Shelter;
+}
+
 export interface FindAnimalsVariables {
   type?: string;
   breed?: string;

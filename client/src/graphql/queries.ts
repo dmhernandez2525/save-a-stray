@@ -4,6 +4,7 @@ interface Queries {
   IS_LOGGED_IN: DocumentNode;
   USER_ID: DocumentNode;
   FETCH_USER: DocumentNode;
+  FETCH_SHELTER: DocumentNode;
   FIND_ANIMALS: DocumentNode;
   FETCH_ANIMAL: DocumentNode;
   USER_FAVORITES: DocumentNode;
@@ -53,6 +54,26 @@ const queries: Queries = {
         image
         video
         status
+      }
+    }
+  `,
+  FETCH_SHELTER: gql`
+    query FetchShelter($_id: ID) {
+      shelter(_id: $_id) {
+        _id
+        name
+        location
+        paymentEmail
+        animals {
+          _id
+          name
+          type
+          breed
+          age
+          sex
+          status
+          image
+        }
       }
     }
   `,
