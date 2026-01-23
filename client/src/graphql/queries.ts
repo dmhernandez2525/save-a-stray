@@ -10,6 +10,7 @@ interface Queries {
   SHELTER_STAFF: DocumentNode;
   SHELTER_EVENTS: DocumentNode;
   SHELTER_DONATIONS: DocumentNode;
+  PLATFORM_STATS: DocumentNode;
   USER_APPLICATIONS: DocumentNode;
   FIND_ANIMALS: DocumentNode;
   FETCH_ANIMAL: DocumentNode;
@@ -245,6 +246,19 @@ const queries: Queries = {
         amount
         message
         createdAt
+      }
+    }
+  `,
+  PLATFORM_STATS: gql`
+    query PlatformStats {
+      platformStats {
+        totalUsers
+        totalShelters
+        totalAnimals
+        totalApplications
+        availableAnimals
+        adoptedAnimals
+        totalDonations
       }
     }
   `,
