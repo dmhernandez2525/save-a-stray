@@ -25,8 +25,12 @@ jobs:
             backend:
               - 'package.json'
               - 'package-lock.json'
+              - 'tsconfig.json'
               - 'server/**'
-              - 'index.js'
+              - 'shared/**'
+              - 'config/**'
+              - 'index.ts'
+              - 'tests/**'
             frontend:
               - 'client/**'
 
@@ -46,8 +50,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
-        run: npm test || echo "No tests configured"
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+        continue-on-error: true
+
+      - name: Upload coverage
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v4
+        with:
+          flags: backend
+          directory: ./coverage
+          token: ${{ secrets.CODECOV_TOKEN }}
+        continue-on-error: true
 
   frontend:
     needs: changes
@@ -56,8 +73,6 @@ jobs:
     defaults:
       run:
         working-directory: client
-    env:
-      CI: false
     steps:
       - uses: actions/checkout@v4
 
@@ -71,8 +86,26 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run typecheck
+
       - name: Run tests
-        run: npm test -- --watchAll=false || echo "No tests"
+        run: npm run test:run
+
+      - name: Test coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v4
+        with:
+          flags: frontend
+          directory: ./client/coverage
+          token: ${{ secrets.CODECOV_TOKEN }}
+        continue-on-error: true
 
       - name: Build
         run: npm run build

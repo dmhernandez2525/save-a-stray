@@ -1,16 +1,22 @@
 module.exports = {
   testEnvironment: 'node',
-  testMatch: ['**/__tests__/**/*.test.js', '**/tests/**/*.test.js'],
+  transform: {
+    '^.+\\.ts$': 'ts-jest',
+  },
+  testMatch: [
+    '**/__tests__/**/*.test.{js,ts}',
+    '**/tests/**/*.test.{js,ts}',
+  ],
   collectCoverageFrom: [
-    'server/**/*.js',
-    '!server/**/index.js',
+    'server/**/*.{js,ts}',
+    '!server/**/index.{js,ts}',
     '!**/node_modules/**',
+    '!**/dist/**',
   ],
   coverageDirectory: 'coverage',
   verbose: true,
   testTimeout: 10000,
-  // Clear mocks between tests
   clearMocks: true,
-  // Module paths
   moduleDirectories: ['node_modules', 'server'],
+  moduleFileExtensions: ['js', 'ts', 'json'],
 };

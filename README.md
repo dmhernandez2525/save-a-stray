@@ -1,6 +1,6 @@
 # Save A Stray
 
-A pet adoption platform that connects animal shelters with potential adopters through a unified, searchable database.
+A pet adoption platform that connects animal shelters with potential adopters through a unified, searchable database with real-time listing sync and communication accountability.
 
 ---
 
@@ -9,16 +9,17 @@ A pet adoption platform that connects animal shelters with potential adopters th
 Save A Stray addresses three key challenges faced by animal shelters:
 
 - **Reach**: Provides shelters with an online presence without building their own websites
-- **Cost**: No upfront costs - only a small fee on successful adoptions
-- **Convenience**: One platform to search all available animals in your area
+- **Cost**: Per-adoption pricing ($2/adoption) vs monthly subscriptions
+- **Communication**: Auto-acknowledgment and response tracking for every inquiry
 
 ### Key Features
 
-- **Animal Listings**: Browse adoptable pets with photos and details
-- **Shelter Management**: Shelters can add and manage their animals
-- **Adoption Applications**: Submit applications directly through the platform
-- **Location Search**: Find animals near you
+- **Animal Listings**: Browse adoptable pets with photos and video support
+- **Shelter Dashboard**: Shelters can add, edit, and manage their animals
+- **Adoption Applications**: Submit and track applications directly through the platform
+- **Search & Filters**: Find animals by type, location, age, and more
 - **OAuth Authentication**: Sign in with Google or Facebook
+- **Real-Time Sync**: <5 min listing updates to external platforms (planned)
 
 ---
 
@@ -26,12 +27,14 @@ Save A Stray addresses three key challenges faced by animal shelters:
 
 | Layer | Technology |
 |-------|------------|
-| Frontend | React 16, Apollo Client |
-| Backend | Node.js, Express |
-| API | GraphQL with Apollo Server |
-| Database | MongoDB (Mongoose ODM) |
-| Auth | Passport.js (Google, Facebook OAuth) |
-| Styling | SCSS |
+| Frontend | React 18, Vite, TypeScript, Tailwind CSS, Apollo Client |
+| Backend | Node.js 20+, Express, GraphQL (graphql-http), TypeScript |
+| Database | MongoDB (Mongoose 8) |
+| Auth | Passport.js (JWT, Google OAuth, Facebook OAuth) |
+| Testing | Vitest (frontend), Jest (backend) |
+| Deployment | Render.com (IaC via render.yaml) |
+| CI/CD | GitHub Actions |
+| Code Quality | ESLint, Prettier, SonarCloud, CodeRabbit |
 
 ---
 
@@ -39,22 +42,29 @@ Save A Stray addresses three key challenges faced by animal shelters:
 
 ```
 save-a-stray/
-├── client/                    # React frontend
+├── client/                    # React + Vite frontend
 │   ├── src/
-│   │   ├── components/        # React components
+│   │   ├── components/        # React components + Shadcn UI
 │   │   ├── graphql/           # Apollo queries/mutations
-│   │   ├── css/               # Stylesheets
-│   │   └── util/              # Utilities
-├── server/                    # Express backend
-│   ├── models/                # Mongoose schemas
-│   ├── schema/                # GraphQL schema
-│   │   ├── types/             # GraphQL type definitions
-│   │   ├── mutations.js       # Mutation resolvers
-│   │   └── schema.js          # Schema composition
-│   └── services/              # Auth services
+│   │   ├── types/             # TypeScript types
+│   │   ├── util/              # Route utilities
+│   │   ├── test/              # Component tests
+│   │   └── lib/               # Helper libraries (cn utility)
+│   └── package.json
+├── server/                    # Express + GraphQL backend
+│   ├── models/                # Mongoose schemas (TypeScript)
+│   ├── schema/                # GraphQL schema + resolvers
+│   ├── services/              # Auth service
+│   └── validation/            # Input validation
+├── tests/                     # Backend tests (Jest)
+├── shared/                    # Shared TypeScript types
 ├── config/                    # Configuration
 ├── docs/                      # Documentation
-└── package.json               # Dependencies
+│   ├── ARCHITECTURE.md
+│   ├── ROADMAP.md
+│   ├── FEATURE_BACKLOG.md
+│   └── CODING_STANDARDS.md
+└── roadmap/                   # Work tracking
 ```
 
 ---
@@ -63,54 +73,51 @@ save-a-stray/
 
 ### Prerequisites
 
-- Node.js 12.x or higher
+- Node.js 20+
 - MongoDB (local or Atlas cluster)
-- Google OAuth credentials
-- Facebook OAuth credentials
+- Google OAuth credentials (optional)
+- Facebook OAuth credentials (optional)
 
 ### Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/save-a-stray.git
+git clone https://github.com/dmhernandez2525/save-a-stray.git
 cd save-a-stray
 
-# Install dependencies
+# Install root dependencies
 npm install
 
-# Set up environment variables
-cp config/keys_dev.example.js config/keys_dev.js
-# Edit keys_dev.js with your configuration
+# Install client dependencies
+cd client && npm install && cd ..
 ```
 
-### Configuration
+### Environment Variables
 
-Create `config/keys_dev.js`:
-```javascript
-module.exports = {
-  MONGO_URI: 'mongodb+srv://your-cluster-url',
-  secretOrKey: 'your-jwt-secret',
-  googleClientId: 'your-google-client-id',
-  googleClientSecret: 'your-google-secret',
-  facebookAppId: 'your-facebook-app-id',
-  facebookAppSecret: 'your-facebook-secret'
-};
+Create environment variables for the backend (or use a `.env` file):
+
+```bash
+MONGO_URI=mongodb+srv://your-cluster-url
+SECRET_OR_KEY=your-jwt-secret
+GOOG_CLIENT=your-google-client-id
+GOOG_SECRET=your-google-secret
+FBOOK_KEY=your-facebook-app-id
+FBOOK_CLIENT=your-facebook-secret
+CORS_ORIGIN=http://localhost:3000
 ```
 
 ### Running the Application
 
 ```bash
-# Development mode (frontend + backend)
+# Development mode (frontend + backend concurrently)
 npm run dev
 
-# Backend only
-npm run server
+# Backend only (port 5000)
+npm run server:dev
 
-# Frontend only
-npm run client
+# Frontend only (port 3000)
+cd client && npm run dev
 ```
-
-Note: Frontend requires `NODE_OPTIONS=--openssl-legacy-provider` due to OpenSSL 3.0 compatibility.
 
 ---
 
@@ -118,21 +125,57 @@ Note: Frontend requires `NODE_OPTIONS=--openssl-legacy-provider` due to OpenSSL 
 
 ### Queries
 
-| Query | Description |
-|-------|-------------|
-| `animals(shelter: ID, species: String)` | List animals with optional filters |
-| `animal(id: ID!)` | Get single animal by ID |
-| `shelters` | List all shelters |
-| `shelter(id: ID!)` | Get shelter details |
-| `user(id: ID!)` | Get user profile |
+| Query | Parameters | Returns |
+|-------|------------|---------|
+| `animals` | - | All animals |
+| `findAnimals` | `type: String!` | Filtered animals |
+| `animal` | `_id: ID!` | Single animal |
+| `shelters` | - | All shelters |
+| `shelter` | `_id: ID` | Single shelter |
+| `users` | - | All users |
+| `user` | `_id: ID!` | Single user |
 
 ### Mutations
 
-| Mutation | Description |
-|----------|-------------|
-| `createApplication(animalId: ID!)` | Submit adoption application |
-| `updateApplicationStatus(id: ID!, status: String!)` | Update application status |
-| `registerUser(email: String!, password: String!)` | Register new user |
+| Mutation | Purpose |
+|----------|---------|
+| `register` | Create user account |
+| `login` | Authenticate user |
+| `newAnimal` | Create animal listing |
+| `updateAnimal` | Edit animal |
+| `deleteAnimal` | Remove animal |
+| `newApplication` | Submit adoption application |
+| `newShelter` | Create shelter |
+
+---
+
+## Testing
+
+```bash
+# Frontend tests (Vitest)
+cd client
+npm test              # Watch mode
+npm run test:run      # Single run
+npm run test:coverage # With coverage
+
+# Backend tests (Jest)
+npm test              # From root
+npm run test:coverage # With coverage
+```
+
+**Coverage target:** 85% across branches, functions, lines, and statements.
+
+---
+
+## Deployment
+
+Deployed on [Render.com](https://render.com) using infrastructure-as-code (`render.yaml`):
+
+| Service | URL |
+|---------|-----|
+| Frontend | https://save-a-stray-site.onrender.com |
+| Backend | https://save-a-stray-api.onrender.com |
+| Health Check | https://save-a-stray-api.onrender.com/health |
 
 ---
 
@@ -140,36 +183,32 @@ Note: Frontend requires `NODE_OPTIONS=--openssl-legacy-provider` due to OpenSSL 
 
 | Document | Description |
 |----------|-------------|
-| [Index](./docs/INDEX.md) | Documentation overview |
-| [Architecture](./docs/ARCHITECTURE.md) | System design and patterns |
-| [Roadmap](./docs/ROADMAP.md) | Modernization backlog |
-| [Coding Standards](./docs/CODING_STANDARDS.md) | Code style guidelines |
+| [Documentation Index](./docs/INDEX.md) | Full documentation overview |
+| [Architecture](./docs/ARCHITECTURE.md) | System design, models, API reference |
+| [Roadmap](./docs/ROADMAP.md) | 5-phase implementation plan |
+| [Feature Backlog](./docs/FEATURE_BACKLOG.md) | 326 features organized by phase |
+| [Coding Standards](./docs/CODING_STANDARDS.md) | TypeScript patterns and quality requirements |
 
 ---
 
-## Status
+## Contributing
 
-**Current State**: Requires modernization
-
-This project was built in 2019-2020. It requires:
-- MongoDB Atlas cluster recreation
-- OAuth credential setup (Google, Facebook)
-- React modernization (16 → 18)
-- Apollo Client upgrade (2 → 3)
-- Testing infrastructure setup
-
-See [ROADMAP.md](./docs/ROADMAP.md) for detailed modernization plan.
-
----
-
-## Original Team
-
-- Daniel Hernandez - Backend and Frontend
-- Chas Huggins - Backend and Frontend
-- Tom Driscoll - Frontend and UI/UX
+1. Check `roadmap/WORK_STATUS.md` for current priorities
+2. Create a feature branch: `git checkout -b feat/{feature-id}-{name}`
+3. Follow the coding standards in `docs/CODING_STANDARDS.md`
+4. Write tests for all new features
+5. Submit a PR with conventional commit messages
 
 ---
 
 ## License
 
 MIT License
+
+---
+
+## Original Team
+
+- Daniel Hernandez
+- Chas Huggins
+- Tom Driscoll

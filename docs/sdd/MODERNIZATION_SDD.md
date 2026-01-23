@@ -1,360 +1,175 @@
 # Software Design Document: save-a-stray Modernization
 
-**Version:** 1.0.0
+**Version:** 2.0.0
 **Author:** Daniel Hernandez
 **Created:** January 2026
-**Status:** Draft - Awaiting Review
+**Status:** Mostly Complete - TypeScript migration in progress
 
 ---
 
 ## 1. Executive Summary
 
-This document outlines the modernization strategy for save-a-stray, upgrading from 2019-era technologies to current LTS versions while adopting Tailwind v4 and Shadcn for styling.
+This document outlines the modernization strategy for save-a-stray, upgrading from 2019-era technologies to current LTS versions. **Most phases are now complete.** The remaining work is completing the TypeScript strict mode migration for backend files.
 
-### Current State
-- **Node.js:** Unspecified (likely 12.x)
-- **React:** 16.10.1 (Legacy)
-- **Build Tool:** Create React App 3.3.0 (Deprecated)
+### Migration Status
+
+| Phase | Description | Status |
+|-------|-------------|--------|
+| Phase 1 | Backend Dependencies | Complete |
+| Phase 2 | GraphQL Server | Complete |
+| Phase 3 | Frontend Build System | Complete |
+| Phase 4 | Apollo Client 3 | Complete |
+| Phase 5 | React & Router | Complete |
+| Phase 6 | Styling (Tailwind + Shadcn) | Complete |
+| Phase 7 | Testing Infrastructure | Complete |
+| Ongoing | TypeScript Strict Migration | In Progress |
+
+### Previous State (2019)
+
+- **Node.js:** ~12.x
+- **React:** 16.10.1
+- **Build Tool:** Create React App 3.3.0
 - **GraphQL:** graphql 14.5.8 + express-graphql 0.9.0
-- **Apollo Client:** 2.6.4 (Legacy)
+- **Apollo Client:** 2.6.4
 - **Styling:** Custom CSS
-- **Database:** MongoDB with Mongoose 5.7.5
+- **Database:** Mongoose 5.7.5
 - **Auth:** Firebase Admin 8.6.0, Passport 0.4.0
 
-### Target State
-- **Node.js:** 22.x LTS
-- **React:** 19.x
-- **Build Tool:** Vite 6.x
-- **GraphQL:** graphql 16.x + graphql-yoga or Apollo Server 4
-- **Apollo Client:** 3.x
-- **Styling:** Tailwind CSS v4 + Shadcn
-- **Database:** MongoDB with Mongoose 8.x
-- **Auth:** Firebase Admin 13.x, Passport 0.7.x
+### Current State (January 2026)
+
+- **Node.js:** 20+ LTS
+- **React:** 18.3.1
+- **Build Tool:** Vite 6.0.7
+- **GraphQL:** graphql 16.10.0 + graphql-http 1.22.3
+- **Apollo Client:** 3.12.5
+- **Styling:** Tailwind CSS 3.4.17 + Shadcn-style components
+- **Database:** Mongoose 8.9.5
+- **Auth:** Passport.js 0.7.0 + JWT + bcryptjs
+- **TypeScript:** 5.9.3 (strict mode enabled, migration partial)
+- **Testing:** Vitest 2.1.8 (frontend), Jest 29.7.0 (backend)
 
 ---
 
-## 2. Current Technology Audit
+## 2. Completed Migrations
 
-### Backend (package.json)
+### Phase 1: Backend Dependencies (Complete)
 
-| Package | Current | LTS/Latest | Action | Breaking Changes |
-|---------|---------|------------|--------|------------------|
-| Node.js | ~12.x | 22.x | **Upgrade** | Major - async/ESM changes |
-| express | 4.17.1 | 4.21.x | Upgrade | Minor |
-| mongoose | 5.7.5 | 8.x | **Upgrade** | Major - query API changes |
-| graphql | 14.5.8 | 16.x | **Upgrade** | Major - execute API |
-| express-graphql | 0.9.0 | Deprecated | **Replace** | Use graphql-http or yoga |
-| bcryptjs | 2.4.3 | 2.4.3 | Keep | None |
-| jsonwebtoken | 8.5.1 | 9.x | Upgrade | Minor - algorithm defaults |
-| passport | 0.4.0 | 0.7.x | Upgrade | Minor |
-| passport-facebook | 3.0.0 | 3.0.0 | Keep | None |
-| passport-google | 0.3.0 | Deprecated | **Replace** | Use passport-google-oauth20 |
-| body-parser | 1.19.0 | Deprecated | **Remove** | Use express.json() |
-| faker | 4.1.0 | Deprecated | **Replace** | Use @faker-js/faker |
-| firebase-admin | 8.6.0 | 13.x | **Upgrade** | Major - API changes |
-| google-auth-library | 5.4.0 | 9.x | **Upgrade** | Major |
-| validator | 11.1.0 | 13.x | Upgrade | Minor |
-| nodemon | 1.19.3 | 3.x | Upgrade | None |
-| concurrently | 4.1.2 | 9.x | Upgrade | Minor |
+- Express upgraded to 4.21.2
+- Mongoose upgraded to 8.9.5 (callback → async/await)
+- Replaced `body-parser` with `express.json()`
+- Replaced `faker` with `@faker-js/faker`
+- Upgraded `jsonwebtoken` to 9.x
+- Upgraded `passport` to 0.7.0
+- Upgraded `validator` to 13.12.0
+- Added TypeScript with strict mode
 
-### Frontend (client/package.json)
+### Phase 2: GraphQL Server (Complete)
 
-| Package | Current | LTS/Latest | Action | Breaking Changes |
-|---------|---------|------------|--------|------------------|
-| react | 16.10.1 | 19.x | **Upgrade** | Major - Hooks, Concurrent |
-| react-dom | 16.10.1 | 19.x | **Upgrade** | Major |
-| react-scripts | 3.3.0 | Deprecated | **Replace with Vite** | Major - Build config |
-| react-router-dom | 5.1.2 | 7.x | **Upgrade** | Major - API changes |
-| apollo-client | 2.6.4 | Deprecated | **Replace** | Use @apollo/client 3.x |
-| apollo-cache-inmemory | 1.6.3 | Deprecated | **Remove** | Bundled in @apollo/client |
-| apollo-link | 1.2.13 | Deprecated | **Remove** | Bundled in @apollo/client |
-| apollo-link-http | 1.5.16 | Deprecated | **Remove** | Bundled in @apollo/client |
-| apollo-link-error | 1.1.12 | Deprecated | **Remove** | Bundled in @apollo/client |
-| react-apollo | 3.1.2 | Deprecated | **Remove** | Use @apollo/client hooks |
-| react-adopt | 0.6.0 | Deprecated | **Remove** | Use React Context |
-| graphql-tag | 2.10.1 | 2.12.x | Upgrade | Minor |
+- Replaced deprecated `express-graphql` with `graphql-http`
+- Upgraded `graphql` to 16.10.0
+- Updated resolver patterns
 
-### New Dependencies to Add
+### Phase 3: Frontend Build System (Complete)
 
-| Package | Version | Purpose |
-|---------|---------|---------|
-| tailwindcss | 4.x | Styling |
-| @shadcn/ui | latest | Component library |
-| vite | 6.x | Build tool |
-| @vitejs/plugin-react | 5.x | React plugin for Vite |
-| typescript | 5.9.x | Type safety |
-| vitest | 2.x | Testing |
-| @testing-library/react | 16.x | Component testing |
-| @apollo/client | 3.x | GraphQL client |
-| graphql-http | 1.x | GraphQL server |
+- Replaced Create React App with Vite 6.0.7
+- Added TypeScript configuration (strict mode)
+- Updated project structure
+- Configured path aliases (`@/*`)
 
----
+### Phase 4: Apollo Client 3 (Complete)
 
-## 3. Migration Strategy
+- Replaced all `apollo-*` packages with `@apollo/client` 3.12.5
+- Updated to hooks pattern (useQuery, useMutation)
+- Removed deprecated packages (react-apollo, apollo-link-*, etc.)
+- Updated cache configuration
 
-### Phase 1: Backend Modernization (PR #1)
-**Scope:** Node.js, Express, Mongoose, and auth layer updates
-**Breaking Changes:** Minimal - API contract unchanged
+### Phase 5: React & Router (Complete)
 
-#### Steps:
-1. Add `engines` in package.json for Node 22.x
-2. Replace `body-parser` with `express.json()`
-3. Upgrade Express to 4.21.x
-4. Upgrade Mongoose to 8.x
-   - Update query syntax (no more callbacks)
-   - Update connection string format
-5. Replace `faker` with `@faker-js/faker`
-6. Upgrade `jsonwebtoken` to 9.x
-7. Upgrade `passport` to 0.7.x
-8. Replace `passport-google` with `passport-google-oauth20`
-9. Upgrade `firebase-admin` to 13.x
-10. Upgrade `google-auth-library` to 9.x
+- Upgraded React to 18.3.1
+- Upgraded React Router to 7.1.1 (Routes/Route pattern)
+- Updated component patterns
 
-#### Mongoose 8 Migration Notes:
-```javascript
-// OLD (Mongoose 5)
-User.findOne({ email }, callback);
-mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+### Phase 6: Styling (Complete)
 
-// NEW (Mongoose 8)
-const user = await User.findOne({ email });
-await mongoose.connect(uri);
-```
+- Added Tailwind CSS 3.4.17
+- Added Shadcn-style UI components (button, card, input, label)
+- Added Radix UI primitives
+- Added `cn()` utility for class merging
+- Legacy CSS files still exist alongside Tailwind
+
+### Phase 7: Testing Infrastructure (Complete)
+
+- Added Vitest 2.1.8 for frontend testing
+- Added @testing-library/react 16.1.0
+- Configured jsdom test environment
+- Added test setup file
+- Backend uses Jest 29.7.0 with supertest
 
 ---
 
-### Phase 2: GraphQL Server Migration (PR #2)
-**Scope:** Replace deprecated express-graphql
-**Breaking Changes:** Server implementation only
+## 3. Remaining Work
 
-#### Steps:
-1. Install `graphql-http` or `graphql-yoga`
-2. Upgrade `graphql` to 16.x
-3. Replace express-graphql middleware
-4. Update resolver patterns
-5. Add TypeScript for schemas (optional)
+### TypeScript Strict Migration (In Progress)
 
-#### Migration Example:
-```javascript
-// OLD (express-graphql)
-app.use('/graphql', graphqlHTTP({
-  schema,
-  graphiql: true
-}));
+The TypeScript compiler is configured in strict mode, but many server files still have both `.js` and `.ts` versions. The `.ts` files are being developed alongside the legacy `.js` files.
 
-// NEW (graphql-http)
-import { createHandler } from 'graphql-http/lib/use/express';
-app.all('/graphql', createHandler({ schema }));
-```
+**Files with dual versions (need .js removal):**
+- `server/models/*.{js,ts}`
+- `server/schema/*.{js,ts}`
+- `server/schema/types/*.{js,ts}`
+- `server/services/*.{js,ts}`
+- `server/validation/*.{js,ts}`
+- `config/*.{js,ts}`
+- `index.{js,ts}`
 
----
+**Action Required:**
+1. Ensure all `.ts` files compile correctly
+2. Update `tsconfig.json` if needed
+3. Remove legacy `.js` files
+4. Update any imports referencing `.js` files
 
-### Phase 3: Frontend Build System (PR #3)
-**Scope:** Replace CRA with Vite, add TypeScript
-**Breaking Changes:** Build configuration only
+### Legacy CSS Cleanup (Low Priority)
 
-#### Steps:
-1. Create new Vite project structure
-2. Move components to new structure
-3. Configure Vite for React
-4. Add TypeScript configuration
-5. Update import paths
-6. Remove react-scripts
-7. Update npm scripts
+Component-specific CSS files in `client/src/components/css/` coexist with Tailwind classes. These can be removed as components are refactored to use Tailwind exclusively.
 
-#### New Project Structure:
-```
-client/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   ├── hooks/
-│   ├── graphql/
-│   ├── services/
-│   ├── types/
-│   └── main.tsx
-├── public/
-├── vite.config.ts
-├── tsconfig.json
-├── tailwind.config.ts
-└── package.json
-```
+**CSS files to eventually remove:**
+- `Animal.css`, `AnimalFeedItem.css`, `AnimalShow.css`
+- `App.css`, `ShelterLanding.css`
+- `application.css`, `auth.css`, `slug.css`
+- `splash.css`, `tos.css`, `userLanding.css`
 
 ---
 
-### Phase 4: Apollo Client 3 Migration (PR #4)
-**Scope:** Upgrade Apollo Client, remove deprecated packages
-**Breaking Changes:** Import paths, caching API
+## 4. Differences from Original Plan
 
-#### Steps:
-1. Replace all apollo-* packages with `@apollo/client`
-2. Update ApolloProvider setup
-3. Migrate to hooks (useQuery, useMutation)
-4. Remove react-adopt (use React Context)
-5. Update cache policies
-
-#### Migration Example:
-```jsx
-// OLD (Apollo Client 2)
-import { ApolloProvider } from 'react-apollo';
-import ApolloClient from 'apollo-client';
-import { InMemoryCache } from 'apollo-cache-inmemory';
-import { HttpLink } from 'apollo-link-http';
-
-const client = new ApolloClient({
-  link: new HttpLink({ uri: '/graphql' }),
-  cache: new InMemoryCache()
-});
-
-// NEW (Apollo Client 3)
-import { ApolloClient, InMemoryCache, ApolloProvider } from '@apollo/client';
-
-const client = new ApolloClient({
-  uri: '/graphql',
-  cache: new InMemoryCache()
-});
-```
+| Planned | Actual | Reason |
+|---------|--------|--------|
+| React 19.x | React 18.3.1 | 18.x is current stable; 19.x has breaking changes |
+| Node.js 22.x | Node.js 20+ | 20.x is current LTS |
+| Tailwind v4 | Tailwind 3.4.17 | v4 was in beta; 3.x is stable |
+| graphql-yoga | graphql-http | Simpler, lighter-weight |
+| Firebase Auth retained | Custom JWT + bcryptjs | Reduced external dependencies |
 
 ---
 
-### Phase 5: React & Router Upgrade (PR #5)
-**Scope:** React 19, React Router 7
-**Breaking Changes:** Component patterns, routing API
+## 5. Success Criteria
 
-#### React Router 7 Migration:
-```jsx
-// OLD (v5)
-import { Switch, Route } from 'react-router-dom';
-<Switch>
-  <Route path="/adopt" component={AdoptPage} />
-</Switch>
-
-// NEW (v7)
-import { Routes, Route } from 'react-router-dom';
-<Routes>
-  <Route path="/adopt" element={<AdoptPage />} />
-</Routes>
-```
+- [x] All packages on supported versions
+- [x] Vite build system operational
+- [x] Apollo Client 3 integrated
+- [x] React Router 7 working
+- [x] Tailwind CSS configured
+- [x] TypeScript strict mode enabled
+- [ ] All server files migrated to TypeScript-only
+- [ ] Legacy CSS files removed
+- [ ] 85% test coverage achieved
+- [ ] No TypeScript compilation errors
 
 ---
 
-### Phase 6: Styling Migration (PR #6)
-**Scope:** Replace CSS with Tailwind v4 + Shadcn
-**Breaking Changes:** All component styles
+## Document History
 
-#### Steps:
-1. Install Tailwind v4 and configure
-2. Install Shadcn CLI and initialize
-3. Add base Shadcn components
-4. Migrate components one by one
-5. Remove old CSS files
-
-#### Component Migration Example:
-```jsx
-// OLD
-<button className="adopt-button">Adopt Now</button>
-// .adopt-button { background: green; padding: 10px; }
-
-// NEW (Shadcn)
-import { Button } from '@/components/ui/button';
-<Button variant="default">Adopt Now</Button>
-```
-
----
-
-### Phase 7: Testing Infrastructure (PR #7)
-**Scope:** Add Vitest, React Testing Library
-**Breaking Changes:** None
-
-#### Configuration:
-```typescript
-// vitest.config.ts
-import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
-
-export default defineConfig({
-  plugins: [react()],
-  test: {
-    globals: true,
-    environment: 'happy-dom',
-    coverage: {
-      provider: 'v8',
-      thresholds: { global: { lines: 85 } },
-    },
-  },
-});
-```
-
----
-
-## 4. Risk Assessment
-
-| Risk | Impact | Probability | Mitigation |
-|------|--------|-------------|------------|
-| Mongoose 8 query breaks | High | Medium | Comprehensive testing |
-| Firebase Admin API changes | High | Medium | Test auth flows thoroughly |
-| Apollo Client 3 cache differences | Medium | Medium | Gradual migration |
-| React Router API changes | Medium | High | Incremental migration |
-| GraphQL server migration | Medium | Low | Maintain schema compatibility |
-| Styling inconsistencies | Medium | Medium | Component-by-component migration |
-
----
-
-## 5. Dependencies & Prerequisites
-
-### Development Environment
-- Node.js 22.x LTS installed
-- MongoDB 6.x+ available
-- pnpm or npm 10.x
-
-### External Dependencies
-- MongoDB Atlas cluster (existing)
-- Firebase project (existing)
-- Google OAuth credentials (existing)
-
----
-
-## 6. Success Criteria
-
-- [ ] All tests passing
-- [ ] No console errors/warnings
-- [ ] Lighthouse performance score > 90
-- [ ] Bundle size < 500KB
-- [ ] 85% test coverage
-- [ ] All features functional
-- [ ] Firebase auth working
-- [ ] GraphQL API responsive
-
----
-
-## 7. Rollback Plan
-
-Each PR can be reverted independently. If critical issues arise:
-1. Revert the specific PR
-2. Document the issue
-3. Fix in a new branch
-4. Re-attempt migration
-
----
-
-## 8. Timeline Estimate
-
-| Phase | Estimated Effort |
-|-------|------------------|
-| Phase 1: Backend | 4-6 hours |
-| Phase 2: GraphQL Server | 3-4 hours |
-| Phase 3: Build System | 6-8 hours |
-| Phase 4: Apollo Client 3 | 4-6 hours |
-| Phase 5: React/Router | 4-6 hours |
-| Phase 6: Styling | 8-12 hours |
-| Phase 7: Testing | 4-6 hours |
-| **Total** | **33-48 hours** |
-
----
-
-## 9. Open Questions for Review
-
-1. **GraphQL Server:** graphql-http (minimal) or graphql-yoga (batteries included)?
-2. **Firebase:** Keep Firebase Auth or switch to custom JWT?
-3. **TypeScript:** Strict mode from start or gradual?
-4. **Testing:** Unit-first or E2E-first approach?
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 1.0.0 | Jan 2026 | Original | Initial modernization plan |
+| 2.0.0 | Jan 22, 2026 | Claude Code | Updated to reflect completed migration status |
