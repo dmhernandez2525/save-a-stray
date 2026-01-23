@@ -3,6 +3,7 @@ import {
   GraphQLString,
   GraphQLInt,
   GraphQLFloat,
+  GraphQLBoolean,
   GraphQLID,
   GraphQLList,
   GraphQLInputObjectType,
@@ -26,10 +27,12 @@ import EventType from './types/event_type';
 import DonationType from './types/donation_type';
 import FosterType from './types/foster_type';
 import SavedSearchType from './types/saved_search_type';
+import ApplicationTemplateType from './types/application_template_type';
 import { EventDocument } from '../models/Event';
 import { DonationDocument } from '../models/Donation';
 import { FosterDocument } from '../models/Foster';
 import { SavedSearchDocument } from '../models/SavedSearch';
+import { ApplicationTemplateDocument } from '../models/ApplicationTemplate';
 import { ReviewDocument } from '../models/Review';
 import { NotificationDocument } from '../models/Notification';
 
@@ -44,6 +47,7 @@ const EventModel = mongoose.model<EventDocument>('event');
 const DonationModel = mongoose.model<DonationDocument>('donation');
 const FosterModel = mongoose.model<FosterDocument>('foster');
 const SavedSearchModel = mongoose.model<SavedSearchDocument>('savedSearch');
+const ApplicationTemplateModel = mongoose.model<ApplicationTemplateDocument>('applicationTemplate');
 
 interface RegisterArgs {
   name: string;
@@ -105,6 +109,16 @@ interface ShelterArgs {
   description?: string;
   animals?: string;
 }
+
+const TemplateFieldInput = new GraphQLInputObjectType({
+  name: 'TemplateFieldInput',
+  fields: {
+    label: { type: GraphQLString },
+    fieldType: { type: GraphQLString },
+    required: { type: GraphQLBoolean },
+    options: { type: new GraphQLList(GraphQLString) }
+  }
+});
 
 const AnimalInput = new GraphQLInputObjectType({
   name: 'AnimalInput',
@@ -693,6 +707,35 @@ const mutation = new GraphQLObjectType({
       args: { _id: { type: GraphQLID } },
       resolve(_, args: { _id: string }) {
         return SavedSearchModel.findByIdAndDelete(args._id);
+      }
+    },
+    createApplicationTemplate: {
+      type: ApplicationTemplateType,
+      args: {
+        shelterId: { type: GraphQLID },
+        name: { type: GraphQLString },
+        fields: { type: new GraphQLList(TemplateFieldInput) }
+      },
+      async resolve(_, args: { shelterId: string; name: string; fields: Array<{ label: string; fieldType: string; required?: boolean; options?: string[] }> }) {
+        const template = new ApplicationTemplateModel({
+          shelterId: args.shelterId,
+          name: args.name,
+          fields: (args.fields || []).map(f => ({
+            label: f.label,
+            fieldType: f.fieldType,
+            required: f.required || false,
+            options: f.options || []
+          }))
+        });
+        await template.save();
+        return template;
+      }
+    },
+    deleteApplicationTemplate: {
+      type: ApplicationTemplateType,
+      args: { _id: { type: GraphQLID } },
+      resolve(_, args: { _id: string }) {
+        return ApplicationTemplateModel.findByIdAndDelete(args._id);
       }
     },
     bulkCreateAnimals: {

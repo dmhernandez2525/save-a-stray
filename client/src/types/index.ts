@@ -318,6 +318,28 @@ export interface UserSavedSearchesResponse {
   userSavedSearches: SavedSearch[];
 }
 
+// Application Template Types
+export type TemplateFieldType = 'text' | 'textarea' | 'select' | 'checkbox' | 'number';
+
+export interface TemplateField {
+  label: string;
+  fieldType: TemplateFieldType;
+  required: boolean;
+  options: string[];
+}
+
+export interface ApplicationTemplate {
+  _id: string;
+  shelterId: string;
+  name: string;
+  fields: TemplateField[];
+  createdAt: string;
+}
+
+export interface ShelterApplicationTemplatesResponse {
+  shelterApplicationTemplates: ApplicationTemplate[];
+}
+
 // Local State Types
 export interface IsLoggedInData {
   isLoggedIn: boolean;
