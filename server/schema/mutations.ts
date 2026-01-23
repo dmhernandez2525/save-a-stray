@@ -21,6 +21,8 @@ import { ShelterDocument } from '../models/Shelter';
 import { SuccessStoryDocument } from '../models/SuccessStory';
 import ReviewType from './types/review_type';
 import NotificationType from './types/notification_type';
+import EventType from './types/event_type';
+import { EventDocument } from '../models/Event';
 import { ReviewDocument } from '../models/Review';
 import { NotificationDocument } from '../models/Notification';
 
@@ -31,6 +33,7 @@ const Shelter = mongoose.model<ShelterDocument>('shelter');
 const SuccessStoryModel = mongoose.model<SuccessStoryDocument>('successStory');
 const ReviewModel = mongoose.model<ReviewDocument>('review');
 const NotificationModel = mongoose.model<NotificationDocument>('notification');
+const EventModel = mongoose.model<EventDocument>('event');
 
 interface RegisterArgs {
   name: string;
@@ -541,6 +544,38 @@ const mutation = new GraphQLObjectType({
         }
         await shelter.save();
         return shelter;
+      }
+    },
+    createEvent: {
+      type: EventType,
+      args: {
+        shelterId: { type: GraphQLID },
+        title: { type: GraphQLString },
+        description: { type: GraphQLString },
+        date: { type: GraphQLString },
+        endDate: { type: GraphQLString },
+        location: { type: GraphQLString },
+        eventType: { type: GraphQLString }
+      },
+      async resolve(_, args: { shelterId: string; title: string; description?: string; date: string; endDate?: string; location?: string; eventType?: string }) {
+        const event = new EventModel({
+          shelterId: args.shelterId,
+          title: args.title,
+          description: args.description || '',
+          date: new Date(args.date),
+          endDate: args.endDate ? new Date(args.endDate) : undefined,
+          location: args.location || '',
+          eventType: args.eventType || 'other'
+        });
+        await event.save();
+        return event;
+      }
+    },
+    deleteEvent: {
+      type: EventType,
+      args: { _id: { type: GraphQLID } },
+      resolve(_, args: { _id: string }) {
+        return EventModel.findByIdAndDelete(args._id);
       }
     },
     bulkCreateAnimals: {

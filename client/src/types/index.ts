@@ -225,6 +225,23 @@ export interface ShelterStaffMember {
   email: string;
 }
 
+export type ShelterEventType = 'adoption_day' | 'fundraiser' | 'volunteer' | 'education' | 'other';
+
+export interface ShelterEvent {
+  _id: string;
+  shelterId: string;
+  title: string;
+  description: string;
+  date: string;
+  endDate?: string;
+  location: string;
+  eventType: ShelterEventType;
+}
+
+export interface ShelterEventsResponse {
+  shelterEvents: ShelterEvent[];
+}
+
 export interface ShelterStaffResponse {
   shelterStaff: ShelterStaffMember[];
 }
