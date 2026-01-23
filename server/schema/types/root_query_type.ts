@@ -54,9 +54,11 @@ const RootQueryType = new GraphQLObjectType({
         name: { type: GraphQLString },
         status: { type: GraphQLString },
         minAge: { type: GraphQLInt },
-        maxAge: { type: GraphQLInt }
+        maxAge: { type: GraphQLInt },
+        limit: { type: GraphQLInt },
+        offset: { type: GraphQLInt }
       },
-      resolve(_, args: { type?: string; breed?: string; sex?: string; color?: string; name?: string; status?: string; minAge?: number; maxAge?: number }) {
+      resolve(_, args: { type?: string; breed?: string; sex?: string; color?: string; name?: string; status?: string; minAge?: number; maxAge?: number; limit?: number; offset?: number }) {
         const filter: Record<string, unknown> = {};
         if (args.type) filter.type = args.type;
         if (args.breed) filter.breed = { $regex: args.breed, $options: 'i' };
@@ -69,7 +71,10 @@ const RootQueryType = new GraphQLObjectType({
           if (args.minAge !== undefined) (filter.age as Record<string, number>).$gte = args.minAge;
           if (args.maxAge !== undefined) (filter.age as Record<string, number>).$lte = args.maxAge;
         }
-        return Animal.find(filter);
+        let query = Animal.find(filter);
+        if (args.offset !== undefined) query = query.skip(args.offset);
+        if (args.limit !== undefined) query = query.limit(args.limit);
+        return query;
       }
     },
     applications: {
