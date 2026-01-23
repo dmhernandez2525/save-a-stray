@@ -85,6 +85,22 @@ export interface IApplicationDocument extends IApplication {
   _doc?: IApplication;
 }
 
+// Success Story Types
+export interface ISuccessStory {
+  _id: Types.ObjectId | string;
+  userId: string;
+  animalName: string;
+  animalType: string;
+  title: string;
+  story: string;
+  image?: string;
+  createdAt: Date;
+}
+
+export interface ISuccessStoryDocument extends ISuccessStory {
+  _doc?: ISuccessStory;
+}
+
 // Authentication Types
 export interface RegisterInput {
   name: string;

@@ -11,6 +11,7 @@ interface Queries {
   FETCH_ANIMAL: DocumentNode;
   USER_FAVORITES: DocumentNode;
   USER_FAVORITE_IDS: DocumentNode;
+  SUCCESS_STORIES: DocumentNode;
 }
 
 const queries: Queries = {
@@ -155,6 +156,20 @@ const queries: Queries = {
         images
         video
         status
+      }
+    }
+  `,
+  SUCCESS_STORIES: gql`
+    query SuccessStories {
+      successStories {
+        _id
+        userId
+        animalName
+        animalType
+        title
+        story
+        image
+        createdAt
       }
     }
   `

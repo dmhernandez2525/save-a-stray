@@ -11,16 +11,19 @@ import UserType from './types/user_type';
 import AnimalType from './types/animal_type';
 import ShelterType from './types/shelter_type';
 import ApplicationType from './types/application_type';
+import SuccessStoryType from './types/success_story_type';
 import AuthService from '../services/auth';
 import { UserDocument } from '../models/User';
 import { AnimalDocument } from '../models/Animal';
 import { ApplicationDocument } from '../models/Application';
 import { ShelterDocument } from '../models/Shelter';
+import { SuccessStoryDocument } from '../models/SuccessStory';
 
 const User = mongoose.model<UserDocument>('user');
 const Animal = mongoose.model<AnimalDocument>('animal');
 const Application = mongoose.model<ApplicationDocument>('application');
 const Shelter = mongoose.model<ShelterDocument>('shelter');
+const SuccessStoryModel = mongoose.model<SuccessStoryDocument>('successStory');
 
 interface RegisterArgs {
   name: string;
@@ -368,6 +371,31 @@ const mutation = new GraphQLObjectType({
           return shelter;
         }
         return null;
+      }
+    },
+    createSuccessStory: {
+      type: SuccessStoryType,
+      args: {
+        userId: { type: GraphQLString },
+        animalName: { type: GraphQLString },
+        animalType: { type: GraphQLString },
+        title: { type: GraphQLString },
+        story: { type: GraphQLString },
+        image: { type: GraphQLString }
+      },
+      async resolve(_, args: { userId: string; animalName: string; animalType: string; title: string; story: string; image?: string }) {
+        const { userId, animalName, animalType, title, story, image } = args;
+        const successStory = new SuccessStoryModel({
+          userId,
+          animalName,
+          animalType,
+          title,
+          story,
+          image: image || '',
+          createdAt: new Date()
+        });
+        await successStory.save();
+        return successStory;
       }
     }
   })

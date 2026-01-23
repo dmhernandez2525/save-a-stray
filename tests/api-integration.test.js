@@ -363,4 +363,39 @@ describe('GraphQL Schema Tests', () => {
     expect(args).toContain('shelterLocation');
     expect(args).toContain('shelterPaymentEmail');
   });
+
+  it('should have successStories query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.successStories).toBeDefined();
+  });
+
+  it('should have SuccessStoryType with correct fields', () => {
+    const SuccessStoryType = require('../server/schema/types/success_story_type').default;
+    const fields = SuccessStoryType.getFields();
+
+    expect(fields._id).toBeDefined();
+    expect(fields.userId).toBeDefined();
+    expect(fields.animalName).toBeDefined();
+    expect(fields.animalType).toBeDefined();
+    expect(fields.title).toBeDefined();
+    expect(fields.story).toBeDefined();
+    expect(fields.image).toBeDefined();
+    expect(fields.createdAt).toBeDefined();
+  });
+
+  it('should have createSuccessStory mutation with correct args', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.createSuccessStory).toBeDefined();
+    const args = mutationFields.createSuccessStory.args.map(a => a.name);
+    expect(args).toContain('userId');
+    expect(args).toContain('animalName');
+    expect(args).toContain('animalType');
+    expect(args).toContain('title');
+    expect(args).toContain('story');
+    expect(args).toContain('image');
+  });
 });
