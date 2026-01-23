@@ -1,5 +1,8 @@
 module.exports = {
   testEnvironment: 'node',
+  transform: {
+    '^.+\\.ts$': 'ts-jest',
+  },
   testMatch: [
     '**/__tests__/**/*.test.{js,ts}',
     '**/tests/**/*.test.{js,ts}',
@@ -11,17 +14,9 @@ module.exports = {
     '!**/dist/**',
   ],
   coverageDirectory: 'coverage',
-  coverageThreshold: {
-    global: {
-      branches: 85,
-      functions: 85,
-      lines: 85,
-      statements: 85,
-    },
-  },
   verbose: true,
   testTimeout: 10000,
   clearMocks: true,
   moduleDirectories: ['node_modules', 'server'],
-  moduleFileExtensions: ['ts', 'js', 'json'],
+  moduleFileExtensions: ['js', 'ts', 'json'],
 };

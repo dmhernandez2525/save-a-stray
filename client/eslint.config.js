@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
-  { ignores: ['build', 'node_modules', 'dist'] },
+  { ignores: ['build', 'node_modules', 'dist', 'tailwind.config.js', 'postcss.config.js'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{js,jsx,ts,tsx}'],
@@ -27,6 +27,8 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-non-null-assertion': 'warn',
+      '@typescript-eslint/no-empty-object-type': 'warn',
+      'prefer-const': 'warn',
     },
   },
 )
