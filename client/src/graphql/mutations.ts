@@ -23,6 +23,8 @@ interface Mutations {
   CREATE_EVENT: DocumentNode;
   DELETE_EVENT: DocumentNode;
   CREATE_DONATION: DocumentNode;
+  CREATE_FOSTER: DocumentNode;
+  UPDATE_FOSTER_STATUS: DocumentNode;
 }
 
 const mutations: Mutations = {
@@ -376,6 +378,48 @@ const mutations: Mutations = {
         amount
         message
         createdAt
+      }
+    }
+  `,
+  CREATE_FOSTER: gql`
+    mutation CreateFoster(
+      $shelterId: ID!
+      $animalId: ID!
+      $userId: String
+      $fosterName: String!
+      $fosterEmail: String
+      $startDate: String!
+      $endDate: String
+      $notes: String
+    ) {
+      createFoster(
+        shelterId: $shelterId
+        animalId: $animalId
+        userId: $userId
+        fosterName: $fosterName
+        fosterEmail: $fosterEmail
+        startDate: $startDate
+        endDate: $endDate
+        notes: $notes
+      ) {
+        _id
+        animalId
+        fosterName
+        fosterEmail
+        startDate
+        endDate
+        status
+        notes
+      }
+    }
+  `,
+  UPDATE_FOSTER_STATUS: gql`
+    mutation UpdateFosterStatus($_id: ID!, $status: String!, $endDate: String, $notes: String) {
+      updateFosterStatus(_id: $_id, status: $status, endDate: $endDate, notes: $notes) {
+        _id
+        status
+        endDate
+        notes
       }
     }
   `

@@ -750,4 +750,47 @@ describe('GraphQL Schema Tests', () => {
     const fields = RootQueryType.getFields();
     expect(fields.platformStats.type).toBe(PlatformStatsType);
   });
+
+  it('should have FosterType with all foster fields', () => {
+    const FosterType = require('../server/schema/types/foster_type').default;
+    const fields = FosterType.getFields();
+    expect(fields._id).toBeDefined();
+    expect(fields.shelterId).toBeDefined();
+    expect(fields.animalId).toBeDefined();
+    expect(fields.userId).toBeDefined();
+    expect(fields.fosterName).toBeDefined();
+    expect(fields.fosterEmail).toBeDefined();
+    expect(fields.startDate).toBeDefined();
+    expect(fields.endDate).toBeDefined();
+    expect(fields.status).toBeDefined();
+    expect(fields.notes).toBeDefined();
+    expect(fields.createdAt).toBeDefined();
+  });
+
+  it('should have shelterFosters query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+    expect(fields.shelterFosters).toBeDefined();
+  });
+
+  it('should have createFoster mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const fields = mutation.getFields();
+    expect(fields.createFoster).toBeDefined();
+    expect(fields.createFoster.args).toBeDefined();
+  });
+
+  it('should have updateFosterStatus mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const fields = mutation.getFields();
+    expect(fields.updateFosterStatus).toBeDefined();
+    expect(fields.updateFosterStatus.args).toBeDefined();
+  });
+
+  it('should return FosterType from createFoster mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const FosterType = require('../server/schema/types/foster_type').default;
+    const fields = mutation.getFields();
+    expect(fields.createFoster.type).toBe(FosterType);
+  });
 });

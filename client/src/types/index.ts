@@ -274,6 +274,27 @@ export interface ShelterStaffResponse {
   shelterStaff: ShelterStaffMember[];
 }
 
+// Foster Types
+export type FosterStatus = 'active' | 'completed' | 'cancelled';
+
+export interface Foster {
+  _id: string;
+  shelterId: string;
+  animalId: string;
+  userId: string;
+  fosterName: string;
+  fosterEmail: string;
+  startDate: string;
+  endDate?: string;
+  status: FosterStatus;
+  notes: string;
+  createdAt: string;
+}
+
+export interface ShelterFostersResponse {
+  shelterFosters: Foster[];
+}
+
 // Local State Types
 export interface IsLoggedInData {
   isLoggedIn: boolean;
