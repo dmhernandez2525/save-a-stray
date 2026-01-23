@@ -399,6 +399,17 @@ describe('GraphQL Schema Tests', () => {
     expect(args).toContain('image');
   });
 
+  it('should have updateUser mutation with name and email args', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.updateUser).toBeDefined();
+    const args = mutationFields.updateUser.args.map(a => a.name);
+    expect(args).toContain('_id');
+    expect(args).toContain('name');
+    expect(args).toContain('email');
+  });
+
   it('should have contact fields on ShelterType', () => {
     const ShelterType = require('../server/schema/types/shelter_type').default;
     const fields = ShelterType.getFields();
