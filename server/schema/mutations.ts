@@ -19,7 +19,9 @@ import { ApplicationDocument } from '../models/Application';
 import { ShelterDocument } from '../models/Shelter';
 import { SuccessStoryDocument } from '../models/SuccessStory';
 import ReviewType from './types/review_type';
+import NotificationType from './types/notification_type';
 import { ReviewDocument } from '../models/Review';
+import { NotificationDocument } from '../models/Notification';
 
 const User = mongoose.model<UserDocument>('user');
 const Animal = mongoose.model<AnimalDocument>('animal');
@@ -27,6 +29,7 @@ const Application = mongoose.model<ApplicationDocument>('application');
 const Shelter = mongoose.model<ShelterDocument>('shelter');
 const SuccessStoryModel = mongoose.model<SuccessStoryDocument>('successStory');
 const ReviewModel = mongoose.model<ReviewDocument>('review');
+const NotificationModel = mongoose.model<NotificationDocument>('notification');
 
 interface RegisterArgs {
   name: string;
@@ -292,6 +295,27 @@ const mutation = new GraphQLObjectType({
           return application;
         }
         return null;
+      }
+    },
+    markNotificationRead: {
+      type: NotificationType,
+      args: { _id: { type: GraphQLID } },
+      async resolve(_, args: { _id: string }) {
+        const notification = await NotificationModel.findById(args._id);
+        if (notification) {
+          notification.read = true;
+          await notification.save();
+          return notification;
+        }
+        return null;
+      }
+    },
+    markAllNotificationsRead: {
+      type: GraphQLString,
+      args: { userId: { type: GraphQLString } },
+      async resolve(_, args: { userId: string }) {
+        await NotificationModel.updateMany({ userId: args.userId, read: false }, { read: true });
+        return 'success';
       }
     },
     createReview: {

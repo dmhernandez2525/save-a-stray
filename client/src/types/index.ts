@@ -151,6 +151,21 @@ export interface CreateShelterResponse {
   newShelter: Shelter;
 }
 
+// Notification Types
+export interface AppNotification {
+  _id: string;
+  userId: string;
+  message: string;
+  type: string;
+  read: boolean;
+  link?: string;
+  createdAt: string;
+}
+
+export interface UserNotificationsResponse {
+  userNotifications: AppNotification[];
+}
+
 // Review Types
 export interface Review {
   _id: string;

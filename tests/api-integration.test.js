@@ -399,6 +399,36 @@ describe('GraphQL Schema Tests', () => {
     expect(args).toContain('image');
   });
 
+  it('should have NotificationType with correct fields', () => {
+    const NotificationType = require('../server/schema/types/notification_type').default;
+    const fields = NotificationType.getFields();
+
+    expect(fields._id).toBeDefined();
+    expect(fields.userId).toBeDefined();
+    expect(fields.message).toBeDefined();
+    expect(fields.type).toBeDefined();
+    expect(fields.read).toBeDefined();
+    expect(fields.link).toBeDefined();
+    expect(fields.createdAt).toBeDefined();
+  });
+
+  it('should have userNotifications query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.userNotifications).toBeDefined();
+    const args = fields.userNotifications.args.map(a => a.name);
+    expect(args).toContain('userId');
+  });
+
+  it('should have markNotificationRead mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.markNotificationRead).toBeDefined();
+    expect(mutationFields.markAllNotificationsRead).toBeDefined();
+  });
+
   it('should have ReviewType with correct fields', () => {
     const ReviewType = require('../server/schema/types/review_type').default;
     const fields = ReviewType.getFields();
