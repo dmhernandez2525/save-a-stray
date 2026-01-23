@@ -218,7 +218,7 @@ const mutation = new GraphQLObjectType({
       },
       async resolve(_, args: ApplicationArgs) {
         const { animalId, userId, applicationData } = args;
-        const newApp = new Application({ animalId, userId, applicationData });
+        const newApp = new Application({ animalId, userId, applicationData, status: 'submitted', submittedAt: new Date() });
         const animal = await Animal.findById(animalId);
         if (animal) {
           animal.applications.push(newApp._id);
@@ -250,6 +250,22 @@ const mutation = new GraphQLObjectType({
         const application = await Application.findById(_id);
         if (application) {
           application.applicationData = applicationData;
+          await application.save();
+          return application;
+        }
+        return null;
+      }
+    },
+    updateApplicationStatus: {
+      type: ApplicationType,
+      args: {
+        _id: { type: GraphQLID },
+        status: { type: GraphQLString }
+      },
+      async resolve(_, args: { _id: string; status: string }) {
+        const application = await Application.findById(args._id);
+        if (application) {
+          application.status = args.status as typeof application.status;
           await application.save();
           return application;
         }

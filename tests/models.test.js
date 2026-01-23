@@ -80,6 +80,37 @@ describe('Mongoose Models Schema Tests', () => {
     });
   });
 
+  describe('Application Model', () => {
+    const Application = require('../server/models/Application').default;
+
+    it('should have required fields defined in schema', () => {
+      const appSchema = Application.schema.obj;
+
+      expect(appSchema.animalId).toBeDefined();
+      expect(appSchema.animalId.required).toBe(true);
+
+      expect(appSchema.userId).toBeDefined();
+      expect(appSchema.userId.required).toBe(true);
+
+      expect(appSchema.applicationData).toBeDefined();
+      expect(appSchema.applicationData.required).toBe(true);
+    });
+
+    it('should have status field with enum and default', () => {
+      const appSchema = Application.schema.obj;
+      expect(appSchema.status).toBeDefined();
+      expect(appSchema.status.enum).toEqual(['submitted', 'under_review', 'approved', 'rejected']);
+      expect(appSchema.status.default).toBe('submitted');
+    });
+
+    it('should have submittedAt field with Date type and default', () => {
+      const appSchema = Application.schema.obj;
+      expect(appSchema.submittedAt).toBeDefined();
+      expect(appSchema.submittedAt.type).toBe(Date);
+      expect(appSchema.submittedAt.default).toBe(Date.now);
+    });
+  });
+
   describe('Shelter Model', () => {
     it('should be a valid mongoose model', () => {
       expect(Shelter).toBeDefined();
