@@ -48,6 +48,7 @@ const RootQueryType = new GraphQLObjectType({
       type: new GraphQLList(AnimalType),
       args: {
         type: { type: GraphQLString },
+        breed: { type: GraphQLString },
         sex: { type: GraphQLString },
         color: { type: GraphQLString },
         name: { type: GraphQLString },
@@ -55,9 +56,10 @@ const RootQueryType = new GraphQLObjectType({
         minAge: { type: GraphQLInt },
         maxAge: { type: GraphQLInt }
       },
-      resolve(_, args: { type?: string; sex?: string; color?: string; name?: string; status?: string; minAge?: number; maxAge?: number }) {
+      resolve(_, args: { type?: string; breed?: string; sex?: string; color?: string; name?: string; status?: string; minAge?: number; maxAge?: number }) {
         const filter: Record<string, unknown> = {};
         if (args.type) filter.type = args.type;
+        if (args.breed) filter.breed = { $regex: args.breed, $options: 'i' };
         if (args.sex) filter.sex = args.sex;
         if (args.status) filter.status = args.status;
         if (args.color) filter.color = { $regex: args.color, $options: 'i' };

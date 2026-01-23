@@ -29,7 +29,7 @@ class UserLanding extends Component<UserLandingProps, UserLandingState> {
 
   hasActiveFilters(): boolean {
     const { filters } = this.state;
-    return !!(filters.type || filters.sex || filters.status || filters.name || filters.color || filters.minAge !== undefined || filters.maxAge !== undefined);
+    return !!(filters.type || filters.breed || filters.sex || filters.status || filters.name || filters.color || filters.minAge !== undefined || filters.maxAge !== undefined);
   }
 
   render() {

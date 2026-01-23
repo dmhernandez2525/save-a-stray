@@ -46,6 +46,7 @@ interface AnimalArgs {
   _id?: string;
   name: string;
   type: string;
+  breed?: string;
   age: number;
   sex: string;
   color: string;
@@ -130,6 +131,7 @@ const mutation = new GraphQLObjectType({
       args: {
         name: { type: GraphQLString },
         type: { type: GraphQLString },
+        breed: { type: GraphQLString },
         age: { type: GraphQLInt },
         sex: { type: GraphQLString },
         color: { type: GraphQLString },
@@ -140,8 +142,8 @@ const mutation = new GraphQLObjectType({
         applications: { type: GraphQLID }
       },
       async resolve(_, args: AnimalArgs) {
-        const { name, type, age, sex, color, description, image, video, status } = args;
-        const newAnimal = new Animal({ name, type, age, sex, color, description, image, video, status: status || 'available' });
+        const { name, type, breed, age, sex, color, description, image, video, status } = args;
+        const newAnimal = new Animal({ name, type, breed: breed || '', age, sex, color, description, image, video, status: status || 'available' });
         await newAnimal.save();
         return newAnimal;
       }
@@ -161,6 +163,7 @@ const mutation = new GraphQLObjectType({
         _id: { type: GraphQLID },
         name: { type: GraphQLString },
         type: { type: GraphQLString },
+        breed: { type: GraphQLString },
         age: { type: GraphQLInt },
         sex: { type: GraphQLString },
         color: { type: GraphQLString },
@@ -171,11 +174,12 @@ const mutation = new GraphQLObjectType({
         applications: { type: GraphQLID }
       },
       async resolve(_, args: AnimalArgs & { _id: string }) {
-        const { _id, name, type, age, sex, color, description, image, video, status } = args;
+        const { _id, name, type, breed, age, sex, color, description, image, video, status } = args;
         const animal = await Animal.findById(_id);
         if (animal) {
           animal.name = name;
           animal.type = type;
+          if (breed !== undefined) animal.breed = breed;
           animal.age = age;
           animal.sex = sex;
           animal.color = color;

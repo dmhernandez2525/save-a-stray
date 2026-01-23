@@ -82,6 +82,7 @@ export interface FetchUserResponse {
 
 export interface FindAnimalsVariables {
   type?: string;
+  breed?: string;
   sex?: string;
   color?: string;
   name?: string;
