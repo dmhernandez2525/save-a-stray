@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import {
   GraphQLObjectType,
   GraphQLString,
+  GraphQLBoolean,
   GraphQLID,
   GraphQLList,
   GraphQLFieldConfigMap
@@ -29,6 +30,8 @@ const ShelterType: GraphQLObjectType = new GraphQLObjectType({
     website: { type: GraphQLString },
     hours: { type: GraphQLString },
     description: { type: GraphQLString },
+    verified: { type: GraphQLBoolean },
+    verifiedAt: { type: GraphQLString },
     animals: {
       type: new GraphQLList(require("./animal_type").default),
       resolve(parentValue: ShelterParentValue) {

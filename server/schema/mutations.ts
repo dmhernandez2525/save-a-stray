@@ -727,6 +727,23 @@ const mutation = new GraphQLObjectType({
         return SavedSearchModel.findByIdAndDelete(args._id);
       }
     },
+    verifyShelter: {
+      type: ShelterType,
+      args: {
+        shelterId: { type: GraphQLID },
+        verified: { type: GraphQLBoolean }
+      },
+      async resolve(_, args: { shelterId: string; verified: boolean }) {
+        const shelter = await Shelter.findById(args.shelterId);
+        if (shelter) {
+          shelter.verified = args.verified;
+          shelter.verifiedAt = args.verified ? new Date() : undefined;
+          await shelter.save();
+          return shelter;
+        }
+        return null;
+      }
+    },
     createApplicationTemplate: {
       type: ApplicationTemplateType,
       args: {
