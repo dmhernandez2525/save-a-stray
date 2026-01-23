@@ -256,6 +256,20 @@ export interface ShelterDonationsResponse {
   shelterDonations: Donation[];
 }
 
+export interface PlatformStats {
+  totalUsers: number;
+  totalShelters: number;
+  totalAnimals: number;
+  totalApplications: number;
+  availableAnimals: number;
+  adoptedAnimals: number;
+  totalDonations: number;
+}
+
+export interface PlatformStatsResponse {
+  platformStats: PlatformStats;
+}
+
 export interface ShelterStaffResponse {
   shelterStaff: ShelterStaffMember[];
 }

@@ -725,4 +725,29 @@ describe('GraphQL Schema Tests', () => {
     const fields = mutation.getFields();
     expect(fields.createDonation.type).toBe(DonationType);
   });
+
+  it('should have PlatformStatsType with all stat fields', () => {
+    const PlatformStatsType = require('../server/schema/types/platform_stats_type').default;
+    const fields = PlatformStatsType.getFields();
+    expect(fields.totalUsers).toBeDefined();
+    expect(fields.totalShelters).toBeDefined();
+    expect(fields.totalAnimals).toBeDefined();
+    expect(fields.totalApplications).toBeDefined();
+    expect(fields.availableAnimals).toBeDefined();
+    expect(fields.adoptedAnimals).toBeDefined();
+    expect(fields.totalDonations).toBeDefined();
+  });
+
+  it('should have platformStats query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+    expect(fields.platformStats).toBeDefined();
+  });
+
+  it('should return PlatformStatsType from platformStats query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const PlatformStatsType = require('../server/schema/types/platform_stats_type').default;
+    const fields = RootQueryType.getFields();
+    expect(fields.platformStats.type).toBe(PlatformStatsType);
+  });
 });

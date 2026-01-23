@@ -7,7 +7,7 @@ export interface IUser {
   _id: Types.ObjectId | string;
   name: string;
   email: string;
-  userRole: 'shelter' | 'endUser';
+  userRole: 'shelter' | 'endUser' | 'admin';
   paymentEmail?: string;
   password: string;
   date: Date;
