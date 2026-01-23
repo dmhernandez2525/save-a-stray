@@ -19,6 +19,7 @@ interface Mutations {
   CREATE_SUCCESS_STORY: DocumentNode;
   ADD_SHELTER_STAFF: DocumentNode;
   REMOVE_SHELTER_STAFF: DocumentNode;
+  BULK_CREATE_ANIMALS: DocumentNode;
 }
 
 const mutations: Mutations = {
@@ -302,6 +303,20 @@ const mutations: Mutations = {
         users {
           _id
         }
+      }
+    }
+  `,
+  BULK_CREATE_ANIMALS: gql`
+    mutation BulkCreateAnimals($animals: [AnimalInput]!, $shelterId: ID) {
+      bulkCreateAnimals(animals: $animals, shelterId: $shelterId) {
+        _id
+        name
+        type
+        breed
+        age
+        sex
+        color
+        status
       }
     }
   `

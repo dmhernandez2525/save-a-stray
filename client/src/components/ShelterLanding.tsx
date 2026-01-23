@@ -11,6 +11,7 @@ import Mutations from "../graphql/mutations";
 import ShelterApplications from "./ShelterApplications";
 import ShelterAnalytics from "./ShelterAnalytics";
 import StaffManagement from "./StaffManagement";
+import BulkImport from "./BulkImport";
 import { exportAnimalsCsv } from "../util/exportCsv";
 
 const { FETCH_SHELTER } = Queries;
@@ -322,6 +323,10 @@ class ShelterLanding extends Component<ShelterLandingProps, ShelterLandingState>
                   <div className="mt-6">
                     <h2 className="text-white font-capriola text-xl mb-4">Staff</h2>
                     <StaffManagement shelterId={shelterId} />
+                  </div>
+
+                  <div className="mt-6">
+                    <BulkImport shelterId={shelterId} />
                   </div>
                 </>
               );
