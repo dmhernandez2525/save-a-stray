@@ -4,10 +4,13 @@ import Queries from "../graphql/queries";
 import AnimalFeedItem from "./AnimalFeedItem";
 import SearchFilters from "./SearchFilters";
 import { withRouter, WithRouterProps } from "../util/withRouter";
+import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import { FindAnimalsResponse, FindAnimalsVariables, Animal } from "../types";
 
 const { FIND_ANIMALS } = Queries;
+
+const PAGE_SIZE = 12;
 
 interface UserLandingProps extends WithRouterProps {
   splash?: string;
@@ -16,6 +19,7 @@ interface UserLandingProps extends WithRouterProps {
 interface UserLandingState {
   filters: FindAnimalsVariables;
   animal: Animal | null;
+  hasMore: boolean;
 }
 
 class UserLanding extends Component<UserLandingProps, UserLandingState> {
@@ -24,6 +28,7 @@ class UserLanding extends Component<UserLandingProps, UserLandingState> {
     this.state = {
       filters: {},
       animal: null,
+      hasMore: true,
     };
   }
 
@@ -47,7 +52,7 @@ class UserLanding extends Component<UserLandingProps, UserLandingState> {
         </h1>
         <SearchFilters
           filters={this.state.filters}
-          onFiltersChange={(filters) => this.setState({ filters })}
+          onFiltersChange={(filters) => this.setState({ filters, hasMore: true })}
         />
         <div className="mt-6 w-full">
           {!hasFilters ? (
@@ -65,10 +70,16 @@ class UserLanding extends Component<UserLandingProps, UserLandingState> {
           ) : (
             <Query<FindAnimalsResponse, FindAnimalsVariables>
               query={FIND_ANIMALS}
-              variables={this.state.filters}
+              variables={{ ...this.state.filters, limit: PAGE_SIZE, offset: 0 }}
+              onCompleted={(data) => {
+                const animals = data?.findAnimals || [];
+                if (animals.length < PAGE_SIZE && this.state.hasMore) {
+                  this.setState({ hasMore: false });
+                }
+              }}
             >
-              {({ loading, error, data }) => {
-                if (loading)
+              {({ loading, error, data, fetchMore }) => {
+                if (loading && (!data || !data.findAnimals))
                   return (
                     <p className="text-white font-capriola animate-pulse text-center">
                       Loading...
@@ -96,6 +107,30 @@ class UserLanding extends Component<UserLandingProps, UserLandingState> {
                         </li>
                       ))}
                     </ul>
+                    {this.state.hasMore && animals.length >= PAGE_SIZE && (
+                      <div className="flex justify-center mt-4">
+                        <Button
+                          variant="salmon"
+                          onClick={() => {
+                            fetchMore({
+                              variables: { offset: animals.length },
+                              updateQuery: (prev, { fetchMoreResult }) => {
+                                if (!fetchMoreResult) return prev;
+                                const newAnimals = fetchMoreResult.findAnimals;
+                                if (newAnimals.length < PAGE_SIZE) {
+                                  this.setState({ hasMore: false });
+                                }
+                                return {
+                                  findAnimals: [...prev.findAnimals, ...newAnimals],
+                                };
+                              },
+                            });
+                          }}
+                        >
+                          Load More
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 );
               }}
