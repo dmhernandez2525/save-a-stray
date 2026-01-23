@@ -38,7 +38,11 @@ const UserSchema = new Schema<UserDocument>({
   },
   varId: {
     type: mongoose.Schema.Types.ObjectId
-  }
+  },
+  favorites: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'animal'
+  }]
 });
 
 const User: Model<UserDocument> = mongoose.model<UserDocument>('user', UserSchema);

@@ -85,6 +85,15 @@ const RootQueryType = new GraphQLObjectType({
         return Animal.findById(args._id);
       }
     },
+    userFavorites: {
+      type: new GraphQLList(AnimalType),
+      args: { userId: { type: new GraphQLNonNull(GraphQLID) } },
+      async resolve(_, args: { userId: string }) {
+        const user = await User.findById(args.userId);
+        if (!user || !user.favorites || user.favorites.length === 0) return [];
+        return Animal.find({ _id: { $in: user.favorites } });
+      }
+    },
     shelters: {
       type: new GraphQLList(ShelterType),
       resolve() {
