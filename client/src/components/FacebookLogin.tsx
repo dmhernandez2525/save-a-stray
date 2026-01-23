@@ -43,6 +43,7 @@ class FacebookSignIn extends Component<FacebookSignInProps, FacebookSignInState>
       .mutate({
         variables: { code: this.code },
       })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .then((response: any) => {
         this.setState({ loading: false });
         const { error, user, session } = response.data.facebookSignIn;
@@ -100,4 +101,5 @@ const FACEBOOK_SIGN_IN = gql`
   }
 `;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default graphql(FACEBOOK_SIGN_IN)(FacebookSignIn as any);
