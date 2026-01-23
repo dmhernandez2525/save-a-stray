@@ -3,14 +3,14 @@ import { Query, Mutation } from "@apollo/client/react/components";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import Queries from "../graphql/queries";
 import Mutations from "../graphql/mutations";
-import { UserSavedSearchesResponse, SavedSearch } from "../types";
+import { UserSavedSearchesResponse, SavedSearch, SavedSearchFilters } from "../types";
 
 const { USER_SAVED_SEARCHES } = Queries;
 const { CREATE_SAVED_SEARCH, DELETE_SAVED_SEARCH } = Mutations;
 
 interface SavedSearchesProps {
   userId: string;
-  onRunSearch?: (filters: Record<string, unknown>) => void;
+  onRunSearch?: (filters: SavedSearchFilters) => void;
 }
 
 interface SavedSearchesState {
@@ -55,7 +55,7 @@ class SavedSearches extends Component<SavedSearchesProps, SavedSearchesState> {
     });
   }
 
-  formatFilters(filters: Record<string, unknown>): string {
+  formatFilters(filters: SavedSearchFilters): string {
     const parts: string[] = [];
     if (filters.type) parts.push(`Type: ${filters.type}`);
     if (filters.breed) parts.push(`Breed: ${filters.breed}`);

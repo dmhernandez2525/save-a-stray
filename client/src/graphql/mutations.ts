@@ -30,6 +30,7 @@ interface Mutations {
   CREATE_APPLICATION_TEMPLATE: DocumentNode;
   DELETE_APPLICATION_TEMPLATE: DocumentNode;
   VERIFY_SHELTER: DocumentNode;
+  LOG_ACTIVITY: DocumentNode;
 }
 
 const mutations: Mutations = {
@@ -509,6 +510,29 @@ const mutations: Mutations = {
         _id
         verified
         verifiedAt
+      }
+    }
+  `,
+  LOG_ACTIVITY: gql`
+    mutation LogActivity(
+      $shelterId: ID!
+      $action: String!
+      $entityType: String!
+      $entityId: String
+      $description: String!
+    ) {
+      logActivity(
+        shelterId: $shelterId
+        action: $action
+        entityType: $entityType
+        entityId: $entityId
+        description: $description
+      ) {
+        _id
+        action
+        entityType
+        description
+        createdAt
       }
     }
   `

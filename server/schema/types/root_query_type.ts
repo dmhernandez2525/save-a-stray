@@ -24,11 +24,13 @@ import PlatformStatsType from './platform_stats_type';
 import FosterType from './foster_type';
 import SavedSearchType from './saved_search_type';
 import ApplicationTemplateType from './application_template_type';
+import ActivityLogType from './activity_log_type';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
 import { FosterDocument } from '../../models/Foster';
 import { SavedSearchDocument } from '../../models/SavedSearch';
 import { ApplicationTemplateDocument } from '../../models/ApplicationTemplate';
+import { ActivityLogDocument } from '../../models/ActivityLog';
 import { ApplicationDocument } from '../../models/Application';
 import { AnimalDocument } from '../../models/Animal';
 import { UserDocument } from '../../models/User';
@@ -48,6 +50,7 @@ const DonationModel = mongoose.model<DonationDocument>('donation');
 const FosterModel = mongoose.model<FosterDocument>('foster');
 const SavedSearchModel = mongoose.model<SavedSearchDocument>('savedSearch');
 const ApplicationTemplateModel = mongoose.model<ApplicationTemplateDocument>('applicationTemplate');
+const ActivityLogModel = mongoose.model<ActivityLogDocument>('activityLog');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -198,6 +201,17 @@ const RootQueryType = new GraphQLObjectType({
       args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
       resolve(_, args: { shelterId: string }) {
         return ApplicationTemplateModel.find({ shelterId: args.shelterId }).sort({ createdAt: -1 });
+      }
+    },
+    shelterActivityLog: {
+      type: new GraphQLList(ActivityLogType),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        limit: { type: GraphQLInt }
+      },
+      resolve(_, args: { shelterId: string; limit?: number }) {
+        const limit = args.limit || 30;
+        return ActivityLogModel.find({ shelterId: args.shelterId }).sort({ createdAt: -1 }).limit(limit);
       }
     },
     platformStats: {

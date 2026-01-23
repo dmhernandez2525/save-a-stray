@@ -13,6 +13,7 @@ interface Queries {
   SHELTER_FOSTERS: DocumentNode;
   USER_SAVED_SEARCHES: DocumentNode;
   SHELTER_APPLICATION_TEMPLATES: DocumentNode;
+  SHELTER_ACTIVITY_LOG: DocumentNode;
   PLATFORM_STATS: DocumentNode;
   USER_APPLICATIONS: DocumentNode;
   FIND_ANIMALS: DocumentNode;
@@ -302,6 +303,19 @@ const queries: Queries = {
           required
           options
         }
+        createdAt
+      }
+    }
+  `,
+  SHELTER_ACTIVITY_LOG: gql`
+    query ShelterActivityLog($shelterId: ID!, $limit: Int) {
+      shelterActivityLog(shelterId: $shelterId, limit: $limit) {
+        _id
+        shelterId
+        action
+        entityType
+        entityId
+        description
         createdAt
       }
     }

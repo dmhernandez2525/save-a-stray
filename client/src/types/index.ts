@@ -320,6 +320,23 @@ export interface UserSavedSearchesResponse {
   userSavedSearches: SavedSearch[];
 }
 
+// Activity Log Types
+export type ActivityEntityType = 'animal' | 'application' | 'user' | 'shelter' | 'event' | 'donation';
+
+export interface ActivityLogEntry {
+  _id: string;
+  shelterId: string;
+  action: string;
+  entityType: ActivityEntityType;
+  entityId: string;
+  description: string;
+  createdAt: string;
+}
+
+export interface ShelterActivityLogResponse {
+  shelterActivityLog: ActivityLogEntry[];
+}
+
 // Application Template Types
 export type TemplateFieldType = 'text' | 'textarea' | 'select' | 'checkbox' | 'number';
 

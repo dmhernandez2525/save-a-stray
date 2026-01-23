@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const Animal = require('../server/models/Animal').default;
 const User = require('../server/models/User').default;
 const Shelter = require('../server/models/Shelter').default;
+const ActivityLog = require('../server/models/ActivityLog').default;
 
 describe('Mongoose Models Schema Tests', () => {
   describe('Animal Model', () => {
@@ -184,6 +185,37 @@ describe('Mongoose Models Schema Tests', () => {
 
       expect(shelterSchema.animals).toBeDefined();
       expect(Array.isArray(shelterSchema.animals)).toBe(true);
+    });
+  });
+
+  describe('ActivityLog Model', () => {
+    it('should have required fields defined in schema', () => {
+      const schema = ActivityLog.schema.obj;
+      expect(schema.shelterId).toBeDefined();
+      expect(schema.shelterId.required).toBe(true);
+      expect(schema.action).toBeDefined();
+      expect(schema.action.required).toBe(true);
+      expect(schema.description).toBeDefined();
+      expect(schema.description.required).toBe(true);
+    });
+
+    it('should have entityType with enum values', () => {
+      const schema = ActivityLog.schema.obj;
+      expect(schema.entityType).toBeDefined();
+      expect(schema.entityType.required).toBe(true);
+      expect(schema.entityType.enum).toEqual(['animal', 'application', 'user', 'shelter', 'event', 'donation']);
+    });
+
+    it('should have entityId with default empty string', () => {
+      const schema = ActivityLog.schema.obj;
+      expect(schema.entityId).toBeDefined();
+      expect(schema.entityId.default).toBe('');
+    });
+
+    it('should have createdAt field with Date type', () => {
+      const schema = ActivityLog.schema.obj;
+      expect(schema.createdAt).toBeDefined();
+      expect(schema.createdAt.type).toBe(Date);
     });
   });
 });

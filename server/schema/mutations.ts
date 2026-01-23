@@ -28,11 +28,13 @@ import DonationType from './types/donation_type';
 import FosterType from './types/foster_type';
 import SavedSearchType from './types/saved_search_type';
 import ApplicationTemplateType from './types/application_template_type';
+import ActivityLogType from './types/activity_log_type';
 import { EventDocument } from '../models/Event';
 import { DonationDocument } from '../models/Donation';
 import { FosterDocument } from '../models/Foster';
 import { SavedSearchDocument } from '../models/SavedSearch';
 import { ApplicationTemplateDocument } from '../models/ApplicationTemplate';
+import { ActivityLogDocument } from '../models/ActivityLog';
 import { ReviewDocument } from '../models/Review';
 import { NotificationDocument } from '../models/Notification';
 
@@ -48,6 +50,7 @@ const DonationModel = mongoose.model<DonationDocument>('donation');
 const FosterModel = mongoose.model<FosterDocument>('foster');
 const SavedSearchModel = mongoose.model<SavedSearchDocument>('savedSearch');
 const ApplicationTemplateModel = mongoose.model<ApplicationTemplateDocument>('applicationTemplate');
+const ActivityLogModel = mongoose.model<ActivityLogDocument>('activityLog');
 
 interface RegisterArgs {
   name: string;
@@ -725,6 +728,27 @@ const mutation = new GraphQLObjectType({
       args: { _id: { type: GraphQLID } },
       resolve(_, args: { _id: string }) {
         return SavedSearchModel.findByIdAndDelete(args._id);
+      }
+    },
+    logActivity: {
+      type: ActivityLogType,
+      args: {
+        shelterId: { type: GraphQLID },
+        action: { type: GraphQLString },
+        entityType: { type: GraphQLString },
+        entityId: { type: GraphQLString },
+        description: { type: GraphQLString }
+      },
+      async resolve(_, args: { shelterId: string; action: string; entityType: string; entityId?: string; description: string }) {
+        const log = new ActivityLogModel({
+          shelterId: args.shelterId,
+          action: args.action,
+          entityType: args.entityType,
+          entityId: args.entityId || '',
+          description: args.description
+        });
+        await log.save();
+        return log;
       }
     },
     verifyShelter: {
