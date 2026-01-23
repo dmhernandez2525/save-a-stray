@@ -399,6 +399,39 @@ describe('GraphQL Schema Tests', () => {
     expect(args).toContain('image');
   });
 
+  it('should have ReviewType with correct fields', () => {
+    const ReviewType = require('../server/schema/types/review_type').default;
+    const fields = ReviewType.getFields();
+
+    expect(fields._id).toBeDefined();
+    expect(fields.userId).toBeDefined();
+    expect(fields.shelterId).toBeDefined();
+    expect(fields.rating).toBeDefined();
+    expect(fields.comment).toBeDefined();
+    expect(fields.createdAt).toBeDefined();
+  });
+
+  it('should have shelterReviews query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.shelterReviews).toBeDefined();
+    const args = fields.shelterReviews.args.map(a => a.name);
+    expect(args).toContain('shelterId');
+  });
+
+  it('should have createReview mutation with correct args', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.createReview).toBeDefined();
+    const args = mutationFields.createReview.args.map(a => a.name);
+    expect(args).toContain('userId');
+    expect(args).toContain('shelterId');
+    expect(args).toContain('rating');
+    expect(args).toContain('comment');
+  });
+
   it('should have medicalRecords field on AnimalType', () => {
     const AnimalType = require('../server/schema/types/animal_type').default;
     const fields = AnimalType.getFields();

@@ -15,6 +15,7 @@ interface Mutations {
   CREATE_SHELTER: DocumentNode;
   EDIT_SHELTER: DocumentNode;
   ADD_MEDICAL_RECORD: DocumentNode;
+  CREATE_REVIEW: DocumentNode;
   CREATE_SUCCESS_STORY: DocumentNode;
 }
 
@@ -214,6 +215,18 @@ const mutations: Mutations = {
         website
         hours
         description
+      }
+    }
+  `,
+  CREATE_REVIEW: gql`
+    mutation CreateReview($userId: String!, $shelterId: String!, $rating: Int!, $comment: String) {
+      createReview(userId: $userId, shelterId: $shelterId, rating: $rating, comment: $comment) {
+        _id
+        userId
+        shelterId
+        rating
+        comment
+        createdAt
       }
     }
   `,

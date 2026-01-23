@@ -15,17 +15,20 @@ import ApplicationType from './application_type';
 import ShelterType from './shelter_type';
 import SuccessStoryType from './success_story_type';
 import ShelterAnalyticsType from './shelter_analytics_type';
+import ReviewType from './review_type';
 import { ApplicationDocument } from '../../models/Application';
 import { AnimalDocument } from '../../models/Animal';
 import { UserDocument } from '../../models/User';
 import { ShelterDocument } from '../../models/Shelter';
 import { SuccessStoryDocument } from '../../models/SuccessStory';
+import { ReviewDocument } from '../../models/Review';
 
 const Application = mongoose.model<ApplicationDocument>('application');
 const Animal = mongoose.model<AnimalDocument>('animal');
 const User = mongoose.model<UserDocument>('user');
 const Shelter = mongoose.model<ShelterDocument>('shelter');
 const SuccessStoryModel = mongoose.model<SuccessStoryDocument>('successStory');
+const ReviewModel = mongoose.model<ReviewDocument>('review');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -138,6 +141,13 @@ const RootQueryType = new GraphQLObjectType({
       type: new GraphQLList(SuccessStoryType),
       resolve() {
         return SuccessStoryModel.find({}).sort({ createdAt: -1 });
+      }
+    },
+    shelterReviews: {
+      type: new GraphQLList(ReviewType),
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { shelterId: string }) {
+        return ReviewModel.find({ shelterId: args.shelterId }).sort({ createdAt: -1 });
       }
     },
     similarAnimals: {
