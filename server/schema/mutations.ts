@@ -2,6 +2,7 @@ import {
   GraphQLObjectType,
   GraphQLString,
   GraphQLInt,
+  GraphQLFloat,
   GraphQLID,
   GraphQLList,
   GraphQLInputObjectType,
@@ -22,7 +23,9 @@ import { SuccessStoryDocument } from '../models/SuccessStory';
 import ReviewType from './types/review_type';
 import NotificationType from './types/notification_type';
 import EventType from './types/event_type';
+import DonationType from './types/donation_type';
 import { EventDocument } from '../models/Event';
+import { DonationDocument } from '../models/Donation';
 import { ReviewDocument } from '../models/Review';
 import { NotificationDocument } from '../models/Notification';
 
@@ -34,6 +37,7 @@ const SuccessStoryModel = mongoose.model<SuccessStoryDocument>('successStory');
 const ReviewModel = mongoose.model<ReviewDocument>('review');
 const NotificationModel = mongoose.model<NotificationDocument>('notification');
 const EventModel = mongoose.model<EventDocument>('event');
+const DonationModel = mongoose.model<DonationDocument>('donation');
 
 interface RegisterArgs {
   name: string;
@@ -576,6 +580,27 @@ const mutation = new GraphQLObjectType({
       args: { _id: { type: GraphQLID } },
       resolve(_, args: { _id: string }) {
         return EventModel.findByIdAndDelete(args._id);
+      }
+    },
+    createDonation: {
+      type: DonationType,
+      args: {
+        shelterId: { type: GraphQLID },
+        userId: { type: GraphQLString },
+        donorName: { type: GraphQLString },
+        amount: { type: GraphQLFloat },
+        message: { type: GraphQLString }
+      },
+      async resolve(_, args: { shelterId: string; userId?: string; donorName: string; amount: number; message?: string }) {
+        const donation = new DonationModel({
+          shelterId: args.shelterId,
+          userId: args.userId || '',
+          donorName: args.donorName,
+          amount: args.amount,
+          message: args.message || ''
+        });
+        await donation.save();
+        return donation;
       }
     },
     bulkCreateAnimals: {

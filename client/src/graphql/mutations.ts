@@ -22,6 +22,7 @@ interface Mutations {
   BULK_CREATE_ANIMALS: DocumentNode;
   CREATE_EVENT: DocumentNode;
   DELETE_EVENT: DocumentNode;
+  CREATE_DONATION: DocumentNode;
 }
 
 const mutations: Mutations = {
@@ -352,6 +353,29 @@ const mutations: Mutations = {
     mutation DeleteEvent($_id: ID!) {
       deleteEvent(_id: $_id) {
         _id
+      }
+    }
+  `,
+  CREATE_DONATION: gql`
+    mutation CreateDonation(
+      $shelterId: ID!
+      $userId: String
+      $donorName: String!
+      $amount: Float!
+      $message: String
+    ) {
+      createDonation(
+        shelterId: $shelterId
+        userId: $userId
+        donorName: $donorName
+        amount: $amount
+        message: $message
+      ) {
+        _id
+        donorName
+        amount
+        message
+        createdAt
       }
     }
   `
