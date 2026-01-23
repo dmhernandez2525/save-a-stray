@@ -5,6 +5,7 @@ const Animal = require('../server/models/Animal').default;
 const User = require('../server/models/User').default;
 const Shelter = require('../server/models/Shelter').default;
 const ActivityLog = require('../server/models/ActivityLog').default;
+const TerminalReader = require('../server/models/TerminalReader').default;
 
 describe('Mongoose Models Schema Tests', () => {
   describe('Animal Model', () => {
@@ -216,6 +217,32 @@ describe('Mongoose Models Schema Tests', () => {
       const schema = ActivityLog.schema.obj;
       expect(schema.createdAt).toBeDefined();
       expect(schema.createdAt.type).toBe(Date);
+    });
+  });
+
+  describe('TerminalReader Model', () => {
+    it('should have required fields defined in schema', () => {
+      const schema = TerminalReader.schema.obj;
+      expect(schema.shelterId).toBeDefined();
+      expect(schema.shelterId.required).toBe(true);
+      expect(schema.stripeReaderId).toBeDefined();
+      expect(schema.stripeReaderId.required).toBe(true);
+      expect(schema.label).toBeDefined();
+      expect(schema.label.required).toBe(true);
+    });
+
+    it('should have status field with enum values', () => {
+      const schema = TerminalReader.schema.obj;
+      expect(schema.status).toBeDefined();
+      expect(schema.status.enum).toEqual(['online', 'offline']);
+      expect(schema.status.default).toBe('offline');
+    });
+
+    it('should have optional fields with defaults', () => {
+      const schema = TerminalReader.schema.obj;
+      expect(schema.deviceType.default).toBe('simulated');
+      expect(schema.serialNumber.default).toBe('');
+      expect(schema.location.default).toBe('');
     });
   });
 });

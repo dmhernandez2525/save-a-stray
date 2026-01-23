@@ -31,6 +31,9 @@ interface Mutations {
   DELETE_APPLICATION_TEMPLATE: DocumentNode;
   VERIFY_SHELTER: DocumentNode;
   LOG_ACTIVITY: DocumentNode;
+  REGISTER_TERMINAL_READER: DocumentNode;
+  DELETE_TERMINAL_READER: DocumentNode;
+  CREATE_TERMINAL_PAYMENT_INTENT: DocumentNode;
 }
 
 const mutations: Mutations = {
@@ -533,6 +536,62 @@ const mutations: Mutations = {
         entityType
         description
         createdAt
+      }
+    }
+  `,
+  REGISTER_TERMINAL_READER: gql`
+    mutation RegisterTerminalReader(
+      $shelterId: ID!
+      $registrationCode: String!
+      $label: String!
+      $location: String
+    ) {
+      registerTerminalReader(
+        shelterId: $shelterId
+        registrationCode: $registrationCode
+        label: $label
+        location: $location
+      ) {
+        _id
+        shelterId
+        stripeReaderId
+        label
+        deviceType
+        serialNumber
+        location
+        status
+        registeredAt
+      }
+    }
+  `,
+  DELETE_TERMINAL_READER: gql`
+    mutation DeleteTerminalReader($_id: ID!) {
+      deleteTerminalReader(_id: $_id) {
+        _id
+      }
+    }
+  `,
+  CREATE_TERMINAL_PAYMENT_INTENT: gql`
+    mutation CreateTerminalPaymentIntent(
+      $shelterId: ID!
+      $readerId: String!
+      $amount: Int!
+      $currency: String
+      $description: String
+    ) {
+      createTerminalPaymentIntent(
+        shelterId: $shelterId
+        readerId: $readerId
+        amount: $amount
+        currency: $currency
+        description: $description
+      ) {
+        id
+        amount
+        currency
+        status
+        description
+        clientSecret
       }
     }
   `
