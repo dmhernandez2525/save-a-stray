@@ -1,34 +1,39 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-
 // Mock the modules before requiring auth service
 jest.mock('../server/models/User', () => {
   const mockUser = jest.fn();
   mockUser.findOne = jest.fn();
   mockUser.findById = jest.fn();
-  return mockUser;
+  return { __esModule: true, default: mockUser };
 });
 
 jest.mock('bcryptjs', () => ({
-  hash: jest.fn(),
-  compareSync: jest.fn()
+  __esModule: true,
+  default: {
+    hash: jest.fn(),
+    compareSync: jest.fn(),
+    genSalt: jest.fn()
+  }
 }));
 
 jest.mock('jsonwebtoken', () => ({
-  sign: jest.fn(),
-  verify: jest.fn()
+  __esModule: true,
+  default: {
+    sign: jest.fn(),
+    verify: jest.fn()
+  }
 }));
 
 jest.mock('../config/keys', () => ({
-  secretOrKey: 'test-secret-key'
+  __esModule: true,
+  default: { secretOrKey: 'test-secret-key' }
 }));
 
-const User = require('../server/models/User');
-const keys = require('../config/keys');
-
-// Import validation functions for testing
-const validateRegisterInput = require('../server/validation/register');
-const validateLoginInput = require('../server/validation/login');
+const User = require('../server/models/User').default;
+const keys = require('../config/keys').default;
+const bcrypt = require('bcryptjs').default;
+const jwt = require('jsonwebtoken').default;
+const validateRegisterInput = require('../server/validation/register').default;
+const validateLoginInput = require('../server/validation/login').default;
 
 describe('Auth Service Tests', () => {
   beforeEach(() => {

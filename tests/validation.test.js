@@ -1,6 +1,6 @@
-const validText = require('../server/validation/valid-text');
-const validateLoginInput = require('../server/validation/login');
-const validateRegisterInput = require('../server/validation/register');
+const validText = require('../server/validation/valid-text').default;
+const validateLoginInput = require('../server/validation/login').default;
+const validateRegisterInput = require('../server/validation/register').default;
 
 describe('Validation Utilities', () => {
   describe('validText', () => {

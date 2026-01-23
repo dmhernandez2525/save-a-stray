@@ -1,12 +1,13 @@
 module.exports = {
   testEnvironment: 'node',
+  roots: ['<rootDir>/tests'],
   transform: {
     '^.+\\.ts$': 'ts-jest',
   },
   testMatch: [
-    '**/__tests__/**/*.test.{js,ts}',
-    '**/tests/**/*.test.{js,ts}',
+    '**/*.test.{js,ts}',
   ],
+  testPathIgnorePatterns: ['/node_modules/', '/client/'],
   collectCoverageFrom: [
     'server/**/*.{js,ts}',
     '!server/**/index.{js,ts}',
@@ -17,6 +18,7 @@ module.exports = {
   verbose: true,
   testTimeout: 10000,
   clearMocks: true,
+  forceExit: true,
   moduleDirectories: ['node_modules', 'server'],
   moduleFileExtensions: ['js', 'ts', 'json'],
 };

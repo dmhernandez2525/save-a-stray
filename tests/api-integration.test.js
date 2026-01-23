@@ -70,7 +70,7 @@ describe('API Integration Tests', () => {
 
   beforeAll(() => {
     // Import app after mocks are set up
-    app = require('../server/server');
+    app = require('../server/server').default;
   });
 
   beforeEach(() => {
@@ -192,20 +192,20 @@ describe('API Integration Tests', () => {
 
 describe('GraphQL Schema Tests', () => {
   it('should have Query type defined', () => {
-    const schema = require('../server/schema/schema');
+    const schema = require('../server/schema/schema').default;
 
     expect(schema).toBeDefined();
     expect(schema._queryType).toBeDefined();
   });
 
   it('should have Mutation type defined', () => {
-    const schema = require('../server/schema/schema');
+    const schema = require('../server/schema/schema').default;
 
     expect(schema._mutationType).toBeDefined();
   });
 
   it('should have correct query fields', () => {
-    const RootQueryType = require('../server/schema/types/root_query_type');
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
     const fields = RootQueryType.getFields();
 
     expect(fields.users).toBeDefined();
