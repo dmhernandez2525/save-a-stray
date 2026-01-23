@@ -72,6 +72,12 @@ describe('Mongoose Models Schema Tests', () => {
       expect(userSchema.shelterId).toBeDefined();
       expect(userSchema.paymentEmail).toBeDefined();
     });
+
+    it('should have favorites array reference field', () => {
+      const userSchema = User.schema.obj;
+      expect(userSchema.favorites).toBeDefined();
+      expect(Array.isArray(userSchema.favorites)).toBe(true);
+    });
   });
 
   describe('Shelter Model', () => {

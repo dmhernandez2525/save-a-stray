@@ -256,6 +256,45 @@ const mutation = new GraphQLObjectType({
         return null;
       }
     },
+    addFavorite: {
+      type: UserType,
+      args: {
+        userId: { type: GraphQLID },
+        animalId: { type: GraphQLID }
+      },
+      async resolve(_, args: { userId: string; animalId: string }) {
+        const user = await User.findById(args.userId);
+        if (user) {
+          const alreadyFavorited = user.favorites.some(
+            (id) => id.toString() === args.animalId
+          );
+          if (!alreadyFavorited) {
+            user.favorites.push(args.animalId as unknown as typeof user.favorites[0]);
+            await user.save();
+          }
+          return user;
+        }
+        return null;
+      }
+    },
+    removeFavorite: {
+      type: UserType,
+      args: {
+        userId: { type: GraphQLID },
+        animalId: { type: GraphQLID }
+      },
+      async resolve(_, args: { userId: string; animalId: string }) {
+        const user = await User.findById(args.userId);
+        if (user) {
+          user.favorites = user.favorites.filter(
+            (id) => id.toString() !== args.animalId
+          ) as typeof user.favorites;
+          await user.save();
+          return user;
+        }
+        return null;
+      }
+    },
     newShelter: {
       type: ShelterType,
       args: {

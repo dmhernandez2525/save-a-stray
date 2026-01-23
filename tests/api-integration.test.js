@@ -250,4 +250,37 @@ describe('GraphQL Schema Tests', () => {
 
     expect(fields.status).toBeDefined();
   });
+
+  it('should have addFavorite and removeFavorite mutations', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.addFavorite).toBeDefined();
+    expect(mutationFields.removeFavorite).toBeDefined();
+
+    const addArgs = mutationFields.addFavorite.args.map(a => a.name);
+    expect(addArgs).toContain('userId');
+    expect(addArgs).toContain('animalId');
+
+    const removeArgs = mutationFields.removeFavorite.args.map(a => a.name);
+    expect(removeArgs).toContain('userId');
+    expect(removeArgs).toContain('animalId');
+  });
+
+  it('should have userFavorites query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.userFavorites).toBeDefined();
+    const args = fields.userFavorites.args.map(a => a.name);
+    expect(args).toContain('userId');
+  });
+
+  it('should have favorites and favoriteIds fields on UserType', () => {
+    const UserType = require('../server/schema/types/user_type').default;
+    const fields = UserType.getFields();
+
+    expect(fields.favorites).toBeDefined();
+    expect(fields.favoriteIds).toBeDefined();
+  });
 });
