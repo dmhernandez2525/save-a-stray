@@ -6,6 +6,7 @@ import {
   GraphQLNonNull,
   GraphQLString,
   GraphQLInt,
+  GraphQLFloat,
   GraphQLFieldConfigMap
 } from 'graphql';
 import UserType from './user_type';
@@ -13,6 +14,7 @@ import AnimalType from './animal_type';
 import ApplicationType from './application_type';
 import ShelterType from './shelter_type';
 import SuccessStoryType from './success_story_type';
+import ShelterAnalyticsType from './shelter_analytics_type';
 import { ApplicationDocument } from '../../models/Application';
 import { AnimalDocument } from '../../models/Animal';
 import { UserDocument } from '../../models/User';
@@ -136,6 +138,65 @@ const RootQueryType = new GraphQLObjectType({
       type: new GraphQLList(SuccessStoryType),
       resolve() {
         return SuccessStoryModel.find({}).sort({ createdAt: -1 });
+      }
+    },
+    shelterAnalytics: {
+      type: ShelterAnalyticsType,
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      async resolve(_, args: { shelterId: string }) {
+        const shelter = await Shelter.findById(args.shelterId);
+        if (!shelter || !shelter.animals || shelter.animals.length === 0) {
+          return {
+            totalAnimals: 0,
+            availableAnimals: 0,
+            pendingAnimals: 0,
+            adoptedAnimals: 0,
+            adoptionRate: 0,
+            totalApplications: 0,
+            submittedApplications: 0,
+            underReviewApplications: 0,
+            approvedApplications: 0,
+            rejectedApplications: 0,
+            recentApplications: 0
+          };
+        }
+
+        const animalIds = shelter.animals.map((id) => id.toString());
+        const animals = await Animal.find({ _id: { $in: animalIds } });
+
+        const totalAnimals = animals.length;
+        const availableAnimals = animals.filter((a) => a.status === 'available').length;
+        const pendingAnimals = animals.filter((a) => a.status === 'pending').length;
+        const adoptedAnimals = animals.filter((a) => a.status === 'adopted').length;
+        const adoptionRate = totalAnimals > 0 ? (adoptedAnimals / totalAnimals) * 100 : 0;
+
+        const applications = await Application.find({ animalId: { $in: animalIds } });
+
+        const totalApplications = applications.length;
+        const submittedApplications = applications.filter((a) => a.status === 'submitted').length;
+        const underReviewApplications = applications.filter((a) => a.status === 'under_review').length;
+        const approvedApplications = applications.filter((a) => a.status === 'approved').length;
+        const rejectedApplications = applications.filter((a) => a.status === 'rejected').length;
+
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const recentApplications = applications.filter(
+          (a) => a.submittedAt && new Date(a.submittedAt) >= thirtyDaysAgo
+        ).length;
+
+        return {
+          totalAnimals,
+          availableAnimals,
+          pendingAnimals,
+          adoptedAnimals,
+          adoptionRate,
+          totalApplications,
+          submittedApplications,
+          underReviewApplications,
+          approvedApplications,
+          rejectedApplications,
+          recentApplications
+        };
       }
     }
   })
