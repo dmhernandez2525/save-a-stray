@@ -17,6 +17,8 @@ interface Mutations {
   ADD_MEDICAL_RECORD: DocumentNode;
   CREATE_REVIEW: DocumentNode;
   CREATE_SUCCESS_STORY: DocumentNode;
+  ADD_SHELTER_STAFF: DocumentNode;
+  REMOVE_SHELTER_STAFF: DocumentNode;
 }
 
 const mutations: Mutations = {
@@ -280,6 +282,26 @@ const mutations: Mutations = {
         story
         image
         createdAt
+      }
+    }
+  `,
+  ADD_SHELTER_STAFF: gql`
+    mutation AddShelterStaff($shelterId: ID!, $email: String!) {
+      addShelterStaff(shelterId: $shelterId, email: $email) {
+        _id
+        users {
+          _id
+        }
+      }
+    }
+  `,
+  REMOVE_SHELTER_STAFF: gql`
+    mutation RemoveShelterStaff($shelterId: ID!, $userId: ID!) {
+      removeShelterStaff(shelterId: $shelterId, userId: $userId) {
+        _id
+        users {
+          _id
+        }
       }
     }
   `

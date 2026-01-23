@@ -219,6 +219,16 @@ export interface ShelterAnalyticsResponse {
   shelterAnalytics: ShelterAnalytics;
 }
 
+export interface ShelterStaffMember {
+  _id: string;
+  name: string;
+  email: string;
+}
+
+export interface ShelterStaffResponse {
+  shelterStaff: ShelterStaffMember[];
+}
+
 // Local State Types
 export interface IsLoggedInData {
   isLoggedIn: boolean;
