@@ -266,12 +266,14 @@ const mutation = new GraphQLObjectType({
         animals: { type: GraphQLString }
       },
       async resolve(_, args: ShelterArgs & { _id: string }) {
-        const { _id, name, location, paymentEmail } = args;
+        const { _id, name, location, users, paymentEmail, animals } = args;
         const shelter = await Shelter.findById(_id);
         if (shelter) {
           shelter.name = name;
           shelter.location = location;
+          if (users) shelter.users = users as unknown as (typeof shelter.users);
           shelter.paymentEmail = paymentEmail;
+          if (animals) shelter.animals = animals as unknown as (typeof shelter.animals);
           await shelter.save();
           return shelter;
         }

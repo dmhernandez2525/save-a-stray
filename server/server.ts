@@ -22,7 +22,7 @@ if (keys.fbookClient && keys.fbookKey) {
     new FacebookStrategy({
       clientID: keys.fbookClient,
       clientSecret: keys.fbookKey,
-      callbackURL: 'https://save-a-stray.herokuapp.com/auth/facebook/callback',
+      callbackURL: keys.fbookCallbackURL || '/auth/facebook/callback',
       profileFields: ['id', 'displayName', 'photos', 'email']
     },
       async (accessToken: string, refreshToken: string, profile: Profile, cb: (error: Error | null, user?: UserStuff) => void) => {
@@ -61,17 +61,13 @@ app.use((_req: Request, res: Response, next: NextFunction) => {
 });
 
 app.use(cors());
+app.use(express.json());
 app.use(passport.initialize());
-
 app.use(passport.session());
 
 // Use graphql-http instead of deprecated express-graphql
 app.all("/graphql", createHandler({ schema }));
 
-// Use Express built-in JSON parser
-app.use(express.json());
-
-app.get('/a', () => console.log(11111111111111));
 app.get('/facebooklogin', cors(), passport.authenticate('facebook'));
 app.get(
   '/auth/facebook/callback',
