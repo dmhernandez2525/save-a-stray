@@ -27,6 +27,8 @@ interface Mutations {
   UPDATE_FOSTER_STATUS: DocumentNode;
   CREATE_SAVED_SEARCH: DocumentNode;
   DELETE_SAVED_SEARCH: DocumentNode;
+  CREATE_APPLICATION_TEMPLATE: DocumentNode;
+  DELETE_APPLICATION_TEMPLATE: DocumentNode;
 }
 
 const mutations: Mutations = {
@@ -466,6 +468,36 @@ const mutations: Mutations = {
   DELETE_SAVED_SEARCH: gql`
     mutation DeleteSavedSearch($_id: ID!) {
       deleteSavedSearch(_id: $_id) {
+        _id
+      }
+    }
+  `,
+  CREATE_APPLICATION_TEMPLATE: gql`
+    mutation CreateApplicationTemplate(
+      $shelterId: ID!
+      $name: String!
+      $fields: [TemplateFieldInput]
+    ) {
+      createApplicationTemplate(
+        shelterId: $shelterId
+        name: $name
+        fields: $fields
+      ) {
+        _id
+        name
+        fields {
+          label
+          fieldType
+          required
+          options
+        }
+        createdAt
+      }
+    }
+  `,
+  DELETE_APPLICATION_TEMPLATE: gql`
+    mutation DeleteApplicationTemplate($_id: ID!) {
+      deleteApplicationTemplate(_id: $_id) {
         _id
       }
     }

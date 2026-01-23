@@ -12,6 +12,7 @@ interface Queries {
   SHELTER_DONATIONS: DocumentNode;
   SHELTER_FOSTERS: DocumentNode;
   USER_SAVED_SEARCHES: DocumentNode;
+  SHELTER_APPLICATION_TEMPLATES: DocumentNode;
   PLATFORM_STATS: DocumentNode;
   USER_APPLICATIONS: DocumentNode;
   FIND_ANIMALS: DocumentNode;
@@ -283,6 +284,22 @@ const queries: Queries = {
         endDate
         status
         notes
+        createdAt
+      }
+    }
+  `,
+  SHELTER_APPLICATION_TEMPLATES: gql`
+    query ShelterApplicationTemplates($shelterId: ID!) {
+      shelterApplicationTemplates(shelterId: $shelterId) {
+        _id
+        shelterId
+        name
+        fields {
+          label
+          fieldType
+          required
+          options
+        }
         createdAt
       }
     }
