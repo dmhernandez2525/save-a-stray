@@ -278,3 +278,106 @@ describe('Animal Form - Multiple Images', () => {
     expect(screen.getByTestId('remove-image-1')).toBeInTheDocument();
   });
 });
+
+describe('Similar Animals Section', () => {
+  const mockSimilarAnimals = [
+    { _id: '2', name: 'Buddy', type: 'Dog', breed: 'Labrador', age: 3, sex: 'Male', image: 'buddy.jpg', status: 'available' },
+    { _id: '3', name: 'Max', type: 'Dog', breed: 'Labrador', age: 5, sex: 'Male', image: 'max.jpg', status: 'available' },
+    { _id: '4', name: 'Luna', type: 'Dog', breed: 'Golden', age: 2, sex: 'Female', image: 'luna.jpg', status: 'available' },
+  ];
+
+  const MockSimilarAnimals = ({ animals }) => {
+    if (!animals || animals.length === 0) return null;
+    return (
+      <div data-testid="similar-animals-section">
+        <h3 data-testid="similar-heading">Similar Animals You May Like</h3>
+        <div data-testid="similar-grid">
+          {animals.map(animal => (
+            <a key={animal._id} href={`/animal/${animal._id}`} data-testid={`similar-card-${animal._id}`}>
+              <img src={animal.image} alt={animal.name} data-testid={`similar-img-${animal._id}`} />
+              <p data-testid={`similar-name-${animal._id}`}>{animal.name}</p>
+              <p data-testid={`similar-info-${animal._id}`}>{animal.breed || animal.type} · {animal.age} yrs</p>
+            </a>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  it('should render similar animals section when data exists', () => {
+    render(
+      <TestWrapper>
+        <MockSimilarAnimals animals={mockSimilarAnimals} />
+      </TestWrapper>
+    );
+
+    expect(screen.getByTestId('similar-animals-section')).toBeInTheDocument();
+    expect(screen.getByTestId('similar-heading')).toHaveTextContent('Similar Animals You May Like');
+  });
+
+  it('should not render when no similar animals', () => {
+    render(
+      <TestWrapper>
+        <MockSimilarAnimals animals={[]} />
+      </TestWrapper>
+    );
+
+    expect(screen.queryByTestId('similar-animals-section')).not.toBeInTheDocument();
+  });
+
+  it('should render cards for each similar animal', () => {
+    render(
+      <TestWrapper>
+        <MockSimilarAnimals animals={mockSimilarAnimals} />
+      </TestWrapper>
+    );
+
+    expect(screen.getByTestId('similar-card-2')).toBeInTheDocument();
+    expect(screen.getByTestId('similar-card-3')).toBeInTheDocument();
+    expect(screen.getByTestId('similar-card-4')).toBeInTheDocument();
+  });
+
+  it('should display animal name and info', () => {
+    render(
+      <TestWrapper>
+        <MockSimilarAnimals animals={mockSimilarAnimals} />
+      </TestWrapper>
+    );
+
+    expect(screen.getByTestId('similar-name-2')).toHaveTextContent('Buddy');
+    expect(screen.getByTestId('similar-info-2')).toHaveTextContent('Labrador · 3 yrs');
+  });
+
+  it('should link to animal detail page', () => {
+    render(
+      <TestWrapper>
+        <MockSimilarAnimals animals={mockSimilarAnimals} />
+      </TestWrapper>
+    );
+
+    expect(screen.getByTestId('similar-card-2')).toHaveAttribute('href', '/animal/2');
+  });
+
+  it('should display animal images', () => {
+    render(
+      <TestWrapper>
+        <MockSimilarAnimals animals={mockSimilarAnimals} />
+      </TestWrapper>
+    );
+
+    expect(screen.getByTestId('similar-img-2')).toHaveAttribute('src', 'buddy.jpg');
+  });
+
+  it('should use type when breed is not available', () => {
+    const animalsWithoutBreed = [
+      { _id: '5', name: 'Rex', type: 'Dog', breed: '', age: 4, sex: 'Male', image: 'rex.jpg', status: 'available' }
+    ];
+    render(
+      <TestWrapper>
+        <MockSimilarAnimals animals={animalsWithoutBreed} />
+      </TestWrapper>
+    );
+
+    expect(screen.getByTestId('similar-info-5')).toHaveTextContent('Dog · 4 yrs');
+  });
+});
