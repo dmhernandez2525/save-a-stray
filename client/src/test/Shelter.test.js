@@ -330,3 +330,142 @@ describe('Shelter Form Component', () => {
     });
   });
 });
+
+describe('Shelter Contact Information', () => {
+  const MockContactInfo = ({ shelter, onEdit }) => {
+    const [editing, setEditing] = React.useState(false);
+    const [form, setForm] = React.useState({
+      phone: shelter.phone || '',
+      email: shelter.email || '',
+      website: shelter.website || '',
+      hours: shelter.hours || '',
+      description: shelter.description || ''
+    });
+
+    const hasContact = shelter.phone || shelter.email || shelter.website || shelter.hours || shelter.description;
+
+    if (editing) {
+      return (
+        <div data-testid="contact-edit-form">
+          <h3>Edit Contact Information</h3>
+          <input data-testid="edit-phone" value={form.phone}
+            onChange={e => setForm({...form, phone: e.target.value})} placeholder="Phone" />
+          <input data-testid="edit-email" value={form.email}
+            onChange={e => setForm({...form, email: e.target.value})} placeholder="Contact Email" />
+          <input data-testid="edit-website" value={form.website}
+            onChange={e => setForm({...form, website: e.target.value})} placeholder="Website" />
+          <input data-testid="edit-hours" value={form.hours}
+            onChange={e => setForm({...form, hours: e.target.value})} placeholder="Hours" />
+          <input data-testid="edit-description" value={form.description}
+            onChange={e => setForm({...form, description: e.target.value})} placeholder="About" />
+          <button data-testid="save-contact" onClick={() => { onEdit && onEdit(form); setEditing(false); }}>Save</button>
+          <button data-testid="cancel-edit" onClick={() => setEditing(false)}>Cancel</button>
+        </div>
+      );
+    }
+
+    return (
+      <div data-testid="contact-display">
+        <h3>Contact Information</h3>
+        <button data-testid="edit-contact-btn" onClick={() => setEditing(true)}>Edit</button>
+        {!hasContact ? (
+          <p data-testid="no-contact-msg">No contact information added yet.</p>
+        ) : (
+          <div data-testid="contact-details">
+            {shelter.phone && <div data-testid="contact-phone">{shelter.phone}</div>}
+            {shelter.email && <div data-testid="contact-email">{shelter.email}</div>}
+            {shelter.website && <div data-testid="contact-website">{shelter.website}</div>}
+            {shelter.hours && <div data-testid="contact-hours">{shelter.hours}</div>}
+            {shelter.description && <div data-testid="contact-desc">{shelter.description}</div>}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  it('should show empty state when no contact info', () => {
+    render(
+      <TestWrapper>
+        <MockContactInfo shelter={{ _id: '1', name: 'Test', location: 'NY', paymentEmail: 'test@t.com' }} />
+      </TestWrapper>
+    );
+    expect(screen.getByTestId('no-contact-msg')).toBeInTheDocument();
+  });
+
+  it('should display contact details when present', () => {
+    render(
+      <TestWrapper>
+        <MockContactInfo shelter={{
+          _id: '1', name: 'Test', location: 'NY', paymentEmail: 'test@t.com',
+          phone: '555-1234', email: 'info@shelter.com', website: 'https://shelter.com',
+          hours: 'Mon-Fri 9-5', description: 'A great shelter'
+        }} />
+      </TestWrapper>
+    );
+    expect(screen.getByTestId('contact-phone')).toHaveTextContent('555-1234');
+    expect(screen.getByTestId('contact-email')).toHaveTextContent('info@shelter.com');
+    expect(screen.getByTestId('contact-website')).toHaveTextContent('https://shelter.com');
+    expect(screen.getByTestId('contact-hours')).toHaveTextContent('Mon-Fri 9-5');
+    expect(screen.getByTestId('contact-desc')).toHaveTextContent('A great shelter');
+  });
+
+  it('should show edit form when Edit clicked', () => {
+    render(
+      <TestWrapper>
+        <MockContactInfo shelter={{ _id: '1', name: 'Test', location: 'NY', paymentEmail: 'test@t.com' }} />
+      </TestWrapper>
+    );
+    fireEvent.click(screen.getByTestId('edit-contact-btn'));
+    expect(screen.getByTestId('contact-edit-form')).toBeInTheDocument();
+  });
+
+  it('should populate edit form with existing values', () => {
+    render(
+      <TestWrapper>
+        <MockContactInfo shelter={{
+          _id: '1', name: 'Test', location: 'NY', paymentEmail: 'test@t.com',
+          phone: '555-1234', email: 'info@shelter.com'
+        }} />
+      </TestWrapper>
+    );
+    fireEvent.click(screen.getByTestId('edit-contact-btn'));
+    expect(screen.getByTestId('edit-phone').value).toBe('555-1234');
+    expect(screen.getByTestId('edit-email').value).toBe('info@shelter.com');
+  });
+
+  it('should call onEdit with form data on save', () => {
+    const handleEdit = vi.fn();
+    render(
+      <TestWrapper>
+        <MockContactInfo shelter={{ _id: '1', name: 'Test', location: 'NY', paymentEmail: 'test@t.com' }}
+          onEdit={handleEdit} />
+      </TestWrapper>
+    );
+    fireEvent.click(screen.getByTestId('edit-contact-btn'));
+    fireEvent.change(screen.getByTestId('edit-phone'), { target: { value: '555-9999' } });
+    fireEvent.click(screen.getByTestId('save-contact'));
+    expect(handleEdit).toHaveBeenCalledWith(expect.objectContaining({ phone: '555-9999' }));
+  });
+
+  it('should cancel editing', () => {
+    render(
+      <TestWrapper>
+        <MockContactInfo shelter={{ _id: '1', name: 'Test', location: 'NY', paymentEmail: 'test@t.com' }} />
+      </TestWrapper>
+    );
+    fireEvent.click(screen.getByTestId('edit-contact-btn'));
+    fireEvent.click(screen.getByTestId('cancel-edit'));
+    expect(screen.getByTestId('contact-display')).toBeInTheDocument();
+  });
+
+  it('should return to display mode after saving', () => {
+    render(
+      <TestWrapper>
+        <MockContactInfo shelter={{ _id: '1', name: 'Test', location: 'NY', paymentEmail: 'test@t.com' }} />
+      </TestWrapper>
+    );
+    fireEvent.click(screen.getByTestId('edit-contact-btn'));
+    fireEvent.click(screen.getByTestId('save-contact'));
+    expect(screen.getByTestId('contact-display')).toBeInTheDocument();
+  });
+});

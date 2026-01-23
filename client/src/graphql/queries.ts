@@ -72,6 +72,11 @@ const queries: Queries = {
         name
         location
         paymentEmail
+        phone
+        email
+        website
+        hours
+        description
         animals {
           _id
           name

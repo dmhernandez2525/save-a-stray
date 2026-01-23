@@ -24,6 +24,11 @@ const ShelterType: GraphQLObjectType = new GraphQLObjectType({
     name: { type: GraphQLString },
     location: { type: GraphQLString },
     paymentEmail: { type: GraphQLString },
+    phone: { type: GraphQLString },
+    email: { type: GraphQLString },
+    website: { type: GraphQLString },
+    hours: { type: GraphQLString },
+    description: { type: GraphQLString },
     animals: {
       type: new GraphQLList(require("./animal_type").default),
       resolve(parentValue: ShelterParentValue) {

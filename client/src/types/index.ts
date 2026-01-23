@@ -36,6 +36,11 @@ export interface Shelter {
   name: string;
   location: string;
   paymentEmail: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  hours?: string;
+  description?: string;
   animals?: Animal[];
   users?: User[];
 }

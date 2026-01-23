@@ -62,6 +62,11 @@ export interface IShelter {
   location: string;
   users: (Types.ObjectId | string)[];
   paymentEmail: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  hours?: string;
+  description?: string;
   animals: (Types.ObjectId | string)[];
 }
 
