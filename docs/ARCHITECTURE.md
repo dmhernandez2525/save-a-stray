@@ -238,6 +238,7 @@ save-a-stray/
   date: Date,                // Auto: creation date
   fbookId?: string,          // Facebook OAuth ID
   shelterId?: ObjectId,      // Reference to shelter
+  favorites: ObjectId[],     // References to favorited animals
   varId?: ObjectId           // Variable ID
 }
 ```
@@ -249,12 +250,14 @@ save-a-stray/
   _id: ObjectId,
   name: string,              // Required
   type: string,              // Required: 'dog', 'cat', etc.
+  breed: string,             // Default: '' (optional breed tag)
   age: number,               // Required
   sex: string,               // Required
   color: string,             // Required
   description: string,       // Required
   image: string,             // Required: URL
   video: string,             // Required: URL
+  status: 'available' | 'pending' | 'adopted',  // Default: 'available'
   applications: ObjectId[]   // References to applications
 }
 ```
@@ -279,7 +282,9 @@ save-a-stray/
   _id: ObjectId,
   animalId: string,          // Required
   userId: string,            // Required
-  applicationData: string    // Required: JSON stringified form data
+  applicationData: string,   // Required: JSON stringified form data
+  status: 'submitted' | 'under_review' | 'approved' | 'rejected',  // Default: 'submitted'
+  submittedAt: Date          // Default: Date.now
 }
 ```
 
@@ -292,19 +297,22 @@ save-a-stray/
 | Query | Parameters | Returns |
 |-------|------------|---------|
 | `users` | - | All users |
-| `user` | `_id: ID!` | Single user |
+| `user` | `_id: ID!` | Single user (includes name, email, userRole, shelter) |
 | `animals` | - | All animals |
-| `findAnimals` | `type: String!` | Filtered animals |
+| `findAnimals` | `type, breed, sex, color, name, status, minAge, maxAge, limit, offset` | Filtered/paginated animals |
 | `animal` | `_id: ID!` | Single animal |
 | `applications` | - | All applications |
 | `shelters` | - | All shelters |
 | `shelter` | `_id: ID` | Single shelter |
+| `userFavorites` | `userId: ID!` | User's favorited animals |
+| `shelterApplications` | `shelterId: ID!` | Applications for shelter's animals |
+| `userApplications` | `userId: ID!` | User's submitted applications |
 
 ### Mutations
 
 | Mutation | Purpose |
 |----------|---------|
-| `register` | Create user account |
+| `register` | Create user account (supports inline shelter creation via shelterName/shelterLocation/shelterPaymentEmail) |
 | `login` | Authenticate user |
 | `logout` | Log out user |
 | `verifyUser` | Verify JWT token |
@@ -312,9 +320,13 @@ save-a-stray/
 | `newAnimal` | Create animal listing |
 | `deleteAnimal` | Remove animal |
 | `updateAnimal` | Edit animal |
-| `newApplication` | Submit adoption application |
+| `updateAnimalStatus` | Update animal status (available/pending/adopted) |
+| `newApplication` | Submit adoption application (sets status=submitted, submittedAt) |
 | `deleteApplication` | Cancel application |
-| `editApplication` | Update application status |
+| `editApplication` | Update application data |
+| `updateApplicationStatus` | Update application status (submitted/under_review/approved/rejected) |
+| `addFavorite` | Add animal to user's favorites |
+| `removeFavorite` | Remove animal from user's favorites |
 | `newShelter` | Create shelter |
 | `deleteShelter` | Remove shelter |
 | `editShelter` | Update shelter |

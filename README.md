@@ -14,10 +14,13 @@ Save A Stray addresses three key challenges faced by animal shelters:
 
 ### Key Features
 
-- **Animal Listings**: Browse adoptable pets with photos and video support
-- **Shelter Dashboard**: Shelters can add, edit, and manage their animals
-- **Adoption Applications**: Submit and track applications directly through the platform
-- **Search & Filters**: Find animals by type, location, age, and more
+- **Animal Listings**: Browse adoptable pets with photos, video, breed tags, and status tracking
+- **Shelter Dashboard**: Shelters can add, edit, and manage their animals with application management
+- **Unified Registration**: Register as an adopter or shelter staff with inline shelter creation
+- **Adoption Applications**: Submit and track applications with status workflow (submitted → under review → approved/rejected)
+- **Favorites**: Save animals to your favorites list for quick access
+- **User Profile**: View your favorites and application history
+- **Search & Filters**: Find animals by type, breed, sex, color, age range, status, and name with pagination
 - **OAuth Authentication**: Sign in with Google or Facebook
 - **Real-Time Sync**: <5 min listing updates to external platforms (planned)
 
@@ -128,23 +131,30 @@ cd client && npm run dev
 | Query | Parameters | Returns |
 |-------|------------|---------|
 | `animals` | - | All animals |
-| `findAnimals` | `type: String!` | Filtered animals |
+| `findAnimals` | `type, breed, sex, color, name, status, minAge, maxAge, limit, offset` | Filtered/paginated animals |
 | `animal` | `_id: ID!` | Single animal |
 | `shelters` | - | All shelters |
 | `shelter` | `_id: ID` | Single shelter |
 | `users` | - | All users |
 | `user` | `_id: ID!` | Single user |
+| `userFavorites` | `userId: ID!` | User's favorited animals |
+| `shelterApplications` | `shelterId: ID!` | Applications for shelter's animals |
+| `userApplications` | `userId: ID!` | User's submitted applications |
 
 ### Mutations
 
 | Mutation | Purpose |
 |----------|---------|
-| `register` | Create user account |
+| `register` | Create user account (optionally creates shelter with shelterName/shelterLocation/shelterPaymentEmail) |
 | `login` | Authenticate user |
 | `newAnimal` | Create animal listing |
 | `updateAnimal` | Edit animal |
+| `updateAnimalStatus` | Update animal availability status |
 | `deleteAnimal` | Remove animal |
 | `newApplication` | Submit adoption application |
+| `updateApplicationStatus` | Update application review status |
+| `addFavorite` | Add animal to user's favorites |
+| `removeFavorite` | Remove animal from favorites |
 | `newShelter` | Create shelter |
 
 ---
