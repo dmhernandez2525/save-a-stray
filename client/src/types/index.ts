@@ -40,11 +40,15 @@ export interface Shelter {
 }
 
 // Application Types
+export type ApplicationStatus = 'submitted' | 'under_review' | 'approved' | 'rejected';
+
 export interface Application {
   _id: string;
   animalId: string;
   userId: string;
   applicationData: string;
+  status: ApplicationStatus;
+  submittedAt: string;
   animal?: Animal;
 }
 

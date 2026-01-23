@@ -14,6 +14,8 @@ interface ApplicationParentValue {
   animalId: string;
   userId: string;
   applicationData: string;
+  status: string;
+  submittedAt: Date;
 }
 
 const ApplicationType: GraphQLObjectType = new GraphQLObjectType({
@@ -23,6 +25,8 @@ const ApplicationType: GraphQLObjectType = new GraphQLObjectType({
     animalId: { type: GraphQLString },
     userId: { type: GraphQLString },
     applicationData: { type: GraphQLString },
+    status: { type: GraphQLString },
+    submittedAt: { type: GraphQLString },
     animal: {
       type: require("./animal_type").default,
       resolve(parentValue: ApplicationParentValue) {

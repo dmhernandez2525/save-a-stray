@@ -69,11 +69,15 @@ export interface IShelterDocument extends IShelter {
 }
 
 // Application Types
+export type ApplicationStatus = 'submitted' | 'under_review' | 'approved' | 'rejected';
+
 export interface IApplication {
   _id: Types.ObjectId | string;
   animalId: string;
   userId: string;
   applicationData: string;
+  status: ApplicationStatus;
+  submittedAt: Date;
 }
 
 export interface IApplicationDocument extends IApplication {
