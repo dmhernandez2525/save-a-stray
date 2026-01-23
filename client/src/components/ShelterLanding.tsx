@@ -10,6 +10,7 @@ import Queries from "../graphql/queries";
 import Mutations from "../graphql/mutations";
 import ShelterApplications from "./ShelterApplications";
 import ShelterAnalytics from "./ShelterAnalytics";
+import { exportAnimalsCsv } from "../util/exportCsv";
 
 const { FETCH_SHELTER } = Queries;
 const { UPDATE_ANIMAL_STATUS, EDIT_SHELTER } = Mutations;
@@ -232,9 +233,11 @@ class ShelterLanding extends Component<ShelterLandingProps, ShelterLandingState>
           <h1 className="text-white font-capriola text-3xl">
             {this.props.shelterInfo?.name || "Shelter"} Dashboard
           </h1>
-          <Button variant="salmon" size="lg" asChild>
-            <Link to="/newAnimal">+ Add Animal</Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="salmon" size="lg" asChild>
+              <Link to="/newAnimal">+ Add Animal</Link>
+            </Button>
+          </div>
         </div>
 
         {shelterId ? (
@@ -278,10 +281,19 @@ class ShelterLanding extends Component<ShelterLandingProps, ShelterLandingState>
                   </div>
 
                   <Card className="bg-white">
-                    <CardHeader>
+                    <CardHeader className="flex flex-row items-center justify-between">
                       <CardTitle className="text-sky-blue font-capriola">
                         Animals ({filtered.length})
                       </CardTitle>
+                      {animals.length > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => exportAnimalsCsv(animals, data?.shelter?.name || "shelter")}
+                        >
+                          Export CSV
+                        </Button>
+                      )}
                     </CardHeader>
                     <CardContent>
                       {filtered.length === 0 ? (
