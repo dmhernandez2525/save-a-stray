@@ -864,4 +864,25 @@ describe('GraphQL Schema Tests', () => {
     const fields = mutation.getFields();
     expect(fields.createApplicationTemplate.type).toBe(ApplicationTemplateType);
   });
+
+  it('should have verified and verifiedAt fields on ShelterType', () => {
+    const ShelterType = require('../server/schema/types/shelter_type').default;
+    const fields = ShelterType.getFields();
+    expect(fields.verified).toBeDefined();
+    expect(fields.verifiedAt).toBeDefined();
+  });
+
+  it('should have verifyShelter mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const fields = mutation.getFields();
+    expect(fields.verifyShelter).toBeDefined();
+    expect(fields.verifyShelter.args).toBeDefined();
+  });
+
+  it('should return ShelterType from verifyShelter mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const ShelterType = require('../server/schema/types/shelter_type').default;
+    const fields = mutation.getFields();
+    expect(fields.verifyShelter.type).toBe(ShelterType);
+  });
 });

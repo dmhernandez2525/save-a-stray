@@ -16,6 +16,7 @@ import EventCalendar from "./EventCalendar";
 import DonationTracker from "./DonationTracker";
 import FosterManagement from "./FosterManagement";
 import ApplicationTemplateManager from "./ApplicationTemplateManager";
+import VerificationBadge from "./VerificationBadge";
 import { exportAnimalsCsv } from "../util/exportCsv";
 
 const { FETCH_SHELTER } = Queries;
@@ -236,9 +237,15 @@ class ShelterLanding extends Component<ShelterLandingProps, ShelterLandingState>
     return (
       <div className="max-w-4xl mx-auto p-4">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-white font-capriola text-3xl">
-            {this.props.shelterInfo?.name || "Shelter"} Dashboard
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-white font-capriola text-3xl">
+              {this.props.shelterInfo?.name || "Shelter"} Dashboard
+            </h1>
+            <VerificationBadge
+              verified={this.props.shelterInfo?.verified}
+              verifiedAt={this.props.shelterInfo?.verifiedAt}
+            />
+          </div>
           <div className="flex gap-2">
             <Button variant="salmon" size="lg" asChild>
               <Link to="/newAnimal">+ Add Animal</Link>

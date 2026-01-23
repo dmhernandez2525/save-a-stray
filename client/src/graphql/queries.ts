@@ -86,6 +86,8 @@ const queries: Queries = {
         website
         hours
         description
+        verified
+        verifiedAt
         animals {
           _id
           name
