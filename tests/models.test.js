@@ -26,6 +26,13 @@ describe('Mongoose Models Schema Tests', () => {
       expect(animalSchema.image).toBeDefined();
     });
 
+    it('should have breed field with default empty string', () => {
+      const animalSchema = Animal.schema.obj;
+      expect(animalSchema.breed).toBeDefined();
+      expect(animalSchema.breed.type).toBe(String);
+      expect(animalSchema.breed.default).toBe('');
+    });
+
     it('should have status field with enum and default', () => {
       const animalSchema = Animal.schema.obj;
       expect(animalSchema.status).toBeDefined();

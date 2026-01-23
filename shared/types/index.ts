@@ -38,6 +38,7 @@ export interface IAnimal {
   _id: Types.ObjectId | string;
   name: string;
   type: string;
+  breed: string;
   age: number;
   sex: string;
   color: string;

@@ -225,6 +225,7 @@ describe('GraphQL Schema Tests', () => {
 
     const argNames = findAnimalsArgs.map(arg => arg.name);
     expect(argNames).toContain('type');
+    expect(argNames).toContain('breed');
     expect(argNames).toContain('sex');
     expect(argNames).toContain('color');
     expect(argNames).toContain('name');

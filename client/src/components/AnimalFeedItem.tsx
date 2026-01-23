@@ -46,7 +46,7 @@ class AnimalFeedItem extends Component<AnimalFeedItemProps> {
             </span>
           </div>
           <span className="text-muted-foreground text-sm">
-            {animal.age} yrs | {animal.sex}
+            {animal.breed && `${animal.breed} · `}{animal.age} yrs · {animal.sex}
           </span>
         </CardHeader>
         <CardContent className="p-0">
