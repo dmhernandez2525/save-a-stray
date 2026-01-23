@@ -38,8 +38,8 @@ const queries: Queries = {
     }
   `,
   FIND_ANIMALS: gql`
-    query FindAnimals($type: String!) {
-      findAnimals(type: $type) {
+    query FindAnimals($type: String, $sex: String, $color: String, $name: String, $minAge: Int, $maxAge: Int) {
+      findAnimals(type: $type, sex: $sex, color: $color, name: $name, minAge: $minAge, maxAge: $maxAge) {
         _id
         name
         type

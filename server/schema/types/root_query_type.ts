@@ -5,6 +5,7 @@ import {
   GraphQLID,
   GraphQLNonNull,
   GraphQLString,
+  GraphQLInt,
   GraphQLFieldConfigMap
 } from 'graphql';
 import UserType from './user_type';
@@ -45,9 +46,26 @@ const RootQueryType = new GraphQLObjectType({
     },
     findAnimals: {
       type: new GraphQLList(AnimalType),
-      args: { type: { type: GraphQLString } },
-      resolve(_, args: { type: string }) {
-        return Animal.find({ type: args.type });
+      args: {
+        type: { type: GraphQLString },
+        sex: { type: GraphQLString },
+        color: { type: GraphQLString },
+        name: { type: GraphQLString },
+        minAge: { type: GraphQLInt },
+        maxAge: { type: GraphQLInt }
+      },
+      resolve(_, args: { type?: string; sex?: string; color?: string; name?: string; minAge?: number; maxAge?: number }) {
+        const filter: Record<string, unknown> = {};
+        if (args.type) filter.type = args.type;
+        if (args.sex) filter.sex = args.sex;
+        if (args.color) filter.color = { $regex: args.color, $options: 'i' };
+        if (args.name) filter.name = { $regex: args.name, $options: 'i' };
+        if (args.minAge !== undefined || args.maxAge !== undefined) {
+          filter.age = {};
+          if (args.minAge !== undefined) (filter.age as Record<string, number>).$gte = args.minAge;
+          if (args.maxAge !== undefined) (filter.age as Record<string, number>).$lte = args.maxAge;
+        }
+        return Animal.find(filter);
       }
     },
     applications: {

@@ -217,4 +217,18 @@ describe('GraphQL Schema Tests', () => {
     expect(fields.applications).toBeDefined();
     expect(fields.findAnimals).toBeDefined();
   });
+
+  it('should have multi-field filter args on findAnimals', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+    const findAnimalsArgs = fields.findAnimals.args;
+
+    const argNames = findAnimalsArgs.map(arg => arg.name);
+    expect(argNames).toContain('type');
+    expect(argNames).toContain('sex');
+    expect(argNames).toContain('color');
+    expect(argNames).toContain('name');
+    expect(argNames).toContain('minAge');
+    expect(argNames).toContain('maxAge');
+  });
 });
