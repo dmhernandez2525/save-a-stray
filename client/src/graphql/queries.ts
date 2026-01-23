@@ -38,8 +38,8 @@ const queries: Queries = {
     }
   `,
   FIND_ANIMALS: gql`
-    query FindAnimals($type: String, $sex: String, $color: String, $name: String, $minAge: Int, $maxAge: Int) {
-      findAnimals(type: $type, sex: $sex, color: $color, name: $name, minAge: $minAge, maxAge: $maxAge) {
+    query FindAnimals($type: String, $sex: String, $color: String, $name: String, $status: String, $minAge: Int, $maxAge: Int) {
+      findAnimals(type: $type, sex: $sex, color: $color, name: $name, status: $status, minAge: $minAge, maxAge: $maxAge) {
         _id
         name
         type
@@ -49,6 +49,7 @@ const queries: Queries = {
         description
         image
         video
+        status
       }
     }
   `,
@@ -64,6 +65,7 @@ const queries: Queries = {
         description
         image
         video
+        status
       }
     }
   `

@@ -32,6 +32,8 @@ export interface UserAuthPayload {
 }
 
 // Animal Types
+export type AnimalStatus = 'available' | 'pending' | 'adopted';
+
 export interface IAnimal {
   _id: Types.ObjectId | string;
   name: string;
@@ -42,6 +44,7 @@ export interface IAnimal {
   description: string;
   image: string;
   video: string;
+  status: AnimalStatus;
   applications: (Types.ObjectId | string)[];
 }
 

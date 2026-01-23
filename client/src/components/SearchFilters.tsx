@@ -10,6 +10,7 @@ interface SearchFiltersProps {
 
 const ANIMAL_TYPES = ["Dogs", "Cats", "Other"];
 const SEX_OPTIONS = ["Any", "Male", "Female"];
+const STATUS_OPTIONS = ["Any", "Available", "Pending", "Adopted"];
 
 const SearchFilters: React.FC<SearchFiltersProps> = ({ filters, onFiltersChange }) => {
   const updateFilter = (key: keyof FindAnimalsVariables, value: string | number | undefined) => {
@@ -32,7 +33,7 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({ filters, onFiltersChange 
         ))}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
         <div>
           <Input
             placeholder="Search by name..."
@@ -49,6 +50,18 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({ filters, onFiltersChange 
             className="flex h-10 w-full rounded-md border border-input bg-white/90 px-3 py-2 text-sm"
           >
             {SEX_OPTIONS.map((option) => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <select
+            value={filters.status ? filters.status.charAt(0).toUpperCase() + filters.status.slice(1) : "Any"}
+            onChange={(e) => updateFilter("status", e.target.value === "Any" ? undefined : e.target.value.toLowerCase())}
+            className="flex h-10 w-full rounded-md border border-input bg-white/90 px-3 py-2 text-sm"
+          >
+            {STATUS_OPTIONS.map((option) => (
               <option key={option} value={option}>{option}</option>
             ))}
           </select>
