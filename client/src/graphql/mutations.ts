@@ -21,12 +21,18 @@ const mutations: Mutations = {
       $name: String!
       $email: String!
       $password: String!
+      $shelterName: String
+      $shelterLocation: String
+      $shelterPaymentEmail: String
     ) {
       register(
         userRole: $userRole
         name: $name
         email: $email
         password: $password
+        shelterName: $shelterName
+        shelterLocation: $shelterLocation
+        shelterPaymentEmail: $shelterPaymentEmail
       ) {
         token
         loggedIn

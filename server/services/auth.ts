@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User, { UserDocument } from '../models/User';
+import Shelter from '../models/Shelter';
 import keys from '../../config/keys';
 import validateRegisterInput from '../validation/register';
 import validateLoginInput from '../validation/login';
@@ -27,7 +28,7 @@ export const register = async (data: RegisterInput): Promise<UserAuthPayload> =>
       throw new Error(message);
     }
 
-    const { name, email, password, userRole, shelterId } = data;
+    const { name, email, password, userRole, shelterId, shelterName, shelterLocation, shelterPaymentEmail } = data;
 
     const existingEmail = await User.findOne({ email });
     if (existingEmail) {
@@ -41,15 +42,37 @@ export const register = async (data: RegisterInput): Promise<UserAuthPayload> =>
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    let resolvedShelterId = shelterId;
+
+    // If shelter fields are provided, create the shelter first
+    if (userRole === 'shelter' && shelterName && shelterLocation && shelterPaymentEmail) {
+      const newShelter = new Shelter({
+        name: shelterName,
+        location: shelterLocation,
+        paymentEmail: shelterPaymentEmail
+      });
+      await newShelter.save();
+      resolvedShelterId = newShelter._id.toString();
+    }
+
     const user = new User({
       name,
       email,
       password: hashedPassword,
       userRole,
-      shelterId
+      shelterId: resolvedShelterId
     });
 
     await user.save();
+
+    // Add user to shelter's users array
+    if (resolvedShelterId) {
+      const shelter = await Shelter.findById(resolvedShelterId);
+      if (shelter) {
+        shelter.users.push(user._id as unknown as typeof shelter.users[0]);
+        await shelter.save();
+      }
+    }
 
     const token = jwt.sign({ id: user._id }, keys.secretOrKey);
 
@@ -60,7 +83,7 @@ export const register = async (data: RegisterInput): Promise<UserAuthPayload> =>
       name: user.name,
       email: user.email,
       userRole: user.userRole,
-      shelterId: user.shelterId?.toString()
+      shelterId: resolvedShelterId
     };
   } catch (err) {
     throw err;

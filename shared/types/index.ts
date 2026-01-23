@@ -91,6 +91,9 @@ export interface RegisterInput {
   password: string;
   userRole: string;
   shelterId?: string;
+  shelterName?: string;
+  shelterLocation?: string;
+  shelterPaymentEmail?: string;
 }
 
 export interface LoginInput {

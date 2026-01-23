@@ -175,6 +175,9 @@ export interface RegisterFormState {
   email: string;
   password: string;
   userRole: string;
+  shelterName: string;
+  shelterLocation: string;
+  shelterPaymentEmail: string;
 }
 
 export interface AnimalFormState {
