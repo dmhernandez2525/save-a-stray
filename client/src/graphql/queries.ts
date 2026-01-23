@@ -11,6 +11,7 @@ interface Queries {
   FIND_ANIMALS: DocumentNode;
   FETCH_ANIMAL: DocumentNode;
   SIMILAR_ANIMALS: DocumentNode;
+  SHELTER_REVIEWS: DocumentNode;
   USER_FAVORITES: DocumentNode;
   USER_FAVORITE_IDS: DocumentNode;
   SUCCESS_STORIES: DocumentNode;
@@ -170,6 +171,17 @@ const queries: Queries = {
           description
           veterinarian
         }
+      }
+    }
+  `,
+  SHELTER_REVIEWS: gql`
+    query ShelterReviews($shelterId: ID!) {
+      shelterReviews(shelterId: $shelterId) {
+        _id
+        userId
+        rating
+        comment
+        createdAt
       }
     }
   `,

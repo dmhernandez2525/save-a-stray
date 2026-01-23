@@ -18,12 +18,15 @@ import { AnimalDocument } from '../models/Animal';
 import { ApplicationDocument } from '../models/Application';
 import { ShelterDocument } from '../models/Shelter';
 import { SuccessStoryDocument } from '../models/SuccessStory';
+import ReviewType from './types/review_type';
+import { ReviewDocument } from '../models/Review';
 
 const User = mongoose.model<UserDocument>('user');
 const Animal = mongoose.model<AnimalDocument>('animal');
 const Application = mongoose.model<ApplicationDocument>('application');
 const Shelter = mongoose.model<ShelterDocument>('shelter');
 const SuccessStoryModel = mongoose.model<SuccessStoryDocument>('successStory');
+const ReviewModel = mongoose.model<ReviewDocument>('review');
 
 interface RegisterArgs {
   name: string;
@@ -301,6 +304,25 @@ const mutation = new GraphQLObjectType({
           return application;
         }
         return null;
+      }
+    },
+    createReview: {
+      type: ReviewType,
+      args: {
+        userId: { type: GraphQLString },
+        shelterId: { type: GraphQLString },
+        rating: { type: GraphQLInt },
+        comment: { type: GraphQLString }
+      },
+      async resolve(_, args: { userId: string; shelterId: string; rating: number; comment?: string }) {
+        const review = new ReviewModel({
+          userId: args.userId,
+          shelterId: args.shelterId,
+          rating: args.rating,
+          comment: args.comment || ''
+        });
+        await review.save();
+        return review;
       }
     },
     addMedicalRecord: {
