@@ -52,6 +52,7 @@ interface AnimalArgs {
   description: string;
   image: string;
   video: string;
+  status?: string;
   applications?: string;
 }
 
@@ -135,11 +136,12 @@ const mutation = new GraphQLObjectType({
         description: { type: GraphQLString },
         image: { type: GraphQLString },
         video: { type: GraphQLString },
+        status: { type: GraphQLString },
         applications: { type: GraphQLID }
       },
       async resolve(_, args: AnimalArgs) {
-        const { name, type, age, sex, color, description, image, video } = args;
-        const newAnimal = new Animal({ name, type, age, sex, color, description, image, video });
+        const { name, type, age, sex, color, description, image, video, status } = args;
+        const newAnimal = new Animal({ name, type, age, sex, color, description, image, video, status: status || 'available' });
         await newAnimal.save();
         return newAnimal;
       }
@@ -165,10 +167,11 @@ const mutation = new GraphQLObjectType({
         description: { type: GraphQLString },
         image: { type: GraphQLString },
         video: { type: GraphQLString },
+        status: { type: GraphQLString },
         applications: { type: GraphQLID }
       },
       async resolve(_, args: AnimalArgs & { _id: string }) {
-        const { _id, name, type, age, sex, color, description, image, video } = args;
+        const { _id, name, type, age, sex, color, description, image, video, status } = args;
         const animal = await Animal.findById(_id);
         if (animal) {
           animal.name = name;
@@ -179,6 +182,23 @@ const mutation = new GraphQLObjectType({
           animal.description = description;
           animal.image = image;
           animal.video = video;
+          if (status) animal.status = status as typeof animal.status;
+          await animal.save();
+          return animal;
+        }
+        return null;
+      }
+    },
+    updateAnimalStatus: {
+      type: AnimalType,
+      args: {
+        _id: { type: GraphQLID },
+        status: { type: GraphQLString }
+      },
+      async resolve(_, args: { _id: string; status: string }) {
+        const animal = await Animal.findById(args._id);
+        if (animal) {
+          animal.status = args.status as typeof animal.status;
           await animal.save();
           return animal;
         }

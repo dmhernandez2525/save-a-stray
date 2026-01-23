@@ -31,8 +31,8 @@ describe("SearchFilters", () => {
   it("renders sex filter dropdown", () => {
     render(<SearchFilters filters={defaultFilters} onFiltersChange={mockOnChange} />);
 
-    const select = screen.getByDisplayValue("Any");
-    expect(select).toBeInTheDocument();
+    const selects = screen.getAllByDisplayValue("Any");
+    expect(selects[0]).toBeInTheDocument();
   });
 
   it("calls onFiltersChange when type button is clicked", () => {
@@ -70,7 +70,8 @@ describe("SearchFilters", () => {
   it("calls onFiltersChange when sex is changed", () => {
     render(<SearchFilters filters={defaultFilters} onFiltersChange={mockOnChange} />);
 
-    fireEvent.change(screen.getByDisplayValue("Any"), {
+    const selects = screen.getAllByDisplayValue("Any");
+    fireEvent.change(selects[0], {
       target: { value: "Male" },
     });
     expect(mockOnChange).toHaveBeenCalledWith({ sex: "Male" });
@@ -119,6 +120,31 @@ describe("SearchFilters", () => {
 
     const dogsButton = screen.getByText("Dogs");
     expect(dogsButton.className).toContain("salmon");
+  });
+
+  it("renders status filter dropdown", () => {
+    render(<SearchFilters filters={defaultFilters} onFiltersChange={mockOnChange} />);
+
+    const selects = screen.getAllByDisplayValue("Any");
+    expect(selects.length).toBe(2); // sex and status
+  });
+
+  it("calls onFiltersChange when status is changed", () => {
+    render(<SearchFilters filters={defaultFilters} onFiltersChange={mockOnChange} />);
+
+    const selects = screen.getAllByDisplayValue("Any");
+    // Status is the second "Any" dropdown
+    fireEvent.change(selects[1], { target: { value: "Available" } });
+    expect(mockOnChange).toHaveBeenCalledWith({ status: "available" });
+  });
+
+  it("calls onFiltersChange with undefined when status is set to Any", () => {
+    render(<SearchFilters filters={{ status: "available" }} onFiltersChange={mockOnChange} />);
+
+    fireEvent.change(screen.getByDisplayValue("Available"), {
+      target: { value: "Any" },
+    });
+    expect(mockOnChange).toHaveBeenCalledWith({ status: undefined });
   });
 
   it("preserves existing filters when updating a single field", () => {

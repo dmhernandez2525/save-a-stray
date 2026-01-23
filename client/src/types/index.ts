@@ -12,6 +12,8 @@ export interface User {
 }
 
 // Animal Types
+export type AnimalStatus = 'available' | 'pending' | 'adopted';
+
 export interface Animal {
   _id: string;
   name: string;
@@ -23,6 +25,7 @@ export interface Animal {
   description: string;
   image: string;
   video: string;
+  status: AnimalStatus;
   applications?: Application[];
 }
 
@@ -82,6 +85,7 @@ export interface FindAnimalsVariables {
   sex?: string;
   color?: string;
   name?: string;
+  status?: string;
   minAge?: number;
   maxAge?: number;
 }

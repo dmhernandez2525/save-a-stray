@@ -51,13 +51,15 @@ const RootQueryType = new GraphQLObjectType({
         sex: { type: GraphQLString },
         color: { type: GraphQLString },
         name: { type: GraphQLString },
+        status: { type: GraphQLString },
         minAge: { type: GraphQLInt },
         maxAge: { type: GraphQLInt }
       },
-      resolve(_, args: { type?: string; sex?: string; color?: string; name?: string; minAge?: number; maxAge?: number }) {
+      resolve(_, args: { type?: string; sex?: string; color?: string; name?: string; status?: string; minAge?: number; maxAge?: number }) {
         const filter: Record<string, unknown> = {};
         if (args.type) filter.type = args.type;
         if (args.sex) filter.sex = args.sex;
+        if (args.status) filter.status = args.status;
         if (args.color) filter.color = { $regex: args.color, $options: 'i' };
         if (args.name) filter.name = { $regex: args.name, $options: 'i' };
         if (args.minAge !== undefined || args.maxAge !== undefined) {
