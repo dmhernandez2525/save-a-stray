@@ -17,6 +17,7 @@ client/build/
 # Configuration secrets
 config/keys_dev.js
 config/keys_dev.ts
+config/google_signin.json
 
 # Testing
 coverage/
