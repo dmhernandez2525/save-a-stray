@@ -21,8 +21,10 @@ import { NotificationDocument } from '../../models/Notification';
 import EventType from './event_type';
 import DonationType from './donation_type';
 import PlatformStatsType from './platform_stats_type';
+import FosterType from './foster_type';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
+import { FosterDocument } from '../../models/Foster';
 import { ApplicationDocument } from '../../models/Application';
 import { AnimalDocument } from '../../models/Animal';
 import { UserDocument } from '../../models/User';
@@ -39,6 +41,7 @@ const ReviewModel = mongoose.model<ReviewDocument>('review');
 const NotificationModel = mongoose.model<NotificationDocument>('notification');
 const EventModel = mongoose.model<EventDocument>('event');
 const DonationModel = mongoose.model<DonationDocument>('donation');
+const FosterModel = mongoose.model<FosterDocument>('foster');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -168,6 +171,13 @@ const RootQueryType = new GraphQLObjectType({
       args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
       resolve(_, args: { shelterId: string }) {
         return DonationModel.find({ shelterId: args.shelterId }).sort({ createdAt: -1 }).limit(50);
+      }
+    },
+    shelterFosters: {
+      type: new GraphQLList(FosterType),
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { shelterId: string }) {
+        return FosterModel.find({ shelterId: args.shelterId }).sort({ createdAt: -1 });
       }
     },
     platformStats: {

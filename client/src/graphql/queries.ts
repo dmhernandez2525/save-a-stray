@@ -10,6 +10,7 @@ interface Queries {
   SHELTER_STAFF: DocumentNode;
   SHELTER_EVENTS: DocumentNode;
   SHELTER_DONATIONS: DocumentNode;
+  SHELTER_FOSTERS: DocumentNode;
   PLATFORM_STATS: DocumentNode;
   USER_APPLICATIONS: DocumentNode;
   FIND_ANIMALS: DocumentNode;
@@ -245,6 +246,23 @@ const queries: Queries = {
         donorName
         amount
         message
+        createdAt
+      }
+    }
+  `,
+  SHELTER_FOSTERS: gql`
+    query ShelterFosters($shelterId: ID!) {
+      shelterFosters(shelterId: $shelterId) {
+        _id
+        shelterId
+        animalId
+        userId
+        fosterName
+        fosterEmail
+        startDate
+        endDate
+        status
+        notes
         createdAt
       }
     }
