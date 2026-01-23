@@ -3,6 +3,7 @@ import {
   GraphQLObjectType,
   GraphQLString,
   GraphQLID,
+  GraphQLList,
   GraphQLFieldConfigMap
 } from 'graphql';
 import { ShelterDocument } from '../../models/Shelter';
@@ -24,18 +25,18 @@ const ShelterType: GraphQLObjectType = new GraphQLObjectType({
     location: { type: GraphQLString },
     paymentEmail: { type: GraphQLString },
     animals: {
-      type: require("./animal_type").default,
+      type: new GraphQLList(require("./animal_type").default),
       resolve(parentValue: ShelterParentValue) {
         return Shelter.findById(parentValue._id).populate("animals").then(shelter => {
-          return shelter?.animals;
+          return shelter?.animals || [];
         });
       }
     },
     users: {
-      type: require("./user_type").default,
+      type: new GraphQLList(require("./user_type").default),
       resolve(parentValue: ShelterParentValue) {
         return Shelter.findById(parentValue._id).populate("users").then(shelter => {
-          return shelter?.users;
+          return shelter?.users || [];
         });
       }
     }
