@@ -283,4 +283,22 @@ describe('GraphQL Schema Tests', () => {
     expect(fields.favorites).toBeDefined();
     expect(fields.favoriteIds).toBeDefined();
   });
+
+  it('should have status and submittedAt fields on ApplicationType', () => {
+    const ApplicationType = require('../server/schema/types/application_type').default;
+    const fields = ApplicationType.getFields();
+
+    expect(fields.status).toBeDefined();
+    expect(fields.submittedAt).toBeDefined();
+  });
+
+  it('should have updateApplicationStatus mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.updateApplicationStatus).toBeDefined();
+    const args = mutationFields.updateApplicationStatus.args.map(a => a.name);
+    expect(args).toContain('_id');
+    expect(args).toContain('status');
+  });
 });

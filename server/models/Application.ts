@@ -15,6 +15,15 @@ const ApplicationSchema = new Schema<ApplicationDocument>({
   applicationData: {
     type: String,
     required: true
+  },
+  status: {
+    type: String,
+    enum: ['submitted', 'under_review', 'approved', 'rejected'],
+    default: 'submitted'
+  },
+  submittedAt: {
+    type: Date,
+    default: Date.now
   }
 });
 
