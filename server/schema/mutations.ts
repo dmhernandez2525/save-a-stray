@@ -4,6 +4,7 @@ import {
   GraphQLInt,
   GraphQLID,
   GraphQLList,
+  GraphQLInputObjectType,
   GraphQLFieldConfigMap
 } from 'graphql';
 import mongoose from 'mongoose';
@@ -91,6 +92,21 @@ interface ShelterArgs {
   description?: string;
   animals?: string;
 }
+
+const AnimalInput = new GraphQLInputObjectType({
+  name: 'AnimalInput',
+  fields: {
+    name: { type: GraphQLString },
+    type: { type: GraphQLString },
+    breed: { type: GraphQLString },
+    age: { type: GraphQLInt },
+    sex: { type: GraphQLString },
+    color: { type: GraphQLString },
+    description: { type: GraphQLString },
+    image: { type: GraphQLString },
+    video: { type: GraphQLString }
+  }
+});
 
 const mutation = new GraphQLObjectType({
   name: "Mutation",
@@ -583,6 +599,42 @@ const mutation = new GraphQLObjectType({
         }
         await shelter.save();
         return shelter;
+      }
+    },
+    bulkCreateAnimals: {
+      type: new GraphQLList(AnimalType),
+      args: {
+        animals: { type: new GraphQLList(AnimalInput) },
+        shelterId: { type: GraphQLID }
+      },
+      async resolve(_, args: { animals: Array<{ name: string; type: string; breed?: string; age: number; sex: string; color: string; description: string; image?: string; video?: string }>; shelterId?: string }) {
+        const created = [];
+        for (const animalData of args.animals) {
+          const newAnimal = new Animal({
+            name: animalData.name,
+            type: animalData.type,
+            breed: animalData.breed || '',
+            age: animalData.age,
+            sex: animalData.sex,
+            color: animalData.color,
+            description: animalData.description,
+            image: animalData.image || '',
+            video: animalData.video || '',
+            status: 'available'
+          });
+          await newAnimal.save();
+          created.push(newAnimal);
+        }
+        if (args.shelterId) {
+          const shelter = await Shelter.findById(args.shelterId);
+          if (shelter) {
+            for (const animal of created) {
+              shelter.animals.push(animal._id as unknown as typeof shelter.animals[0]);
+            }
+            await shelter.save();
+          }
+        }
+        return created;
       }
     },
     createSuccessStory: {
