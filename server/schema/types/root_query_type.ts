@@ -140,6 +140,15 @@ const RootQueryType = new GraphQLObjectType({
         return Shelter.findById(args._id);
       }
     },
+    shelterStaff: {
+      type: new GraphQLList(UserType),
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      async resolve(_, args: { shelterId: string }) {
+        const shelter = await Shelter.findById(args.shelterId);
+        if (!shelter || !shelter.users || shelter.users.length === 0) return [];
+        return User.find({ _id: { $in: shelter.users } });
+      }
+    },
     successStories: {
       type: new GraphQLList(SuccessStoryType),
       resolve() {

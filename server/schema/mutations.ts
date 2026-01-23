@@ -482,6 +482,51 @@ const mutation = new GraphQLObjectType({
         return null;
       }
     },
+    addShelterStaff: {
+      type: ShelterType,
+      args: {
+        shelterId: { type: GraphQLID },
+        email: { type: GraphQLString }
+      },
+      async resolve(_, args: { shelterId: string; email: string }) {
+        const shelter = await Shelter.findById(args.shelterId);
+        if (!shelter) return null;
+        const user = await User.findOne({ email: args.email });
+        if (!user) throw new Error('User not found with that email');
+        const alreadyStaff = shelter.users.some(
+          (id) => id.toString() === user._id.toString()
+        );
+        if (alreadyStaff) throw new Error('User is already staff');
+        shelter.users.push(user._id as unknown as typeof shelter.users[0]);
+        user.userRole = 'shelter';
+        user.shelterId = shelter._id as unknown as typeof user.shelterId;
+        await user.save();
+        await shelter.save();
+        return shelter;
+      }
+    },
+    removeShelterStaff: {
+      type: ShelterType,
+      args: {
+        shelterId: { type: GraphQLID },
+        userId: { type: GraphQLID }
+      },
+      async resolve(_, args: { shelterId: string; userId: string }) {
+        const shelter = await Shelter.findById(args.shelterId);
+        if (!shelter) return null;
+        shelter.users = shelter.users.filter(
+          (id) => id.toString() !== args.userId
+        ) as typeof shelter.users;
+        const user = await User.findById(args.userId);
+        if (user) {
+          user.userRole = 'endUser';
+          user.shelterId = undefined as unknown as typeof user.shelterId;
+          await user.save();
+        }
+        await shelter.save();
+        return shelter;
+      }
+    },
     createSuccessStory: {
       type: SuccessStoryType,
       args: {
