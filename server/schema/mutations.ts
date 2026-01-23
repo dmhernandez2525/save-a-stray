@@ -291,6 +291,31 @@ const mutation = new GraphQLObjectType({
         return null;
       }
     },
+    addMedicalRecord: {
+      type: AnimalType,
+      args: {
+        animalId: { type: GraphQLID },
+        date: { type: GraphQLString },
+        recordType: { type: GraphQLString },
+        description: { type: GraphQLString },
+        veterinarian: { type: GraphQLString }
+      },
+      async resolve(_, args: { animalId: string; date: string; recordType: string; description: string; veterinarian?: string }) {
+        const animal = await Animal.findById(args.animalId);
+        if (animal) {
+          if (!animal.medicalRecords) animal.medicalRecords = [];
+          animal.medicalRecords.push({
+            date: args.date,
+            recordType: args.recordType,
+            description: args.description,
+            veterinarian: args.veterinarian || ''
+          });
+          await animal.save();
+          return animal;
+        }
+        return null;
+      }
+    },
     updateUser: {
       type: UserType,
       args: {

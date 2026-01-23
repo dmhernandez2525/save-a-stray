@@ -49,6 +49,12 @@ const AnimalSchema = new Schema<AnimalDocument>({
     enum: ['available', 'pending', 'adopted'],
     default: 'available'
   },
+  medicalRecords: [{
+    date: { type: String, required: true },
+    recordType: { type: String, required: true },
+    description: { type: String, required: true },
+    veterinarian: { type: String, default: '' }
+  }],
   applications: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'application'

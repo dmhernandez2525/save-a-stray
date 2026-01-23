@@ -399,6 +399,37 @@ describe('GraphQL Schema Tests', () => {
     expect(args).toContain('image');
   });
 
+  it('should have medicalRecords field on AnimalType', () => {
+    const AnimalType = require('../server/schema/types/animal_type').default;
+    const fields = AnimalType.getFields();
+
+    expect(fields.medicalRecords).toBeDefined();
+  });
+
+  it('should have MedicalRecordType with correct fields', () => {
+    const MedicalRecordType = require('../server/schema/types/medical_record_type').default;
+    const fields = MedicalRecordType.getFields();
+
+    expect(fields._id).toBeDefined();
+    expect(fields.date).toBeDefined();
+    expect(fields.recordType).toBeDefined();
+    expect(fields.description).toBeDefined();
+    expect(fields.veterinarian).toBeDefined();
+  });
+
+  it('should have addMedicalRecord mutation with correct args', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.addMedicalRecord).toBeDefined();
+    const args = mutationFields.addMedicalRecord.args.map(a => a.name);
+    expect(args).toContain('animalId');
+    expect(args).toContain('date');
+    expect(args).toContain('recordType');
+    expect(args).toContain('description');
+    expect(args).toContain('veterinarian');
+  });
+
   it('should have updateUser mutation with name and email args', () => {
     const schema = require('../server/schema/schema').default;
     const mutationFields = schema._mutationType.getFields();
