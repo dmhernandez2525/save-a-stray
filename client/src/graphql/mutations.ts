@@ -12,6 +12,9 @@ interface Mutations {
   REMOVE_FAVORITE: DocumentNode;
   CREATE_APPLICATION: DocumentNode;
   CREATE_SHELTER: DocumentNode;
+  CREATE_ANNOUNCEMENT: DocumentNode;
+  TOGGLE_ANNOUNCEMENT_PIN: DocumentNode;
+  DELETE_ANNOUNCEMENT: DocumentNode;
 }
 
 const mutations: Mutations = {
@@ -157,6 +160,49 @@ const mutations: Mutations = {
         location
         paymentEmail
         _id
+      }
+    }
+  `,
+  CREATE_ANNOUNCEMENT: gql`
+    mutation CreateAnnouncement(
+      $shelterId: String!
+      $title: String!
+      $content: String!
+      $category: String
+      $author: String
+    ) {
+      createAnnouncement(
+        shelterId: $shelterId
+        title: $title
+        content: $content
+        category: $category
+        author: $author
+      ) {
+        _id
+        shelterId
+        title
+        content
+        category
+        author
+        pinned
+        active
+        createdAt
+      }
+    }
+  `,
+  TOGGLE_ANNOUNCEMENT_PIN: gql`
+    mutation ToggleAnnouncementPin($_id: ID!, $pinned: Boolean!) {
+      toggleAnnouncementPin(_id: $_id, pinned: $pinned) {
+        _id
+        pinned
+      }
+    }
+  `,
+  DELETE_ANNOUNCEMENT: gql`
+    mutation DeleteAnnouncement($_id: ID!) {
+      deleteAnnouncement(_id: $_id) {
+        _id
+        active
       }
     }
   `

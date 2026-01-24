@@ -3,6 +3,7 @@ import {
   GraphQLString,
   GraphQLInt,
   GraphQLID,
+  GraphQLBoolean,
   GraphQLFieldConfigMap
 } from 'graphql';
 import mongoose from 'mongoose';
@@ -10,16 +11,19 @@ import UserType from './types/user_type';
 import AnimalType from './types/animal_type';
 import ShelterType from './types/shelter_type';
 import ApplicationType from './types/application_type';
+import AnnouncementType from './types/announcement_type';
 import AuthService from '../services/auth';
 import { UserDocument } from '../models/User';
 import { AnimalDocument } from '../models/Animal';
 import { ApplicationDocument } from '../models/Application';
 import { ShelterDocument } from '../models/Shelter';
+import { AnnouncementDocument } from '../models/Announcement';
 
 const User = mongoose.model<UserDocument>('user');
 const Animal = mongoose.model<AnimalDocument>('animal');
 const Application = mongoose.model<ApplicationDocument>('application');
 const Shelter = mongoose.model<ShelterDocument>('shelter');
+const Announcement = mongoose.model<AnnouncementDocument>('announcement');
 
 interface RegisterArgs {
   name: string;
@@ -355,6 +359,60 @@ const mutation = new GraphQLObjectType({
           if (animals) shelter.animals = animals as unknown as (typeof shelter.animals);
           await shelter.save();
           return shelter;
+        }
+        return null;
+      }
+    },
+    createAnnouncement: {
+      type: AnnouncementType,
+      args: {
+        shelterId: { type: GraphQLString },
+        title: { type: GraphQLString },
+        content: { type: GraphQLString },
+        category: { type: GraphQLString },
+        author: { type: GraphQLString }
+      },
+      async resolve(_, args: { shelterId: string; title: string; content: string; category: string; author: string }) {
+        const announcement = new Announcement({
+          shelterId: args.shelterId,
+          title: args.title,
+          content: args.content,
+          category: args.category || 'general',
+          author: args.author || '',
+          pinned: false,
+          active: true
+        });
+        await announcement.save();
+        return announcement;
+      }
+    },
+    toggleAnnouncementPin: {
+      type: AnnouncementType,
+      args: {
+        _id: { type: GraphQLID },
+        pinned: { type: GraphQLBoolean }
+      },
+      async resolve(_, args: { _id: string; pinned: boolean }) {
+        const announcement = await Announcement.findById(args._id);
+        if (announcement) {
+          announcement.pinned = args.pinned;
+          await announcement.save();
+          return announcement;
+        }
+        return null;
+      }
+    },
+    deleteAnnouncement: {
+      type: AnnouncementType,
+      args: {
+        _id: { type: GraphQLID }
+      },
+      async resolve(_, args: { _id: string }) {
+        const announcement = await Announcement.findById(args._id);
+        if (announcement) {
+          announcement.active = false;
+          await announcement.save();
+          return announcement;
         }
         return null;
       }

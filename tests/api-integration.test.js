@@ -329,4 +329,60 @@ describe('GraphQL Schema Tests', () => {
     const args = fields.userApplications.args.map(a => a.name);
     expect(args).toContain('userId');
   });
+
+  it('should have shelterAnnouncements query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.shelterAnnouncements).toBeDefined();
+    const args = fields.shelterAnnouncements.args.map(a => a.name);
+    expect(args).toContain('shelterId');
+  });
+
+  it('should have createAnnouncement mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.createAnnouncement).toBeDefined();
+    const args = mutationFields.createAnnouncement.args.map(a => a.name);
+    expect(args).toContain('shelterId');
+    expect(args).toContain('title');
+    expect(args).toContain('content');
+    expect(args).toContain('category');
+    expect(args).toContain('author');
+  });
+
+  it('should have toggleAnnouncementPin mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.toggleAnnouncementPin).toBeDefined();
+    const args = mutationFields.toggleAnnouncementPin.args.map(a => a.name);
+    expect(args).toContain('_id');
+    expect(args).toContain('pinned');
+  });
+
+  it('should have deleteAnnouncement mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.deleteAnnouncement).toBeDefined();
+    const args = mutationFields.deleteAnnouncement.args.map(a => a.name);
+    expect(args).toContain('_id');
+  });
+
+  it('should have correct fields on AnnouncementType', () => {
+    const AnnouncementType = require('../server/schema/types/announcement_type').default;
+    const fields = AnnouncementType.getFields();
+
+    expect(fields._id).toBeDefined();
+    expect(fields.shelterId).toBeDefined();
+    expect(fields.title).toBeDefined();
+    expect(fields.content).toBeDefined();
+    expect(fields.category).toBeDefined();
+    expect(fields.author).toBeDefined();
+    expect(fields.pinned).toBeDefined();
+    expect(fields.active).toBeDefined();
+    expect(fields.createdAt).toBeDefined();
+  });
 });

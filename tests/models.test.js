@@ -140,4 +140,64 @@ describe('Mongoose Models Schema Tests', () => {
       expect(Array.isArray(shelterSchema.animals)).toBe(true);
     });
   });
+
+  describe('Announcement Model', () => {
+    const Announcement = require('../server/models/Announcement').default;
+
+    it('should be a valid mongoose model', () => {
+      expect(Announcement).toBeDefined();
+      expect(Announcement.modelName).toBe('announcement');
+    });
+
+    it('should have required fields defined in schema', () => {
+      const schema = Announcement.schema.obj;
+
+      expect(schema.shelterId).toBeDefined();
+      expect(schema.shelterId.required).toBe(true);
+      expect(schema.shelterId.type).toBe(String);
+
+      expect(schema.title).toBeDefined();
+      expect(schema.title.required).toBe(true);
+      expect(schema.title.type).toBe(String);
+
+      expect(schema.content).toBeDefined();
+      expect(schema.content.required).toBe(true);
+      expect(schema.content.type).toBe(String);
+    });
+
+    it('should have category field with enum and default', () => {
+      const schema = Announcement.schema.obj;
+      expect(schema.category).toBeDefined();
+      expect(schema.category.enum).toEqual(['general', 'event', 'urgent', 'adoption']);
+      expect(schema.category.default).toBe('general');
+    });
+
+    it('should have pinned field with Boolean type and default false', () => {
+      const schema = Announcement.schema.obj;
+      expect(schema.pinned).toBeDefined();
+      expect(schema.pinned.type).toBe(Boolean);
+      expect(schema.pinned.default).toBe(false);
+    });
+
+    it('should have active field with Boolean type and default true', () => {
+      const schema = Announcement.schema.obj;
+      expect(schema.active).toBeDefined();
+      expect(schema.active.type).toBe(Boolean);
+      expect(schema.active.default).toBe(true);
+    });
+
+    it('should have author field with default empty string', () => {
+      const schema = Announcement.schema.obj;
+      expect(schema.author).toBeDefined();
+      expect(schema.author.type).toBe(String);
+      expect(schema.author.default).toBe('');
+    });
+
+    it('should have createdAt field with Date type', () => {
+      const schema = Announcement.schema.obj;
+      expect(schema.createdAt).toBeDefined();
+      expect(schema.createdAt.type).toBe(Date);
+      expect(schema.createdAt.default).toBe(Date.now);
+    });
+  });
 });
