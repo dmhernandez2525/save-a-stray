@@ -8,34 +8,10 @@ interface Mutations {
   CREATE_ANIMAL: DocumentNode;
   UPDATE_ANIMAL_STATUS: DocumentNode;
   UPDATE_APPLICATION_STATUS: DocumentNode;
-  UPDATE_USER: DocumentNode;
   ADD_FAVORITE: DocumentNode;
   REMOVE_FAVORITE: DocumentNode;
   CREATE_APPLICATION: DocumentNode;
   CREATE_SHELTER: DocumentNode;
-  EDIT_SHELTER: DocumentNode;
-  ADD_MEDICAL_RECORD: DocumentNode;
-  CREATE_REVIEW: DocumentNode;
-  CREATE_SUCCESS_STORY: DocumentNode;
-  ADD_SHELTER_STAFF: DocumentNode;
-  REMOVE_SHELTER_STAFF: DocumentNode;
-  BULK_CREATE_ANIMALS: DocumentNode;
-  CREATE_EVENT: DocumentNode;
-  DELETE_EVENT: DocumentNode;
-  CREATE_DONATION: DocumentNode;
-  CREATE_FOSTER: DocumentNode;
-  UPDATE_FOSTER_STATUS: DocumentNode;
-  CREATE_SAVED_SEARCH: DocumentNode;
-  DELETE_SAVED_SEARCH: DocumentNode;
-  CREATE_APPLICATION_TEMPLATE: DocumentNode;
-  DELETE_APPLICATION_TEMPLATE: DocumentNode;
-  VERIFY_SHELTER: DocumentNode;
-  LOG_ACTIVITY: DocumentNode;
-  REGISTER_TERMINAL_READER: DocumentNode;
-  DELETE_TERMINAL_READER: DocumentNode;
-  CREATE_TERMINAL_PAYMENT_INTENT: DocumentNode;
-  SEND_MESSAGE: DocumentNode;
-  MARK_MESSAGES_READ: DocumentNode;
 }
 
 const mutations: Mutations = {
@@ -45,18 +21,12 @@ const mutations: Mutations = {
       $name: String!
       $email: String!
       $password: String!
-      $shelterName: String
-      $shelterLocation: String
-      $shelterPaymentEmail: String
     ) {
       register(
         userRole: $userRole
         name: $name
         email: $email
         password: $password
-        shelterName: $shelterName
-        shelterLocation: $shelterLocation
-        shelterPaymentEmail: $shelterPaymentEmail
       ) {
         token
         loggedIn
@@ -100,7 +70,6 @@ const mutations: Mutations = {
       $color: String!
       $description: String!
       $image: String
-      $images: [String]
       $video: String
       $applications: ID
     ) {
@@ -112,7 +81,6 @@ const mutations: Mutations = {
         color: $color
         description: $description
         image: $image
-        images: $images
         video: $video
         applications: $applications
       ) {
@@ -122,7 +90,6 @@ const mutations: Mutations = {
         sex
         color
         description
-        images
       }
     }
   `,
@@ -140,15 +107,6 @@ const mutations: Mutations = {
         _id
         status
         submittedAt
-      }
-    }
-  `,
-  UPDATE_USER: gql`
-    mutation UpdateUser($_id: ID!, $name: String, $email: String) {
-      updateUser(_id: $_id, name: $name, email: $email) {
-        _id
-        name
-        email
       }
     }
   `,
@@ -202,475 +160,49 @@ const mutations: Mutations = {
       }
     }
   `,
-  EDIT_SHELTER: gql`
-    mutation EditShelter(
-      $_id: ID!
-      $name: String
-      $location: String
-      $paymentEmail: String
-      $phone: String
-      $email: String
-      $website: String
-      $hours: String
-      $description: String
-    ) {
-      editShelter(
-        _id: $_id
-        name: $name
-        location: $location
-        paymentEmail: $paymentEmail
-        phone: $phone
-        email: $email
-        website: $website
-        hours: $hours
-        description: $description
-      ) {
-        _id
-        name
-        location
-        paymentEmail
-        phone
-        email
-        website
-        hours
-        description
-      }
-    }
-  `,
-  CREATE_REVIEW: gql`
-    mutation CreateReview($userId: String!, $shelterId: String!, $rating: Int!, $comment: String) {
-      createReview(userId: $userId, shelterId: $shelterId, rating: $rating, comment: $comment) {
-        _id
-        userId
-        shelterId
-        rating
-        comment
-        createdAt
-      }
-    }
-  `,
-  ADD_MEDICAL_RECORD: gql`
-    mutation AddMedicalRecord(
+  JOIN_WAITLIST: gql`
+    mutation JoinWaitlist(
       $animalId: ID!
-      $date: String!
-      $recordType: String!
-      $description: String!
-      $veterinarian: String
-    ) {
-      addMedicalRecord(
-        animalId: $animalId
-        date: $date
-        recordType: $recordType
-        description: $description
-        veterinarian: $veterinarian
-      ) {
-        _id
-        medicalRecords {
-          _id
-          date
-          recordType
-          description
-          veterinarian
-        }
-      }
-    }
-  `,
-  CREATE_SUCCESS_STORY: gql`
-    mutation CreateSuccessStory(
-      $userId: String!
-      $animalName: String!
-      $animalType: String!
-      $title: String!
-      $story: String!
-      $image: String
-    ) {
-      createSuccessStory(
-        userId: $userId
-        animalName: $animalName
-        animalType: $animalType
-        title: $title
-        story: $story
-        image: $image
-      ) {
-        _id
-        animalName
-        animalType
-        title
-        story
-        image
-        createdAt
-      }
-    }
-  `,
-  ADD_SHELTER_STAFF: gql`
-    mutation AddShelterStaff($shelterId: ID!, $email: String!) {
-      addShelterStaff(shelterId: $shelterId, email: $email) {
-        _id
-        users {
-          _id
-        }
-      }
-    }
-  `,
-  REMOVE_SHELTER_STAFF: gql`
-    mutation RemoveShelterStaff($shelterId: ID!, $userId: ID!) {
-      removeShelterStaff(shelterId: $shelterId, userId: $userId) {
-        _id
-        users {
-          _id
-        }
-      }
-    }
-  `,
-  BULK_CREATE_ANIMALS: gql`
-    mutation BulkCreateAnimals($animals: [AnimalInput]!, $shelterId: ID) {
-      bulkCreateAnimals(animals: $animals, shelterId: $shelterId) {
-        _id
-        name
-        type
-        breed
-        age
-        sex
-        color
-        status
-      }
-    }
-  `,
-  CREATE_EVENT: gql`
-    mutation CreateEvent(
-      $shelterId: ID!
-      $title: String!
-      $description: String
-      $date: String!
-      $endDate: String
-      $location: String
-      $eventType: String
-    ) {
-      createEvent(
-        shelterId: $shelterId
-        title: $title
-        description: $description
-        date: $date
-        endDate: $endDate
-        location: $location
-        eventType: $eventType
-      ) {
-        _id
-        title
-        date
-        eventType
-      }
-    }
-  `,
-  DELETE_EVENT: gql`
-    mutation DeleteEvent($_id: ID!) {
-      deleteEvent(_id: $_id) {
-        _id
-      }
-    }
-  `,
-  CREATE_DONATION: gql`
-    mutation CreateDonation(
       $shelterId: ID!
       $userId: String
-      $donorName: String!
-      $amount: Float!
-      $message: String
-    ) {
-      createDonation(
-        shelterId: $shelterId
-        userId: $userId
-        donorName: $donorName
-        amount: $amount
-        message: $message
-      ) {
-        _id
-        donorName
-        amount
-        message
-        createdAt
-      }
-    }
-  `,
-  CREATE_FOSTER: gql`
-    mutation CreateFoster(
-      $shelterId: ID!
-      $animalId: ID!
-      $userId: String
-      $fosterName: String!
-      $fosterEmail: String
-      $startDate: String!
-      $endDate: String
+      $userName: String!
+      $userEmail: String!
+      $userPhone: String
       $notes: String
     ) {
-      createFoster(
-        shelterId: $shelterId
+      joinWaitlist(
         animalId: $animalId
+        shelterId: $shelterId
         userId: $userId
-        fosterName: $fosterName
-        fosterEmail: $fosterEmail
-        startDate: $startDate
-        endDate: $endDate
+        userName: $userName
+        userEmail: $userEmail
+        userPhone: $userPhone
         notes: $notes
       ) {
         _id
         animalId
-        fosterName
-        fosterEmail
-        startDate
-        endDate
+        userName
+        userEmail
+        userPhone
+        position
         status
         notes
-      }
-    }
-  `,
-  UPDATE_FOSTER_STATUS: gql`
-    mutation UpdateFosterStatus($_id: ID!, $status: String!, $endDate: String, $notes: String) {
-      updateFosterStatus(_id: $_id, status: $status, endDate: $endDate, notes: $notes) {
-        _id
-        status
-        endDate
-        notes
-      }
-    }
-  `,
-  CREATE_SAVED_SEARCH: gql`
-    mutation CreateSavedSearch(
-      $userId: ID!
-      $name: String!
-      $type: String
-      $breed: String
-      $sex: String
-      $color: String
-      $status: String
-      $minAge: Int
-      $maxAge: Int
-    ) {
-      createSavedSearch(
-        userId: $userId
-        name: $name
-        type: $type
-        breed: $breed
-        sex: $sex
-        color: $color
-        status: $status
-        minAge: $minAge
-        maxAge: $maxAge
-      ) {
-        _id
-        name
-        filters {
-          type
-          breed
-          sex
-          color
-          status
-          minAge
-          maxAge
-        }
         createdAt
       }
     }
   `,
-  DELETE_SAVED_SEARCH: gql`
-    mutation DeleteSavedSearch($_id: ID!) {
-      deleteSavedSearch(_id: $_id) {
+  REMOVE_FROM_WAITLIST: gql`
+    mutation RemoveFromWaitlist($_id: ID!) {
+      removeFromWaitlist(_id: $_id) {
         _id
       }
     }
   `,
-  CREATE_APPLICATION_TEMPLATE: gql`
-    mutation CreateApplicationTemplate(
-      $shelterId: ID!
-      $name: String!
-      $fields: [TemplateFieldInput]
-    ) {
-      createApplicationTemplate(
-        shelterId: $shelterId
-        name: $name
-        fields: $fields
-      ) {
-        _id
-        name
-        fields {
-          label
-          fieldType
-          required
-          options
-        }
-        createdAt
-      }
-    }
-  `,
-  DELETE_APPLICATION_TEMPLATE: gql`
-    mutation DeleteApplicationTemplate($_id: ID!) {
-      deleteApplicationTemplate(_id: $_id) {
-        _id
-      }
-    }
-  `,
-  VERIFY_SHELTER: gql`
-    mutation VerifyShelter($shelterId: ID!, $verified: Boolean!) {
-      verifyShelter(shelterId: $shelterId, verified: $verified) {
-        _id
-        verified
-        verifiedAt
-      }
-    }
-  `,
-  LOG_ACTIVITY: gql`
-    mutation LogActivity(
-      $shelterId: ID!
-      $action: String!
-      $entityType: String!
-      $entityId: String
-      $description: String!
-    ) {
-      logActivity(
-        shelterId: $shelterId
-        action: $action
-        entityType: $entityType
-        entityId: $entityId
-        description: $description
-      ) {
-        _id
-        action
-        entityType
-        description
-        createdAt
-      }
-    }
-  `,
-  REGISTER_TERMINAL_READER: gql`
-    mutation RegisterTerminalReader(
-      $shelterId: ID!
-      $registrationCode: String!
-      $label: String!
-      $location: String
-    ) {
-      registerTerminalReader(
-        shelterId: $shelterId
-        registrationCode: $registrationCode
-        label: $label
-        location: $location
-      ) {
-        _id
-        shelterId
-        stripeReaderId
-        label
-        deviceType
-        serialNumber
-        location
-        status
-        registeredAt
-      }
-    }
-  `,
-  DELETE_TERMINAL_READER: gql`
-    mutation DeleteTerminalReader($_id: ID!) {
-      deleteTerminalReader(_id: $_id) {
-        _id
-      }
-    }
-  `,
-  CREATE_TERMINAL_PAYMENT_INTENT: gql`
-    mutation CreateTerminalPaymentIntent(
-      $shelterId: ID!
-      $readerId: String!
-      $amount: Int!
-      $currency: String
-      $description: String
-    ) {
-      createTerminalPaymentIntent(
-        shelterId: $shelterId
-        readerId: $readerId
-        amount: $amount
-        currency: $currency
-        description: $description
-      ) {
-        id
-        amount
-        currency
-        status
-        description
-        clientSecret
-      }
-    }
-  `,
-  SEND_MESSAGE: gql`
-    mutation SendMessage(
-      $senderId: String!
-      $recipientId: String!
-      $shelterId: String!
-      $content: String!
-    ) {
-      sendMessage(
-        senderId: $senderId
-        recipientId: $recipientId
-        shelterId: $shelterId
-        content: $content
-      ) {
-        _id
-        senderId
-        recipientId
-        shelterId
-        content
-        read
-        createdAt
-      }
-    }
-  `,
-  MARK_MESSAGES_READ: gql`
-    mutation MarkMessagesRead($shelterId: String!, $userId: String!, $readerId: String!) {
-      markMessagesRead(shelterId: $shelterId, userId: $userId, readerId: $readerId)
-    }
-  `,
-  ADD_VOLUNTEER: gql`
-    mutation AddVolunteer(
-      $shelterId: ID!
-      $name: String!
-      $email: String
-      $phone: String
-      $skills: [String]
-      $availability: String
-      $notes: String
-    ) {
-      addVolunteer(
-        shelterId: $shelterId
-        name: $name
-        email: $email
-        phone: $phone
-        skills: $skills
-        availability: $availability
-        notes: $notes
-      ) {
-        _id
-        name
-        email
-        phone
-        skills
-        availability
-        status
-        startDate
-        totalHours
-        notes
-        createdAt
-      }
-    }
-  `,
-  UPDATE_VOLUNTEER_STATUS: gql`
-    mutation UpdateVolunteerStatus($_id: ID!, $status: String!) {
-      updateVolunteerStatus(_id: $_id, status: $status) {
+  UPDATE_WAITLIST_STATUS: gql`
+    mutation UpdateWaitlistStatus($_id: ID!, $status: String!) {
+      updateWaitlistStatus(_id: $_id, status: $status) {
         _id
         status
-      }
-    }
-  `,
-  LOG_VOLUNTEER_HOURS: gql`
-    mutation LogVolunteerHours($_id: ID!, $hours: Int!) {
-      logVolunteerHours(_id: $_id, hours: $hours) {
-        _id
-        totalHours
       }
     }
   `
