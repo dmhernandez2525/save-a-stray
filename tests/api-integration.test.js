@@ -24,6 +24,10 @@ jest.mock('mongoose', () => {
         application: {
           find: jest.fn().mockResolvedValue([]),
           findById: jest.fn().mockResolvedValue(null)
+        },
+        vaccination: {
+          find: jest.fn().mockReturnValue({ sort: jest.fn().mockResolvedValue([]) }),
+          findById: jest.fn().mockResolvedValue(null)
         }
       };
       return mockModels[modelName] || {};
@@ -328,5 +332,66 @@ describe('GraphQL Schema Tests', () => {
     expect(fields.userApplications).toBeDefined();
     const args = fields.userApplications.args.map(a => a.name);
     expect(args).toContain('userId');
+  });
+
+  it('should have animalVaccinations query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.animalVaccinations).toBeDefined();
+    const args = fields.animalVaccinations.args.map(a => a.name);
+    expect(args).toContain('animalId');
+  });
+
+  it('should have shelterVaccinations query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.shelterVaccinations).toBeDefined();
+    const args = fields.shelterVaccinations.args.map(a => a.name);
+    expect(args).toContain('shelterId');
+  });
+
+  it('should have addVaccination mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.addVaccination).toBeDefined();
+    const args = mutationFields.addVaccination.args.map(a => a.name);
+    expect(args).toContain('animalId');
+    expect(args).toContain('shelterId');
+    expect(args).toContain('vaccineName');
+    expect(args).toContain('batchNumber');
+    expect(args).toContain('administeredBy');
+    expect(args).toContain('administeredDate');
+    expect(args).toContain('expirationDate');
+    expect(args).toContain('notes');
+  });
+
+  it('should have updateVaccinationStatus mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.updateVaccinationStatus).toBeDefined();
+    const args = mutationFields.updateVaccinationStatus.args.map(a => a.name);
+    expect(args).toContain('_id');
+    expect(args).toContain('status');
+  });
+
+  it('should have VaccinationType with correct fields', () => {
+    const VaccinationType = require('../server/schema/types/vaccination_type').default;
+    const fields = VaccinationType.getFields();
+
+    expect(fields._id).toBeDefined();
+    expect(fields.animalId).toBeDefined();
+    expect(fields.shelterId).toBeDefined();
+    expect(fields.vaccineName).toBeDefined();
+    expect(fields.batchNumber).toBeDefined();
+    expect(fields.administeredBy).toBeDefined();
+    expect(fields.administeredDate).toBeDefined();
+    expect(fields.expirationDate).toBeDefined();
+    expect(fields.status).toBeDefined();
+    expect(fields.notes).toBeDefined();
+    expect(fields.createdAt).toBeDefined();
   });
 });

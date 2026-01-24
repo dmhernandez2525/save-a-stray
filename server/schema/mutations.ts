@@ -10,16 +10,19 @@ import UserType from './types/user_type';
 import AnimalType from './types/animal_type';
 import ShelterType from './types/shelter_type';
 import ApplicationType from './types/application_type';
+import VaccinationType from './types/vaccination_type';
 import AuthService from '../services/auth';
 import { UserDocument } from '../models/User';
 import { AnimalDocument } from '../models/Animal';
 import { ApplicationDocument } from '../models/Application';
 import { ShelterDocument } from '../models/Shelter';
+import { VaccinationDocument } from '../models/Vaccination';
 
 const User = mongoose.model<UserDocument>('user');
 const Animal = mongoose.model<AnimalDocument>('animal');
 const Application = mongoose.model<ApplicationDocument>('application');
 const Shelter = mongoose.model<ShelterDocument>('shelter');
+const Vaccination = mongoose.model<VaccinationDocument>('vaccination');
 
 interface RegisterArgs {
   name: string;
@@ -355,6 +358,50 @@ const mutation = new GraphQLObjectType({
           if (animals) shelter.animals = animals as unknown as (typeof shelter.animals);
           await shelter.save();
           return shelter;
+        }
+        return null;
+      }
+    },
+    addVaccination: {
+      type: VaccinationType,
+      args: {
+        animalId: { type: GraphQLString },
+        shelterId: { type: GraphQLString },
+        vaccineName: { type: GraphQLString },
+        batchNumber: { type: GraphQLString },
+        administeredBy: { type: GraphQLString },
+        administeredDate: { type: GraphQLString },
+        expirationDate: { type: GraphQLString },
+        notes: { type: GraphQLString }
+      },
+      async resolve(_, args: { animalId: string; shelterId: string; vaccineName: string; batchNumber: string; administeredBy: string; administeredDate: string; expirationDate: string; notes: string }) {
+        const vaccination = new Vaccination({
+          animalId: args.animalId,
+          shelterId: args.shelterId,
+          vaccineName: args.vaccineName,
+          batchNumber: args.batchNumber || '',
+          administeredBy: args.administeredBy || '',
+          administeredDate: args.administeredDate ? new Date(args.administeredDate) : new Date(),
+          expirationDate: args.expirationDate ? new Date(args.expirationDate) : null,
+          status: 'current',
+          notes: args.notes || ''
+        });
+        await vaccination.save();
+        return vaccination;
+      }
+    },
+    updateVaccinationStatus: {
+      type: VaccinationType,
+      args: {
+        _id: { type: GraphQLID },
+        status: { type: GraphQLString }
+      },
+      async resolve(_, args: { _id: string; status: string }) {
+        const vaccination = await Vaccination.findById(args._id);
+        if (vaccination) {
+          vaccination.status = args.status as typeof vaccination.status;
+          await vaccination.save();
+          return vaccination;
         }
         return null;
       }

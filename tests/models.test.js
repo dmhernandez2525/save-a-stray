@@ -111,6 +111,64 @@ describe('Mongoose Models Schema Tests', () => {
     });
   });
 
+  describe('Vaccination Model', () => {
+    const Vaccination = require('../server/models/Vaccination').default;
+
+    it('should be a valid mongoose model', () => {
+      expect(Vaccination).toBeDefined();
+      expect(Vaccination.modelName).toBe('vaccination');
+    });
+
+    it('should have required fields defined in schema', () => {
+      const schema = Vaccination.schema.obj;
+
+      expect(schema.animalId).toBeDefined();
+      expect(schema.animalId.required).toBe(true);
+      expect(schema.animalId.type).toBe(String);
+
+      expect(schema.shelterId).toBeDefined();
+      expect(schema.shelterId.required).toBe(true);
+
+      expect(schema.vaccineName).toBeDefined();
+      expect(schema.vaccineName.required).toBe(true);
+    });
+
+    it('should have optional fields with defaults', () => {
+      const schema = Vaccination.schema.obj;
+
+      expect(schema.batchNumber).toBeDefined();
+      expect(schema.batchNumber.default).toBe('');
+
+      expect(schema.administeredBy).toBeDefined();
+      expect(schema.administeredBy.default).toBe('');
+
+      expect(schema.notes).toBeDefined();
+      expect(schema.notes.default).toBe('');
+    });
+
+    it('should have date fields', () => {
+      const schema = Vaccination.schema.obj;
+
+      expect(schema.administeredDate).toBeDefined();
+      expect(schema.administeredDate.type).toBe(Date);
+      expect(schema.administeredDate.default).toBe(Date.now);
+
+      expect(schema.expirationDate).toBeDefined();
+      expect(schema.expirationDate.type).toBe(Date);
+      expect(schema.expirationDate.default).toBe(null);
+
+      expect(schema.createdAt).toBeDefined();
+      expect(schema.createdAt.type).toBe(Date);
+    });
+
+    it('should have status field with enum and default', () => {
+      const schema = Vaccination.schema.obj;
+      expect(schema.status).toBeDefined();
+      expect(schema.status.enum).toEqual(['current', 'expired', 'due']);
+      expect(schema.status.default).toBe('current');
+    });
+  });
+
   describe('Shelter Model', () => {
     it('should be a valid mongoose model', () => {
       expect(Shelter).toBeDefined();

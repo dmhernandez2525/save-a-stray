@@ -213,3 +213,28 @@ export interface ShelterFormState {
   paymentEmail: string;
   animals: string;
 }
+
+// Vaccination Types
+export type VaccinationStatus = 'current' | 'expired' | 'due';
+
+export interface Vaccination {
+  _id: string;
+  animalId: string;
+  shelterId: string;
+  vaccineName: string;
+  batchNumber: string;
+  administeredBy: string;
+  administeredDate: string;
+  expirationDate: string;
+  status: VaccinationStatus;
+  notes: string;
+  createdAt: string;
+}
+
+export interface ShelterVaccinationsResponse {
+  shelterVaccinations: Vaccination[];
+}
+
+export interface AnimalVaccinationsResponse {
+  animalVaccinations: Vaccination[];
+}

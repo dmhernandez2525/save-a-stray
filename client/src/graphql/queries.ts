@@ -11,6 +11,8 @@ interface Queries {
   FETCH_ANIMAL: DocumentNode;
   USER_FAVORITES: DocumentNode;
   USER_FAVORITE_IDS: DocumentNode;
+  SHELTER_VACCINATIONS: DocumentNode;
+  ANIMAL_VACCINATIONS: DocumentNode;
 }
 
 const queries: Queries = {
@@ -154,6 +156,40 @@ const queries: Queries = {
         image
         video
         status
+      }
+    }
+  `,
+  SHELTER_VACCINATIONS: gql`
+    query ShelterVaccinations($shelterId: ID!) {
+      shelterVaccinations(shelterId: $shelterId) {
+        _id
+        animalId
+        shelterId
+        vaccineName
+        batchNumber
+        administeredBy
+        administeredDate
+        expirationDate
+        status
+        notes
+        createdAt
+      }
+    }
+  `,
+  ANIMAL_VACCINATIONS: gql`
+    query AnimalVaccinations($animalId: ID!) {
+      animalVaccinations(animalId: $animalId) {
+        _id
+        animalId
+        shelterId
+        vaccineName
+        batchNumber
+        administeredBy
+        administeredDate
+        expirationDate
+        status
+        notes
+        createdAt
       }
     }
   `

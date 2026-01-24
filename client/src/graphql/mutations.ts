@@ -12,6 +12,8 @@ interface Mutations {
   REMOVE_FAVORITE: DocumentNode;
   CREATE_APPLICATION: DocumentNode;
   CREATE_SHELTER: DocumentNode;
+  ADD_VACCINATION: DocumentNode;
+  UPDATE_VACCINATION_STATUS: DocumentNode;
 }
 
 const mutations: Mutations = {
@@ -157,6 +159,49 @@ const mutations: Mutations = {
         location
         paymentEmail
         _id
+      }
+    }
+  `,
+  ADD_VACCINATION: gql`
+    mutation AddVaccination(
+      $animalId: String!
+      $shelterId: String!
+      $vaccineName: String!
+      $batchNumber: String
+      $administeredBy: String
+      $administeredDate: String
+      $expirationDate: String
+      $notes: String
+    ) {
+      addVaccination(
+        animalId: $animalId
+        shelterId: $shelterId
+        vaccineName: $vaccineName
+        batchNumber: $batchNumber
+        administeredBy: $administeredBy
+        administeredDate: $administeredDate
+        expirationDate: $expirationDate
+        notes: $notes
+      ) {
+        _id
+        animalId
+        shelterId
+        vaccineName
+        batchNumber
+        administeredBy
+        administeredDate
+        expirationDate
+        status
+        notes
+        createdAt
+      }
+    }
+  `,
+  UPDATE_VACCINATION_STATUS: gql`
+    mutation UpdateVaccinationStatus($_id: ID!, $status: String!) {
+      updateVaccinationStatus(_id: $_id, status: $status) {
+        _id
+        status
       }
     }
   `
