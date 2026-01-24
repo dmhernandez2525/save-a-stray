@@ -111,6 +111,65 @@ describe('Mongoose Models Schema Tests', () => {
     });
   });
 
+  describe('SpayNeuter Model', () => {
+    const SpayNeuter = require('../server/models/SpayNeuter').default;
+
+    it('should be a valid mongoose model', () => {
+      expect(SpayNeuter).toBeDefined();
+      expect(SpayNeuter.modelName).toBe('spayNeuter');
+    });
+
+    it('should have required fields defined in schema', () => {
+      const schema = SpayNeuter.schema.obj;
+
+      expect(schema.animalId).toBeDefined();
+      expect(schema.animalId.required).toBe(true);
+      expect(schema.animalId.type).toBe(String);
+
+      expect(schema.shelterId).toBeDefined();
+      expect(schema.shelterId.required).toBe(true);
+
+      expect(schema.procedureType).toBeDefined();
+      expect(schema.procedureType.required).toBe(true);
+    });
+
+    it('should have procedureType with enum', () => {
+      const schema = SpayNeuter.schema.obj;
+      expect(schema.procedureType.enum).toEqual(['spay', 'neuter']);
+    });
+
+    it('should have status field with enum and default', () => {
+      const schema = SpayNeuter.schema.obj;
+      expect(schema.status).toBeDefined();
+      expect(schema.status.enum).toEqual(['scheduled', 'completed', 'cancelled']);
+      expect(schema.status.default).toBe('scheduled');
+    });
+
+    it('should have date fields', () => {
+      const schema = SpayNeuter.schema.obj;
+      expect(schema.scheduledDate).toBeDefined();
+      expect(schema.scheduledDate.type).toBe(Date);
+      expect(schema.scheduledDate.default).toBe(null);
+
+      expect(schema.completedDate).toBeDefined();
+      expect(schema.completedDate.type).toBe(Date);
+      expect(schema.completedDate.default).toBe(null);
+
+      expect(schema.createdAt).toBeDefined();
+      expect(schema.createdAt.type).toBe(Date);
+    });
+
+    it('should have optional fields with defaults', () => {
+      const schema = SpayNeuter.schema.obj;
+      expect(schema.veterinarian).toBeDefined();
+      expect(schema.veterinarian.default).toBe('');
+      expect(schema.clinic).toBeDefined();
+      expect(schema.clinic.default).toBe('');
+      expect(schema.notes).toBeDefined();
+      expect(schema.notes.default).toBe('');
+    });
+  });
+
   describe('Shelter Model', () => {
     it('should be a valid mongoose model', () => {
       expect(Shelter).toBeDefined();

@@ -213,3 +213,25 @@ export interface ShelterFormState {
   paymentEmail: string;
   animals: string;
 }
+
+// Spay/Neuter Types
+export type SpayNeuterProcedure = 'spay' | 'neuter';
+export type SpayNeuterStatus = 'scheduled' | 'completed' | 'cancelled';
+
+export interface SpayNeuterRecord {
+  _id: string;
+  animalId: string;
+  shelterId: string;
+  procedureType: SpayNeuterProcedure;
+  status: SpayNeuterStatus;
+  scheduledDate: string;
+  completedDate: string;
+  veterinarian: string;
+  clinic: string;
+  notes: string;
+  createdAt: string;
+}
+
+export interface ShelterSpayNeuterResponse {
+  shelterSpayNeuterRecords: SpayNeuterRecord[];
+}

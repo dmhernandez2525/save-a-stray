@@ -10,16 +10,19 @@ import UserType from './types/user_type';
 import AnimalType from './types/animal_type';
 import ShelterType from './types/shelter_type';
 import ApplicationType from './types/application_type';
+import SpayNeuterType from './types/spay_neuter_type';
 import AuthService from '../services/auth';
 import { UserDocument } from '../models/User';
 import { AnimalDocument } from '../models/Animal';
 import { ApplicationDocument } from '../models/Application';
 import { ShelterDocument } from '../models/Shelter';
+import { SpayNeuterDocument } from '../models/SpayNeuter';
 
 const User = mongoose.model<UserDocument>('user');
 const Animal = mongoose.model<AnimalDocument>('animal');
 const Application = mongoose.model<ApplicationDocument>('application');
 const Shelter = mongoose.model<ShelterDocument>('shelter');
+const SpayNeuter = mongoose.model<SpayNeuterDocument>('spayNeuter');
 
 interface RegisterArgs {
   name: string;
@@ -355,6 +358,50 @@ const mutation = new GraphQLObjectType({
           if (animals) shelter.animals = animals as unknown as (typeof shelter.animals);
           await shelter.save();
           return shelter;
+        }
+        return null;
+      }
+    },
+    scheduleSpayNeuter: {
+      type: SpayNeuterType,
+      args: {
+        animalId: { type: GraphQLString },
+        shelterId: { type: GraphQLString },
+        procedureType: { type: GraphQLString },
+        scheduledDate: { type: GraphQLString },
+        veterinarian: { type: GraphQLString },
+        clinic: { type: GraphQLString },
+        notes: { type: GraphQLString }
+      },
+      async resolve(_, args: { animalId: string; shelterId: string; procedureType: string; scheduledDate: string; veterinarian: string; clinic: string; notes: string }) {
+        const record = new SpayNeuter({
+          animalId: args.animalId,
+          shelterId: args.shelterId,
+          procedureType: args.procedureType,
+          scheduledDate: args.scheduledDate ? new Date(args.scheduledDate) : null,
+          veterinarian: args.veterinarian || '',
+          clinic: args.clinic || '',
+          notes: args.notes || ''
+        });
+        await record.save();
+        return record;
+      }
+    },
+    updateSpayNeuterStatus: {
+      type: SpayNeuterType,
+      args: {
+        _id: { type: GraphQLID },
+        status: { type: GraphQLString }
+      },
+      async resolve(_, args: { _id: string; status: string }) {
+        const record = await SpayNeuter.findById(args._id);
+        if (record) {
+          record.status = args.status as typeof record.status;
+          if (args.status === 'completed') {
+            record.completedDate = new Date();
+          }
+          await record.save();
+          return record;
         }
         return null;
       }

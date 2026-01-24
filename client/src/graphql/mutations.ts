@@ -12,6 +12,8 @@ interface Mutations {
   REMOVE_FAVORITE: DocumentNode;
   CREATE_APPLICATION: DocumentNode;
   CREATE_SHELTER: DocumentNode;
+  SCHEDULE_SPAY_NEUTER: DocumentNode;
+  UPDATE_SPAY_NEUTER_STATUS: DocumentNode;
 }
 
 const mutations: Mutations = {
@@ -157,6 +159,47 @@ const mutations: Mutations = {
         location
         paymentEmail
         _id
+      }
+    }
+  `,
+  SCHEDULE_SPAY_NEUTER: gql`
+    mutation ScheduleSpayNeuter(
+      $animalId: String!
+      $shelterId: String!
+      $procedureType: String!
+      $scheduledDate: String
+      $veterinarian: String
+      $clinic: String
+      $notes: String
+    ) {
+      scheduleSpayNeuter(
+        animalId: $animalId
+        shelterId: $shelterId
+        procedureType: $procedureType
+        scheduledDate: $scheduledDate
+        veterinarian: $veterinarian
+        clinic: $clinic
+        notes: $notes
+      ) {
+        _id
+        animalId
+        shelterId
+        procedureType
+        status
+        scheduledDate
+        veterinarian
+        clinic
+        notes
+        createdAt
+      }
+    }
+  `,
+  UPDATE_SPAY_NEUTER_STATUS: gql`
+    mutation UpdateSpayNeuterStatus($_id: ID!, $status: String!) {
+      updateSpayNeuterStatus(_id: $_id, status: $status) {
+        _id
+        status
+        completedDate
       }
     }
   `

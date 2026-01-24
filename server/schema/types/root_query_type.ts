@@ -12,15 +12,18 @@ import UserType from './user_type';
 import AnimalType from './animal_type';
 import ApplicationType from './application_type';
 import ShelterType from './shelter_type';
+import SpayNeuterType from './spay_neuter_type';
 import { ApplicationDocument } from '../../models/Application';
 import { AnimalDocument } from '../../models/Animal';
 import { UserDocument } from '../../models/User';
 import { ShelterDocument } from '../../models/Shelter';
+import { SpayNeuterDocument } from '../../models/SpayNeuter';
 
 const Application = mongoose.model<ApplicationDocument>('application');
 const Animal = mongoose.model<AnimalDocument>('animal');
 const User = mongoose.model<UserDocument>('user');
 const Shelter = mongoose.model<ShelterDocument>('shelter');
+const SpayNeuter = mongoose.model<SpayNeuterDocument>('spayNeuter');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -127,6 +130,24 @@ const RootQueryType = new GraphQLObjectType({
       args: { _id: { type: GraphQLID } },
       resolve(_, args: { _id: string }) {
         return Shelter.findById(args._id);
+      }
+    },
+    animalSpayNeuter: {
+      type: SpayNeuterType,
+      args: {
+        animalId: { type: new GraphQLNonNull(GraphQLID) }
+      },
+      resolve(_, args: { animalId: string }) {
+        return SpayNeuter.findOne({ animalId: args.animalId });
+      }
+    },
+    shelterSpayNeuterRecords: {
+      type: new GraphQLList(SpayNeuterType),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) }
+      },
+      resolve(_, args: { shelterId: string }) {
+        return SpayNeuter.find({ shelterId: args.shelterId }).sort({ createdAt: -1 });
       }
     }
   })

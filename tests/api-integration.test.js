@@ -24,6 +24,11 @@ jest.mock('mongoose', () => {
         application: {
           find: jest.fn().mockResolvedValue([]),
           findById: jest.fn().mockResolvedValue(null)
+        },
+        spayNeuter: {
+          find: jest.fn().mockReturnValue({ sort: jest.fn().mockResolvedValue([]) }),
+          findOne: jest.fn().mockResolvedValue(null),
+          findById: jest.fn().mockResolvedValue(null)
         }
       };
       return mockModels[modelName] || {};
@@ -328,5 +333,65 @@ describe('GraphQL Schema Tests', () => {
     expect(fields.userApplications).toBeDefined();
     const args = fields.userApplications.args.map(a => a.name);
     expect(args).toContain('userId');
+  });
+
+  it('should have animalSpayNeuter query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.animalSpayNeuter).toBeDefined();
+    const args = fields.animalSpayNeuter.args.map(a => a.name);
+    expect(args).toContain('animalId');
+  });
+
+  it('should have shelterSpayNeuterRecords query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.shelterSpayNeuterRecords).toBeDefined();
+    const args = fields.shelterSpayNeuterRecords.args.map(a => a.name);
+    expect(args).toContain('shelterId');
+  });
+
+  it('should have scheduleSpayNeuter mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.scheduleSpayNeuter).toBeDefined();
+    const args = mutationFields.scheduleSpayNeuter.args.map(a => a.name);
+    expect(args).toContain('animalId');
+    expect(args).toContain('shelterId');
+    expect(args).toContain('procedureType');
+    expect(args).toContain('scheduledDate');
+    expect(args).toContain('veterinarian');
+    expect(args).toContain('clinic');
+    expect(args).toContain('notes');
+  });
+
+  it('should have updateSpayNeuterStatus mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.updateSpayNeuterStatus).toBeDefined();
+    const args = mutationFields.updateSpayNeuterStatus.args.map(a => a.name);
+    expect(args).toContain('_id');
+    expect(args).toContain('status');
+  });
+
+  it('should have SpayNeuterType with correct fields', () => {
+    const SpayNeuterType = require('../server/schema/types/spay_neuter_type').default;
+    const fields = SpayNeuterType.getFields();
+
+    expect(fields._id).toBeDefined();
+    expect(fields.animalId).toBeDefined();
+    expect(fields.shelterId).toBeDefined();
+    expect(fields.procedureType).toBeDefined();
+    expect(fields.status).toBeDefined();
+    expect(fields.scheduledDate).toBeDefined();
+    expect(fields.completedDate).toBeDefined();
+    expect(fields.veterinarian).toBeDefined();
+    expect(fields.clinic).toBeDefined();
+    expect(fields.notes).toBeDefined();
+    expect(fields.createdAt).toBeDefined();
   });
 });

@@ -11,6 +11,7 @@ interface Queries {
   FETCH_ANIMAL: DocumentNode;
   USER_FAVORITES: DocumentNode;
   USER_FAVORITE_IDS: DocumentNode;
+  SHELTER_SPAY_NEUTER: DocumentNode;
 }
 
 const queries: Queries = {
@@ -154,6 +155,23 @@ const queries: Queries = {
         image
         video
         status
+      }
+    }
+  `,
+  SHELTER_SPAY_NEUTER: gql`
+    query ShelterSpayNeuterRecords($shelterId: ID!) {
+      shelterSpayNeuterRecords(shelterId: $shelterId) {
+        _id
+        animalId
+        shelterId
+        procedureType
+        status
+        scheduledDate
+        completedDate
+        veterinarian
+        clinic
+        notes
+        createdAt
       }
     }
   `
