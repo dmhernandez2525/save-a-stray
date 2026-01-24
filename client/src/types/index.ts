@@ -213,3 +213,24 @@ export interface ShelterFormState {
   paymentEmail: string;
   animals: string;
 }
+
+// Microchip Types
+export type MicrochipStatus = 'registered' | 'unregistered' | 'transferred';
+
+export interface Microchip {
+  _id: string;
+  animalId: string;
+  shelterId: string;
+  chipNumber: string;
+  chipBrand: string;
+  registeredDate: string;
+  registeredBy: string;
+  status: MicrochipStatus;
+  ownerName: string;
+  ownerPhone: string;
+  createdAt: string;
+}
+
+export interface ShelterMicrochipsResponse {
+  shelterMicrochips: Microchip[];
+}

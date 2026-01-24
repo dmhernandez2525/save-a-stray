@@ -329,4 +329,64 @@ describe('GraphQL Schema Tests', () => {
     const args = fields.userApplications.args.map(a => a.name);
     expect(args).toContain('userId');
   });
+
+  it('should have animalMicrochip query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.animalMicrochip).toBeDefined();
+    const args = fields.animalMicrochip.args.map(a => a.name);
+    expect(args).toContain('animalId');
+  });
+
+  it('should have shelterMicrochips query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.shelterMicrochips).toBeDefined();
+    const args = fields.shelterMicrochips.args.map(a => a.name);
+    expect(args).toContain('shelterId');
+  });
+
+  it('should have registerMicrochip mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.registerMicrochip).toBeDefined();
+    const args = mutationFields.registerMicrochip.args.map(a => a.name);
+    expect(args).toContain('animalId');
+    expect(args).toContain('shelterId');
+    expect(args).toContain('chipNumber');
+    expect(args).toContain('chipBrand');
+    expect(args).toContain('registeredBy');
+    expect(args).toContain('ownerName');
+    expect(args).toContain('ownerPhone');
+  });
+
+  it('should have updateMicrochipStatus mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.updateMicrochipStatus).toBeDefined();
+    const args = mutationFields.updateMicrochipStatus.args.map(a => a.name);
+    expect(args).toContain('_id');
+    expect(args).toContain('status');
+  });
+
+  it('should have correct fields on MicrochipType', () => {
+    const MicrochipType = require('../server/schema/types/microchip_type').default;
+    const fields = MicrochipType.getFields();
+
+    expect(fields._id).toBeDefined();
+    expect(fields.animalId).toBeDefined();
+    expect(fields.shelterId).toBeDefined();
+    expect(fields.chipNumber).toBeDefined();
+    expect(fields.chipBrand).toBeDefined();
+    expect(fields.registeredDate).toBeDefined();
+    expect(fields.registeredBy).toBeDefined();
+    expect(fields.status).toBeDefined();
+    expect(fields.ownerName).toBeDefined();
+    expect(fields.ownerPhone).toBeDefined();
+    expect(fields.createdAt).toBeDefined();
+  });
 });

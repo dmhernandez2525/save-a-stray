@@ -10,16 +10,19 @@ import UserType from './types/user_type';
 import AnimalType from './types/animal_type';
 import ShelterType from './types/shelter_type';
 import ApplicationType from './types/application_type';
+import MicrochipType from './types/microchip_type';
 import AuthService from '../services/auth';
 import { UserDocument } from '../models/User';
 import { AnimalDocument } from '../models/Animal';
 import { ApplicationDocument } from '../models/Application';
 import { ShelterDocument } from '../models/Shelter';
+import { MicrochipDocument } from '../models/Microchip';
 
 const User = mongoose.model<UserDocument>('user');
 const Animal = mongoose.model<AnimalDocument>('animal');
 const Application = mongoose.model<ApplicationDocument>('application');
 const Shelter = mongoose.model<ShelterDocument>('shelter');
+const Microchip = mongoose.model<MicrochipDocument>('microchip');
 
 interface RegisterArgs {
   name: string;
@@ -355,6 +358,61 @@ const mutation = new GraphQLObjectType({
           if (animals) shelter.animals = animals as unknown as (typeof shelter.animals);
           await shelter.save();
           return shelter;
+        }
+        return null;
+      }
+    },
+    registerMicrochip: {
+      type: MicrochipType,
+      args: {
+        animalId: { type: GraphQLString },
+        shelterId: { type: GraphQLString },
+        chipNumber: { type: GraphQLString },
+        chipBrand: { type: GraphQLString },
+        registeredBy: { type: GraphQLString },
+        ownerName: { type: GraphQLString },
+        ownerPhone: { type: GraphQLString }
+      },
+      async resolve(_, args: { animalId: string; shelterId: string; chipNumber: string; chipBrand: string; registeredBy: string; ownerName: string; ownerPhone: string }) {
+        const existing = await Microchip.findOne({ animalId: args.animalId });
+        if (existing) {
+          existing.chipNumber = args.chipNumber;
+          existing.chipBrand = args.chipBrand || '';
+          existing.registeredBy = args.registeredBy || '';
+          existing.ownerName = args.ownerName || '';
+          existing.ownerPhone = args.ownerPhone || '';
+          existing.status = 'registered';
+          existing.registeredDate = new Date();
+          await existing.save();
+          return existing;
+        }
+        const microchip = new Microchip({
+          animalId: args.animalId,
+          shelterId: args.shelterId,
+          chipNumber: args.chipNumber,
+          chipBrand: args.chipBrand || '',
+          registeredBy: args.registeredBy || '',
+          ownerName: args.ownerName || '',
+          ownerPhone: args.ownerPhone || '',
+          status: 'registered',
+          registeredDate: new Date()
+        });
+        await microchip.save();
+        return microchip;
+      }
+    },
+    updateMicrochipStatus: {
+      type: MicrochipType,
+      args: {
+        _id: { type: GraphQLID },
+        status: { type: GraphQLString }
+      },
+      async resolve(_, args: { _id: string; status: string }) {
+        const microchip = await Microchip.findById(args._id);
+        if (microchip) {
+          microchip.status = args.status as typeof microchip.status;
+          await microchip.save();
+          return microchip;
         }
         return null;
       }

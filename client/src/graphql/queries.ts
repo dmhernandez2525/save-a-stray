@@ -11,6 +11,7 @@ interface Queries {
   FETCH_ANIMAL: DocumentNode;
   USER_FAVORITES: DocumentNode;
   USER_FAVORITE_IDS: DocumentNode;
+  SHELTER_MICROCHIPS: DocumentNode;
 }
 
 const queries: Queries = {
@@ -154,6 +155,23 @@ const queries: Queries = {
         image
         video
         status
+      }
+    }
+  `,
+  SHELTER_MICROCHIPS: gql`
+    query ShelterMicrochips($shelterId: ID!) {
+      shelterMicrochips(shelterId: $shelterId) {
+        _id
+        animalId
+        shelterId
+        chipNumber
+        chipBrand
+        registeredDate
+        registeredBy
+        status
+        ownerName
+        ownerPhone
+        createdAt
       }
     }
   `

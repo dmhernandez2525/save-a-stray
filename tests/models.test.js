@@ -140,4 +140,71 @@ describe('Mongoose Models Schema Tests', () => {
       expect(Array.isArray(shelterSchema.animals)).toBe(true);
     });
   });
+
+  describe('Microchip Model', () => {
+    const Microchip = require('../server/models/Microchip').default;
+
+    it('should be a valid mongoose model', () => {
+      expect(Microchip).toBeDefined();
+      expect(Microchip.modelName).toBe('microchip');
+    });
+
+    it('should have required fields defined in schema', () => {
+      const schema = Microchip.schema.obj;
+
+      expect(schema.animalId).toBeDefined();
+      expect(schema.animalId.required).toBe(true);
+      expect(schema.animalId.type).toBe(String);
+
+      expect(schema.shelterId).toBeDefined();
+      expect(schema.shelterId.required).toBe(true);
+      expect(schema.shelterId.type).toBe(String);
+
+      expect(schema.chipNumber).toBeDefined();
+      expect(schema.chipNumber.required).toBe(true);
+      expect(schema.chipNumber.type).toBe(String);
+    });
+
+    it('should have status field with enum and default', () => {
+      const schema = Microchip.schema.obj;
+      expect(schema.status).toBeDefined();
+      expect(schema.status.enum).toEqual(['registered', 'unregistered', 'transferred']);
+      expect(schema.status.default).toBe('unregistered');
+    });
+
+    it('should have chipBrand field with default empty string', () => {
+      const schema = Microchip.schema.obj;
+      expect(schema.chipBrand).toBeDefined();
+      expect(schema.chipBrand.type).toBe(String);
+      expect(schema.chipBrand.default).toBe('');
+    });
+
+    it('should have ownerName and ownerPhone fields', () => {
+      const schema = Microchip.schema.obj;
+      expect(schema.ownerName).toBeDefined();
+      expect(schema.ownerName.type).toBe(String);
+      expect(schema.ownerName.default).toBe('');
+
+      expect(schema.ownerPhone).toBeDefined();
+      expect(schema.ownerPhone.type).toBe(String);
+      expect(schema.ownerPhone.default).toBe('');
+    });
+
+    it('should have registeredDate and registeredBy fields', () => {
+      const schema = Microchip.schema.obj;
+      expect(schema.registeredDate).toBeDefined();
+      expect(schema.registeredDate.type).toBe(Date);
+
+      expect(schema.registeredBy).toBeDefined();
+      expect(schema.registeredBy.type).toBe(String);
+      expect(schema.registeredBy.default).toBe('');
+    });
+
+    it('should have createdAt field with Date type', () => {
+      const schema = Microchip.schema.obj;
+      expect(schema.createdAt).toBeDefined();
+      expect(schema.createdAt.type).toBe(Date);
+      expect(schema.createdAt.default).toBe(Date.now);
+    });
+  });
 });

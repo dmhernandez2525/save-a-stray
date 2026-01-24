@@ -12,6 +12,8 @@ interface Mutations {
   REMOVE_FAVORITE: DocumentNode;
   CREATE_APPLICATION: DocumentNode;
   CREATE_SHELTER: DocumentNode;
+  REGISTER_MICROCHIP: DocumentNode;
+  UPDATE_MICROCHIP_STATUS: DocumentNode;
 }
 
 const mutations: Mutations = {
@@ -157,6 +159,45 @@ const mutations: Mutations = {
         location
         paymentEmail
         _id
+      }
+    }
+  `,
+  REGISTER_MICROCHIP: gql`
+    mutation RegisterMicrochip(
+      $animalId: String!
+      $shelterId: String!
+      $chipNumber: String!
+      $chipBrand: String
+      $registeredBy: String
+      $ownerName: String
+      $ownerPhone: String
+    ) {
+      registerMicrochip(
+        animalId: $animalId
+        shelterId: $shelterId
+        chipNumber: $chipNumber
+        chipBrand: $chipBrand
+        registeredBy: $registeredBy
+        ownerName: $ownerName
+        ownerPhone: $ownerPhone
+      ) {
+        _id
+        animalId
+        chipNumber
+        chipBrand
+        registeredDate
+        registeredBy
+        status
+        ownerName
+        ownerPhone
+      }
+    }
+  `,
+  UPDATE_MICROCHIP_STATUS: gql`
+    mutation UpdateMicrochipStatus($_id: ID!, $status: String!) {
+      updateMicrochipStatus(_id: $_id, status: $status) {
+        _id
+        status
       }
     }
   `
