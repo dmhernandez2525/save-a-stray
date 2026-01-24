@@ -7,6 +7,7 @@ const Shelter = require('../server/models/Shelter').default;
 const ActivityLog = require('../server/models/ActivityLog').default;
 const TerminalReader = require('../server/models/TerminalReader').default;
 const Message = require('../server/models/Message').default;
+const Volunteer = require('../server/models/Volunteer').default;
 
 describe('Mongoose Models Schema Tests', () => {
   describe('Animal Model', () => {
@@ -268,6 +269,51 @@ describe('Mongoose Models Schema Tests', () => {
 
     it('should have createdAt field with Date type', () => {
       const schema = Message.schema.obj;
+      expect(schema.createdAt).toBeDefined();
+      expect(schema.createdAt.type).toBe(Date);
+    });
+  });
+
+  describe('Volunteer Model', () => {
+    it('should have required fields defined in schema', () => {
+      const schema = Volunteer.schema.obj;
+      expect(schema.shelterId).toBeDefined();
+      expect(schema.shelterId.required).toBe(true);
+      expect(schema.name).toBeDefined();
+      expect(schema.name.required).toBe(true);
+    });
+
+    it('should have contact fields with defaults', () => {
+      const schema = Volunteer.schema.obj;
+      expect(schema.email.default).toBe('');
+      expect(schema.phone.default).toBe('');
+    });
+
+    it('should have skills as array of strings', () => {
+      const schema = Volunteer.schema.obj;
+      expect(schema.skills).toBeDefined();
+      expect(schema.skills.type).toEqual([String]);
+      expect(schema.skills.default).toEqual([]);
+    });
+
+    it('should have status with enum values and default to pending', () => {
+      const schema = Volunteer.schema.obj;
+      expect(schema.status).toBeDefined();
+      expect(schema.status.enum).toEqual(['active', 'inactive', 'pending']);
+      expect(schema.status.default).toBe('pending');
+    });
+
+    it('should have totalHours defaulting to 0', () => {
+      const schema = Volunteer.schema.obj;
+      expect(schema.totalHours).toBeDefined();
+      expect(schema.totalHours.type).toBe(Number);
+      expect(schema.totalHours.default).toBe(0);
+    });
+
+    it('should have startDate and createdAt with Date type', () => {
+      const schema = Volunteer.schema.obj;
+      expect(schema.startDate).toBeDefined();
+      expect(schema.startDate.type).toBe(Date);
       expect(schema.createdAt).toBeDefined();
       expect(schema.createdAt.type).toBe(Date);
     });

@@ -624,6 +624,55 @@ const mutations: Mutations = {
     mutation MarkMessagesRead($shelterId: String!, $userId: String!, $readerId: String!) {
       markMessagesRead(shelterId: $shelterId, userId: $userId, readerId: $readerId)
     }
+  `,
+  ADD_VOLUNTEER: gql`
+    mutation AddVolunteer(
+      $shelterId: ID!
+      $name: String!
+      $email: String
+      $phone: String
+      $skills: [String]
+      $availability: String
+      $notes: String
+    ) {
+      addVolunteer(
+        shelterId: $shelterId
+        name: $name
+        email: $email
+        phone: $phone
+        skills: $skills
+        availability: $availability
+        notes: $notes
+      ) {
+        _id
+        name
+        email
+        phone
+        skills
+        availability
+        status
+        startDate
+        totalHours
+        notes
+        createdAt
+      }
+    }
+  `,
+  UPDATE_VOLUNTEER_STATUS: gql`
+    mutation UpdateVolunteerStatus($_id: ID!, $status: String!) {
+      updateVolunteerStatus(_id: $_id, status: $status) {
+        _id
+        status
+      }
+    }
+  `,
+  LOG_VOLUNTEER_HOURS: gql`
+    mutation LogVolunteerHours($_id: ID!, $hours: Int!) {
+      logVolunteerHours(_id: $_id, hours: $hours) {
+        _id
+        totalHours
+      }
+    }
   `
 };
 
