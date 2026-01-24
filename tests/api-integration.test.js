@@ -24,6 +24,11 @@ jest.mock('mongoose', () => {
         application: {
           find: jest.fn().mockResolvedValue([]),
           findById: jest.fn().mockResolvedValue(null)
+        },
+        adoptionFee: {
+          find: jest.fn().mockReturnValue({ sort: jest.fn().mockResolvedValue([]) }),
+          findOne: jest.fn().mockResolvedValue(null),
+          findById: jest.fn().mockResolvedValue(null)
         }
       };
       return mockModels[modelName] || {};
@@ -328,5 +333,75 @@ describe('GraphQL Schema Tests', () => {
     expect(fields.userApplications).toBeDefined();
     const args = fields.userApplications.args.map(a => a.name);
     expect(args).toContain('userId');
+  });
+
+  it('should have animalAdoptionFee query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.animalAdoptionFee).toBeDefined();
+    const args = fields.animalAdoptionFee.args.map(a => a.name);
+    expect(args).toContain('animalId');
+  });
+
+  it('should have shelterAdoptionFees query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.shelterAdoptionFees).toBeDefined();
+    const args = fields.shelterAdoptionFees.args.map(a => a.name);
+    expect(args).toContain('shelterId');
+  });
+
+  it('should have setAdoptionFee mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.setAdoptionFee).toBeDefined();
+    const args = mutationFields.setAdoptionFee.args.map(a => a.name);
+    expect(args).toContain('animalId');
+    expect(args).toContain('shelterId');
+    expect(args).toContain('amount');
+    expect(args).toContain('currency');
+    expect(args).toContain('description');
+  });
+
+  it('should have updateAdoptionFeeStatus mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.updateAdoptionFeeStatus).toBeDefined();
+    const args = mutationFields.updateAdoptionFeeStatus.args.map(a => a.name);
+    expect(args).toContain('_id');
+    expect(args).toContain('status');
+    expect(args).toContain('paidBy');
+  });
+
+  it('should have waiveAdoptionFee mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.waiveAdoptionFee).toBeDefined();
+    const args = mutationFields.waiveAdoptionFee.args.map(a => a.name);
+    expect(args).toContain('_id');
+    expect(args).toContain('waivedReason');
+  });
+
+  it('should have AdoptionFeeType with correct fields', () => {
+    const AdoptionFeeType = require('../server/schema/types/adoption_fee_type').default;
+    const fields = AdoptionFeeType.getFields();
+
+    expect(fields._id).toBeDefined();
+    expect(fields.animalId).toBeDefined();
+    expect(fields.shelterId).toBeDefined();
+    expect(fields.amount).toBeDefined();
+    expect(fields.currency).toBeDefined();
+    expect(fields.description).toBeDefined();
+    expect(fields.waived).toBeDefined();
+    expect(fields.waivedReason).toBeDefined();
+    expect(fields.paidAt).toBeDefined();
+    expect(fields.paidBy).toBeDefined();
+    expect(fields.status).toBeDefined();
+    expect(fields.createdAt).toBeDefined();
   });
 });

@@ -213,3 +213,25 @@ export interface ShelterFormState {
   paymentEmail: string;
   animals: string;
 }
+
+// Adoption Fee Types
+export type AdoptionFeeStatus = 'pending' | 'paid' | 'waived' | 'refunded';
+
+export interface AdoptionFee {
+  _id: string;
+  animalId: string;
+  shelterId: string;
+  amount: number;
+  currency: string;
+  description: string;
+  waived: boolean;
+  waivedReason: string;
+  paidAt: string;
+  paidBy: string;
+  status: AdoptionFeeStatus;
+  createdAt: string;
+}
+
+export interface ShelterAdoptionFeesResponse {
+  shelterAdoptionFees: AdoptionFee[];
+}

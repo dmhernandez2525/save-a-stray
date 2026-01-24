@@ -11,6 +11,7 @@ interface Queries {
   FETCH_ANIMAL: DocumentNode;
   USER_FAVORITES: DocumentNode;
   USER_FAVORITE_IDS: DocumentNode;
+  SHELTER_ADOPTION_FEES: DocumentNode;
 }
 
 const queries: Queries = {
@@ -154,6 +155,24 @@ const queries: Queries = {
         image
         video
         status
+      }
+    }
+  `,
+  SHELTER_ADOPTION_FEES: gql`
+    query ShelterAdoptionFees($shelterId: ID!) {
+      shelterAdoptionFees(shelterId: $shelterId) {
+        _id
+        animalId
+        shelterId
+        amount
+        currency
+        description
+        waived
+        waivedReason
+        paidAt
+        paidBy
+        status
+        createdAt
       }
     }
   `

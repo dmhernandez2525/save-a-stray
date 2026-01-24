@@ -111,6 +111,69 @@ describe('Mongoose Models Schema Tests', () => {
     });
   });
 
+  describe('AdoptionFee Model', () => {
+    const AdoptionFee = require('../server/models/AdoptionFee').default;
+
+    it('should be a valid mongoose model', () => {
+      expect(AdoptionFee).toBeDefined();
+      expect(AdoptionFee.modelName).toBe('adoptionFee');
+    });
+
+    it('should have required fields defined in schema', () => {
+      const schema = AdoptionFee.schema.obj;
+
+      expect(schema.animalId).toBeDefined();
+      expect(schema.animalId.required).toBe(true);
+      expect(schema.animalId.type).toBe(String);
+
+      expect(schema.shelterId).toBeDefined();
+      expect(schema.shelterId.required).toBe(true);
+
+      expect(schema.amount).toBeDefined();
+      expect(schema.amount.required).toBe(true);
+      expect(schema.amount.type).toBe(Number);
+    });
+
+    it('should have currency with default USD', () => {
+      const schema = AdoptionFee.schema.obj;
+      expect(schema.currency).toBeDefined();
+      expect(schema.currency.default).toBe('USD');
+    });
+
+    it('should have waived boolean field with default false', () => {
+      const schema = AdoptionFee.schema.obj;
+      expect(schema.waived).toBeDefined();
+      expect(schema.waived.type).toBe(Boolean);
+      expect(schema.waived.default).toBe(false);
+    });
+
+    it('should have status field with enum and default', () => {
+      const schema = AdoptionFee.schema.obj;
+      expect(schema.status).toBeDefined();
+      expect(schema.status.enum).toEqual(['pending', 'paid', 'waived', 'refunded']);
+      expect(schema.status.default).toBe('pending');
+    });
+
+    it('should have optional fields with defaults', () => {
+      const schema = AdoptionFee.schema.obj;
+      expect(schema.description).toBeDefined();
+      expect(schema.description.default).toBe('');
+      expect(schema.waivedReason).toBeDefined();
+      expect(schema.waivedReason.default).toBe('');
+      expect(schema.paidBy).toBeDefined();
+      expect(schema.paidBy.default).toBe('');
+    });
+
+    it('should have date fields', () => {
+      const schema = AdoptionFee.schema.obj;
+      expect(schema.paidAt).toBeDefined();
+      expect(schema.paidAt.type).toBe(Date);
+      expect(schema.paidAt.default).toBe(null);
+      expect(schema.createdAt).toBeDefined();
+      expect(schema.createdAt.type).toBe(Date);
+    });
+  });
+
   describe('Shelter Model', () => {
     it('should be a valid mongoose model', () => {
       expect(Shelter).toBeDefined();

@@ -2,6 +2,8 @@ import {
   GraphQLObjectType,
   GraphQLString,
   GraphQLInt,
+  GraphQLFloat,
+  GraphQLBoolean,
   GraphQLID,
   GraphQLFieldConfigMap
 } from 'graphql';
@@ -10,16 +12,19 @@ import UserType from './types/user_type';
 import AnimalType from './types/animal_type';
 import ShelterType from './types/shelter_type';
 import ApplicationType from './types/application_type';
+import AdoptionFeeType from './types/adoption_fee_type';
 import AuthService from '../services/auth';
 import { UserDocument } from '../models/User';
 import { AnimalDocument } from '../models/Animal';
 import { ApplicationDocument } from '../models/Application';
 import { ShelterDocument } from '../models/Shelter';
+import { AdoptionFeeDocument } from '../models/AdoptionFee';
 
 const User = mongoose.model<UserDocument>('user');
 const Animal = mongoose.model<AnimalDocument>('animal');
 const Application = mongoose.model<ApplicationDocument>('application');
 const Shelter = mongoose.model<ShelterDocument>('shelter');
+const AdoptionFee = mongoose.model<AdoptionFeeDocument>('adoptionFee');
 
 interface RegisterArgs {
   name: string;
@@ -355,6 +360,74 @@ const mutation = new GraphQLObjectType({
           if (animals) shelter.animals = animals as unknown as (typeof shelter.animals);
           await shelter.save();
           return shelter;
+        }
+        return null;
+      }
+    },
+    setAdoptionFee: {
+      type: AdoptionFeeType,
+      args: {
+        animalId: { type: GraphQLString },
+        shelterId: { type: GraphQLString },
+        amount: { type: GraphQLFloat },
+        currency: { type: GraphQLString },
+        description: { type: GraphQLString }
+      },
+      async resolve(_, args: { animalId: string; shelterId: string; amount: number; currency: string; description: string }) {
+        const existing = await AdoptionFee.findOne({ animalId: args.animalId });
+        if (existing) {
+          existing.amount = args.amount;
+          existing.currency = args.currency || existing.currency;
+          if (args.description !== undefined) existing.description = args.description;
+          await existing.save();
+          return existing;
+        }
+        const fee = new AdoptionFee({
+          animalId: args.animalId,
+          shelterId: args.shelterId,
+          amount: args.amount,
+          currency: args.currency || 'USD',
+          description: args.description || ''
+        });
+        await fee.save();
+        return fee;
+      }
+    },
+    updateAdoptionFeeStatus: {
+      type: AdoptionFeeType,
+      args: {
+        _id: { type: GraphQLID },
+        status: { type: GraphQLString },
+        paidBy: { type: GraphQLString }
+      },
+      async resolve(_, args: { _id: string; status: string; paidBy?: string }) {
+        const fee = await AdoptionFee.findById(args._id);
+        if (fee) {
+          fee.status = args.status as typeof fee.status;
+          if (args.status === 'paid') {
+            fee.paidAt = new Date();
+            if (args.paidBy) fee.paidBy = args.paidBy;
+          }
+          await fee.save();
+          return fee;
+        }
+        return null;
+      }
+    },
+    waiveAdoptionFee: {
+      type: AdoptionFeeType,
+      args: {
+        _id: { type: GraphQLID },
+        waivedReason: { type: GraphQLString }
+      },
+      async resolve(_, args: { _id: string; waivedReason: string }) {
+        const fee = await AdoptionFee.findById(args._id);
+        if (fee) {
+          fee.waived = true;
+          fee.waivedReason = args.waivedReason || '';
+          fee.status = 'waived';
+          await fee.save();
+          return fee;
         }
         return null;
       }

@@ -12,6 +12,9 @@ interface Mutations {
   REMOVE_FAVORITE: DocumentNode;
   CREATE_APPLICATION: DocumentNode;
   CREATE_SHELTER: DocumentNode;
+  SET_ADOPTION_FEE: DocumentNode;
+  UPDATE_ADOPTION_FEE_STATUS: DocumentNode;
+  WAIVE_ADOPTION_FEE: DocumentNode;
 }
 
 const mutations: Mutations = {
@@ -157,6 +160,52 @@ const mutations: Mutations = {
         location
         paymentEmail
         _id
+      }
+    }
+  `,
+  SET_ADOPTION_FEE: gql`
+    mutation SetAdoptionFee(
+      $animalId: String!
+      $shelterId: String!
+      $amount: Float!
+      $currency: String
+      $description: String
+    ) {
+      setAdoptionFee(
+        animalId: $animalId
+        shelterId: $shelterId
+        amount: $amount
+        currency: $currency
+        description: $description
+      ) {
+        _id
+        animalId
+        shelterId
+        amount
+        currency
+        description
+        status
+        createdAt
+      }
+    }
+  `,
+  UPDATE_ADOPTION_FEE_STATUS: gql`
+    mutation UpdateAdoptionFeeStatus($_id: ID!, $status: String!, $paidBy: String) {
+      updateAdoptionFeeStatus(_id: $_id, status: $status, paidBy: $paidBy) {
+        _id
+        status
+        paidAt
+        paidBy
+      }
+    }
+  `,
+  WAIVE_ADOPTION_FEE: gql`
+    mutation WaiveAdoptionFee($_id: ID!, $waivedReason: String) {
+      waiveAdoptionFee(_id: $_id, waivedReason: $waivedReason) {
+        _id
+        waived
+        waivedReason
+        status
       }
     }
   `
