@@ -12,15 +12,18 @@ import UserType from './user_type';
 import AnimalType from './animal_type';
 import ApplicationType from './application_type';
 import ShelterType from './shelter_type';
+import IntakeLogType from './intake_log_type';
 import { ApplicationDocument } from '../../models/Application';
 import { AnimalDocument } from '../../models/Animal';
 import { UserDocument } from '../../models/User';
 import { ShelterDocument } from '../../models/Shelter';
+import { IntakeLogDocument } from '../../models/IntakeLog';
 
 const Application = mongoose.model<ApplicationDocument>('application');
 const Animal = mongoose.model<AnimalDocument>('animal');
 const User = mongoose.model<UserDocument>('user');
 const Shelter = mongoose.model<ShelterDocument>('shelter');
+const IntakeLog = mongoose.model<IntakeLogDocument>('intakeLog');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -127,6 +130,24 @@ const RootQueryType = new GraphQLObjectType({
       args: { _id: { type: GraphQLID } },
       resolve(_, args: { _id: string }) {
         return Shelter.findById(args._id);
+      }
+    },
+    animalIntakeLog: {
+      type: IntakeLogType,
+      args: {
+        animalId: { type: new GraphQLNonNull(GraphQLID) }
+      },
+      resolve(_, args: { animalId: string }) {
+        return IntakeLog.findOne({ animalId: args.animalId });
+      }
+    },
+    shelterIntakeLogs: {
+      type: new GraphQLList(IntakeLogType),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) }
+      },
+      resolve(_, args: { shelterId: string }) {
+        return IntakeLog.find({ shelterId: args.shelterId }).sort({ intakeDate: -1 });
       }
     }
   })

@@ -10,16 +10,19 @@ import UserType from './types/user_type';
 import AnimalType from './types/animal_type';
 import ShelterType from './types/shelter_type';
 import ApplicationType from './types/application_type';
+import IntakeLogType from './types/intake_log_type';
 import AuthService from '../services/auth';
 import { UserDocument } from '../models/User';
 import { AnimalDocument } from '../models/Animal';
 import { ApplicationDocument } from '../models/Application';
 import { ShelterDocument } from '../models/Shelter';
+import { IntakeLogDocument } from '../models/IntakeLog';
 
 const User = mongoose.model<UserDocument>('user');
 const Animal = mongoose.model<AnimalDocument>('animal');
 const Application = mongoose.model<ApplicationDocument>('application');
 const Shelter = mongoose.model<ShelterDocument>('shelter');
+const IntakeLog = mongoose.model<IntakeLogDocument>('intakeLog');
 
 interface RegisterArgs {
   name: string;
@@ -355,6 +358,51 @@ const mutation = new GraphQLObjectType({
           if (animals) shelter.animals = animals as unknown as (typeof shelter.animals);
           await shelter.save();
           return shelter;
+        }
+        return null;
+      }
+    },
+    createIntakeLog: {
+      type: IntakeLogType,
+      args: {
+        animalId: { type: GraphQLString },
+        shelterId: { type: GraphQLString },
+        intakeDate: { type: GraphQLString },
+        intakeType: { type: GraphQLString },
+        source: { type: GraphQLString },
+        condition: { type: GraphQLString },
+        intakeNotes: { type: GraphQLString },
+        receivedBy: { type: GraphQLString }
+      },
+      async resolve(_, args: { animalId: string; shelterId: string; intakeDate: string; intakeType: string; source: string; condition: string; intakeNotes: string; receivedBy: string }) {
+        const log = new IntakeLog({
+          animalId: args.animalId,
+          shelterId: args.shelterId,
+          intakeDate: args.intakeDate ? new Date(args.intakeDate) : new Date(),
+          intakeType: args.intakeType,
+          source: args.source || '',
+          condition: args.condition || 'unknown',
+          intakeNotes: args.intakeNotes || '',
+          receivedBy: args.receivedBy || ''
+        });
+        await log.save();
+        return log;
+      }
+    },
+    updateIntakeLog: {
+      type: IntakeLogType,
+      args: {
+        _id: { type: GraphQLID },
+        condition: { type: GraphQLString },
+        intakeNotes: { type: GraphQLString }
+      },
+      async resolve(_, args: { _id: string; condition?: string; intakeNotes?: string }) {
+        const log = await IntakeLog.findById(args._id);
+        if (log) {
+          if (args.condition) log.condition = args.condition as typeof log.condition;
+          if (args.intakeNotes !== undefined) log.intakeNotes = args.intakeNotes;
+          await log.save();
+          return log;
         }
         return null;
       }

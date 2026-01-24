@@ -111,6 +111,61 @@ describe('Mongoose Models Schema Tests', () => {
     });
   });
 
+  describe('IntakeLog Model', () => {
+    const IntakeLog = require('../server/models/IntakeLog').default;
+
+    it('should be a valid mongoose model', () => {
+      expect(IntakeLog).toBeDefined();
+      expect(IntakeLog.modelName).toBe('intakeLog');
+    });
+
+    it('should have required fields defined in schema', () => {
+      const schema = IntakeLog.schema.obj;
+
+      expect(schema.animalId).toBeDefined();
+      expect(schema.animalId.required).toBe(true);
+      expect(schema.animalId.type).toBe(String);
+
+      expect(schema.shelterId).toBeDefined();
+      expect(schema.shelterId.required).toBe(true);
+
+      expect(schema.intakeType).toBeDefined();
+      expect(schema.intakeType.required).toBe(true);
+    });
+
+    it('should have intakeType with enum', () => {
+      const schema = IntakeLog.schema.obj;
+      expect(schema.intakeType.enum).toEqual(['stray', 'surrender', 'transfer', 'return', 'born_in_care']);
+    });
+
+    it('should have condition field with enum and default', () => {
+      const schema = IntakeLog.schema.obj;
+      expect(schema.condition).toBeDefined();
+      expect(schema.condition.enum).toEqual(['healthy', 'injured', 'sick', 'unknown']);
+      expect(schema.condition.default).toBe('unknown');
+    });
+
+    it('should have date fields', () => {
+      const schema = IntakeLog.schema.obj;
+      expect(schema.intakeDate).toBeDefined();
+      expect(schema.intakeDate.type).toBe(Date);
+      expect(schema.intakeDate.default).toBe(Date.now);
+
+      expect(schema.createdAt).toBeDefined();
+      expect(schema.createdAt.type).toBe(Date);
+    });
+
+    it('should have optional fields with defaults', () => {
+      const schema = IntakeLog.schema.obj;
+      expect(schema.source).toBeDefined();
+      expect(schema.source.default).toBe('');
+      expect(schema.intakeNotes).toBeDefined();
+      expect(schema.intakeNotes.default).toBe('');
+      expect(schema.receivedBy).toBeDefined();
+      expect(schema.receivedBy.default).toBe('');
+    });
+  });
+
   describe('Shelter Model', () => {
     it('should be a valid mongoose model', () => {
       expect(Shelter).toBeDefined();

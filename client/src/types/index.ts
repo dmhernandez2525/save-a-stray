@@ -213,3 +213,24 @@ export interface ShelterFormState {
   paymentEmail: string;
   animals: string;
 }
+
+// Intake Log Types
+export type IntakeType = 'stray' | 'surrender' | 'transfer' | 'return' | 'born_in_care';
+export type IntakeCondition = 'healthy' | 'injured' | 'sick' | 'unknown';
+
+export interface IntakeLog {
+  _id: string;
+  animalId: string;
+  shelterId: string;
+  intakeDate: string;
+  intakeType: IntakeType;
+  source: string;
+  condition: IntakeCondition;
+  intakeNotes: string;
+  receivedBy: string;
+  createdAt: string;
+}
+
+export interface ShelterIntakeLogsResponse {
+  shelterIntakeLogs: IntakeLog[];
+}

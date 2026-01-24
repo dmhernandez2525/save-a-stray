@@ -12,6 +12,8 @@ interface Mutations {
   REMOVE_FAVORITE: DocumentNode;
   CREATE_APPLICATION: DocumentNode;
   CREATE_SHELTER: DocumentNode;
+  CREATE_INTAKE_LOG: DocumentNode;
+  UPDATE_INTAKE_LOG: DocumentNode;
 }
 
 const mutations: Mutations = {
@@ -157,6 +159,49 @@ const mutations: Mutations = {
         location
         paymentEmail
         _id
+      }
+    }
+  `,
+  CREATE_INTAKE_LOG: gql`
+    mutation CreateIntakeLog(
+      $animalId: String!
+      $shelterId: String!
+      $intakeDate: String
+      $intakeType: String!
+      $source: String
+      $condition: String
+      $intakeNotes: String
+      $receivedBy: String
+    ) {
+      createIntakeLog(
+        animalId: $animalId
+        shelterId: $shelterId
+        intakeDate: $intakeDate
+        intakeType: $intakeType
+        source: $source
+        condition: $condition
+        intakeNotes: $intakeNotes
+        receivedBy: $receivedBy
+      ) {
+        _id
+        animalId
+        shelterId
+        intakeDate
+        intakeType
+        source
+        condition
+        intakeNotes
+        receivedBy
+        createdAt
+      }
+    }
+  `,
+  UPDATE_INTAKE_LOG: gql`
+    mutation UpdateIntakeLog($_id: ID!, $condition: String, $intakeNotes: String) {
+      updateIntakeLog(_id: $_id, condition: $condition, intakeNotes: $intakeNotes) {
+        _id
+        condition
+        intakeNotes
       }
     }
   `

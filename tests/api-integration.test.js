@@ -24,6 +24,11 @@ jest.mock('mongoose', () => {
         application: {
           find: jest.fn().mockResolvedValue([]),
           findById: jest.fn().mockResolvedValue(null)
+        },
+        intakeLog: {
+          find: jest.fn().mockReturnValue({ sort: jest.fn().mockResolvedValue([]) }),
+          findOne: jest.fn().mockResolvedValue(null),
+          findById: jest.fn().mockResolvedValue(null)
         }
       };
       return mockModels[modelName] || {};
@@ -328,5 +333,66 @@ describe('GraphQL Schema Tests', () => {
     expect(fields.userApplications).toBeDefined();
     const args = fields.userApplications.args.map(a => a.name);
     expect(args).toContain('userId');
+  });
+
+  it('should have animalIntakeLog query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.animalIntakeLog).toBeDefined();
+    const args = fields.animalIntakeLog.args.map(a => a.name);
+    expect(args).toContain('animalId');
+  });
+
+  it('should have shelterIntakeLogs query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.shelterIntakeLogs).toBeDefined();
+    const args = fields.shelterIntakeLogs.args.map(a => a.name);
+    expect(args).toContain('shelterId');
+  });
+
+  it('should have createIntakeLog mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.createIntakeLog).toBeDefined();
+    const args = mutationFields.createIntakeLog.args.map(a => a.name);
+    expect(args).toContain('animalId');
+    expect(args).toContain('shelterId');
+    expect(args).toContain('intakeDate');
+    expect(args).toContain('intakeType');
+    expect(args).toContain('source');
+    expect(args).toContain('condition');
+    expect(args).toContain('intakeNotes');
+    expect(args).toContain('receivedBy');
+  });
+
+  it('should have updateIntakeLog mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.updateIntakeLog).toBeDefined();
+    const args = mutationFields.updateIntakeLog.args.map(a => a.name);
+    expect(args).toContain('_id');
+    expect(args).toContain('condition');
+    expect(args).toContain('intakeNotes');
+  });
+
+  it('should have IntakeLogType with correct fields', () => {
+    const IntakeLogType = require('../server/schema/types/intake_log_type').default;
+    const fields = IntakeLogType.getFields();
+
+    expect(fields._id).toBeDefined();
+    expect(fields.animalId).toBeDefined();
+    expect(fields.shelterId).toBeDefined();
+    expect(fields.intakeDate).toBeDefined();
+    expect(fields.intakeType).toBeDefined();
+    expect(fields.source).toBeDefined();
+    expect(fields.condition).toBeDefined();
+    expect(fields.intakeNotes).toBeDefined();
+    expect(fields.receivedBy).toBeDefined();
+    expect(fields.createdAt).toBeDefined();
   });
 });
