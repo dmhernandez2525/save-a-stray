@@ -213,3 +213,24 @@ export interface ShelterFormState {
   paymentEmail: string;
   animals: string;
 }
+
+// Outcome Log Types
+export type OutcomeType = "adoption" | "transfer" | "return_to_owner" | "euthanasia" | "died" | "escaped" | "release" | "other";
+export type OutcomeCondition = "healthy" | "injured" | "sick" | "unknown";
+
+export interface OutcomeLog {
+  _id: string;
+  animalId: string;
+  shelterId: string;
+  outcomeDate: string;
+  outcomeType: OutcomeType;
+  destination: string;
+  condition: OutcomeCondition;
+  outcomeNotes: string;
+  processedBy: string;
+  createdAt: string;
+}
+
+export interface ShelterOutcomeLogsResponse {
+  shelterOutcomeLogs: OutcomeLog[];
+}

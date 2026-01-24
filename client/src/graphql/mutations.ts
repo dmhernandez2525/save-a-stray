@@ -12,6 +12,8 @@ interface Mutations {
   REMOVE_FAVORITE: DocumentNode;
   CREATE_APPLICATION: DocumentNode;
   CREATE_SHELTER: DocumentNode;
+  CREATE_OUTCOME_LOG: DocumentNode;
+  UPDATE_OUTCOME_LOG: DocumentNode;
 }
 
 const mutations: Mutations = {
@@ -157,6 +159,50 @@ const mutations: Mutations = {
         location
         paymentEmail
         _id
+      }
+    }
+  `,
+  CREATE_OUTCOME_LOG: gql`
+    mutation CreateOutcomeLog(
+      $animalId: String!
+      $shelterId: String!
+      $outcomeDate: String
+      $outcomeType: String!
+      $destination: String
+      $condition: String
+      $outcomeNotes: String
+      $processedBy: String
+    ) {
+      createOutcomeLog(
+        animalId: $animalId
+        shelterId: $shelterId
+        outcomeDate: $outcomeDate
+        outcomeType: $outcomeType
+        destination: $destination
+        condition: $condition
+        outcomeNotes: $outcomeNotes
+        processedBy: $processedBy
+      ) {
+        _id
+        animalId
+        shelterId
+        outcomeDate
+        outcomeType
+        destination
+        condition
+        outcomeNotes
+        processedBy
+        createdAt
+      }
+    }
+  `,
+  UPDATE_OUTCOME_LOG: gql`
+    mutation UpdateOutcomeLog($_id: ID!, $destination: String, $condition: String, $outcomeNotes: String) {
+      updateOutcomeLog(_id: $_id, destination: $destination, condition: $condition, outcomeNotes: $outcomeNotes) {
+        _id
+        destination
+        condition
+        outcomeNotes
       }
     }
   `

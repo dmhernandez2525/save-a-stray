@@ -11,6 +11,7 @@ interface Queries {
   FETCH_ANIMAL: DocumentNode;
   USER_FAVORITES: DocumentNode;
   USER_FAVORITE_IDS: DocumentNode;
+  SHELTER_OUTCOME_LOGS: DocumentNode;
 }
 
 const queries: Queries = {
@@ -154,6 +155,22 @@ const queries: Queries = {
         image
         video
         status
+      }
+    }
+  `,
+  SHELTER_OUTCOME_LOGS: gql`
+    query ShelterOutcomeLogs($shelterId: ID!) {
+      shelterOutcomeLogs(shelterId: $shelterId) {
+        _id
+        animalId
+        shelterId
+        outcomeDate
+        outcomeType
+        destination
+        condition
+        outcomeNotes
+        processedBy
+        createdAt
       }
     }
   `

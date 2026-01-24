@@ -140,4 +140,59 @@ describe('Mongoose Models Schema Tests', () => {
       expect(Array.isArray(shelterSchema.animals)).toBe(true);
     });
   });
+
+  describe('OutcomeLog Model', () => {
+    const OutcomeLog = require('../server/models/OutcomeLog').default;
+
+    it('should be a valid mongoose model', () => {
+      expect(OutcomeLog).toBeDefined();
+      expect(OutcomeLog.modelName).toBe('outcomeLog');
+    });
+
+    it('should have required fields defined in schema', () => {
+      const schema = OutcomeLog.schema.obj;
+
+      expect(schema.animalId).toBeDefined();
+      expect(schema.animalId.required).toBe(true);
+      expect(schema.animalId.type).toBe(String);
+
+      expect(schema.shelterId).toBeDefined();
+      expect(schema.shelterId.required).toBe(true);
+
+      expect(schema.outcomeType).toBeDefined();
+      expect(schema.outcomeType.required).toBe(true);
+    });
+
+    it('should have outcomeType with enum', () => {
+      const schema = OutcomeLog.schema.obj;
+      expect(schema.outcomeType.enum).toEqual(['adoption', 'transfer', 'return_to_owner', 'euthanasia', 'died', 'escaped', 'release', 'other']);
+    });
+
+    it('should have condition field with enum and default', () => {
+      const schema = OutcomeLog.schema.obj;
+      expect(schema.condition).toBeDefined();
+      expect(schema.condition.enum).toEqual(['healthy', 'injured', 'sick', 'unknown']);
+      expect(schema.condition.default).toBe('healthy');
+    });
+
+    it('should have date fields', () => {
+      const schema = OutcomeLog.schema.obj;
+      expect(schema.outcomeDate).toBeDefined();
+      expect(schema.outcomeDate.type).toBe(Date);
+      expect(schema.outcomeDate.default).toBe(Date.now);
+
+      expect(schema.createdAt).toBeDefined();
+      expect(schema.createdAt.type).toBe(Date);
+    });
+
+    it('should have optional fields with defaults', () => {
+      const schema = OutcomeLog.schema.obj;
+      expect(schema.destination).toBeDefined();
+      expect(schema.destination.default).toBe('');
+      expect(schema.outcomeNotes).toBeDefined();
+      expect(schema.outcomeNotes.default).toBe('');
+      expect(schema.processedBy).toBeDefined();
+      expect(schema.processedBy.default).toBe('');
+    });
+  });
 });

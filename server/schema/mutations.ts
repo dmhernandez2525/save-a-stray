@@ -10,16 +10,19 @@ import UserType from './types/user_type';
 import AnimalType from './types/animal_type';
 import ShelterType from './types/shelter_type';
 import ApplicationType from './types/application_type';
+import OutcomeLogType from './types/outcome_log_type';
 import AuthService from '../services/auth';
 import { UserDocument } from '../models/User';
 import { AnimalDocument } from '../models/Animal';
 import { ApplicationDocument } from '../models/Application';
 import { ShelterDocument } from '../models/Shelter';
+import { IOutcomeLog } from '../models/OutcomeLog';
 
 const User = mongoose.model<UserDocument>('user');
 const Animal = mongoose.model<AnimalDocument>('animal');
 const Application = mongoose.model<ApplicationDocument>('application');
 const Shelter = mongoose.model<ShelterDocument>('shelter');
+const OutcomeLog = mongoose.model<IOutcomeLog>('outcomeLog');
 
 interface RegisterArgs {
   name: string;
@@ -355,6 +358,62 @@ const mutation = new GraphQLObjectType({
           if (animals) shelter.animals = animals as unknown as (typeof shelter.animals);
           await shelter.save();
           return shelter;
+        }
+        return null;
+      }
+    },
+    createOutcomeLog: {
+      type: OutcomeLogType,
+      args: {
+        animalId: { type: GraphQLString },
+        shelterId: { type: GraphQLString },
+        outcomeDate: { type: GraphQLString },
+        outcomeType: { type: GraphQLString },
+        destination: { type: GraphQLString },
+        condition: { type: GraphQLString },
+        outcomeNotes: { type: GraphQLString },
+        processedBy: { type: GraphQLString }
+      },
+      async resolve(_, args: {
+        animalId: string;
+        shelterId: string;
+        outcomeDate?: string;
+        outcomeType: string;
+        destination?: string;
+        condition?: string;
+        outcomeNotes?: string;
+        processedBy?: string;
+      }) {
+        const log = new OutcomeLog({
+          animalId: args.animalId,
+          shelterId: args.shelterId,
+          outcomeDate: args.outcomeDate ? new Date(args.outcomeDate) : new Date(),
+          outcomeType: args.outcomeType,
+          destination: args.destination || '',
+          condition: args.condition || 'healthy',
+          outcomeNotes: args.outcomeNotes || '',
+          processedBy: args.processedBy || '',
+        });
+        await log.save();
+        return log;
+      }
+    },
+    updateOutcomeLog: {
+      type: OutcomeLogType,
+      args: {
+        _id: { type: GraphQLID },
+        destination: { type: GraphQLString },
+        condition: { type: GraphQLString },
+        outcomeNotes: { type: GraphQLString }
+      },
+      async resolve(_, args: { _id: string; destination?: string; condition?: string; outcomeNotes?: string }) {
+        const log = await OutcomeLog.findById(args._id);
+        if (log) {
+          if (args.destination !== undefined) log.destination = args.destination;
+          if (args.condition !== undefined) log.condition = args.condition as typeof log.condition;
+          if (args.outcomeNotes !== undefined) log.outcomeNotes = args.outcomeNotes;
+          await log.save();
+          return log;
         }
         return null;
       }

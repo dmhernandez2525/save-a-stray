@@ -24,6 +24,11 @@ jest.mock('mongoose', () => {
         application: {
           find: jest.fn().mockResolvedValue([]),
           findById: jest.fn().mockResolvedValue(null)
+        },
+        outcomeLog: {
+          find: jest.fn().mockReturnValue({ sort: jest.fn().mockResolvedValue([]) }),
+          findOne: jest.fn().mockResolvedValue(null),
+          findById: jest.fn().mockResolvedValue(null)
         }
       };
       return mockModels[modelName] || {};
@@ -328,5 +333,67 @@ describe('GraphQL Schema Tests', () => {
     expect(fields.userApplications).toBeDefined();
     const args = fields.userApplications.args.map(a => a.name);
     expect(args).toContain('userId');
+  });
+
+  it('should have animalOutcomeLog query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.animalOutcomeLog).toBeDefined();
+    const args = fields.animalOutcomeLog.args.map(a => a.name);
+    expect(args).toContain('animalId');
+  });
+
+  it('should have shelterOutcomeLogs query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.shelterOutcomeLogs).toBeDefined();
+    const args = fields.shelterOutcomeLogs.args.map(a => a.name);
+    expect(args).toContain('shelterId');
+  });
+
+  it('should have createOutcomeLog mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.createOutcomeLog).toBeDefined();
+    const args = mutationFields.createOutcomeLog.args.map(a => a.name);
+    expect(args).toContain('animalId');
+    expect(args).toContain('shelterId');
+    expect(args).toContain('outcomeDate');
+    expect(args).toContain('outcomeType');
+    expect(args).toContain('destination');
+    expect(args).toContain('condition');
+    expect(args).toContain('outcomeNotes');
+    expect(args).toContain('processedBy');
+  });
+
+  it('should have updateOutcomeLog mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.updateOutcomeLog).toBeDefined();
+    const args = mutationFields.updateOutcomeLog.args.map(a => a.name);
+    expect(args).toContain('_id');
+    expect(args).toContain('destination');
+    expect(args).toContain('condition');
+    expect(args).toContain('outcomeNotes');
+  });
+
+  it('should have OutcomeLogType with correct fields', () => {
+    const OutcomeLogType = require('../server/schema/types/outcome_log_type').default;
+    const fields = OutcomeLogType.getFields();
+
+    expect(fields._id).toBeDefined();
+    expect(fields.animalId).toBeDefined();
+    expect(fields.shelterId).toBeDefined();
+    expect(fields.outcomeDate).toBeDefined();
+    expect(fields.outcomeType).toBeDefined();
+    expect(fields.destination).toBeDefined();
+    expect(fields.condition).toBeDefined();
+    expect(fields.outcomeNotes).toBeDefined();
+    expect(fields.processedBy).toBeDefined();
+    expect(fields.createdAt).toBeDefined();
   });
 });
