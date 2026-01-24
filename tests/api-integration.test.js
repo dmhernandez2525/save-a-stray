@@ -329,4 +329,59 @@ describe('GraphQL Schema Tests', () => {
     const args = fields.userApplications.args.map(a => a.name);
     expect(args).toContain('userId');
   });
+
+  it('should have animalWeightHistory query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.animalWeightHistory).toBeDefined();
+    const args = fields.animalWeightHistory.args.map(a => a.name);
+    expect(args).toContain('animalId');
+  });
+
+  it('should have shelterWeightRecords query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.shelterWeightRecords).toBeDefined();
+    const args = fields.shelterWeightRecords.args.map(a => a.name);
+    expect(args).toContain('shelterId');
+  });
+
+  it('should have addWeightRecord mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.addWeightRecord).toBeDefined();
+    const args = mutationFields.addWeightRecord.args.map(a => a.name);
+    expect(args).toContain('animalId');
+    expect(args).toContain('shelterId');
+    expect(args).toContain('weight');
+    expect(args).toContain('unit');
+    expect(args).toContain('recordedBy');
+    expect(args).toContain('notes');
+  });
+
+  it('should have deleteWeightRecord mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.deleteWeightRecord).toBeDefined();
+    const args = mutationFields.deleteWeightRecord.args.map(a => a.name);
+    expect(args).toContain('_id');
+  });
+
+  it('should have correct fields on WeightRecordType', () => {
+    const WeightRecordType = require('../server/schema/types/weight_record_type').default;
+    const fields = WeightRecordType.getFields();
+
+    expect(fields._id).toBeDefined();
+    expect(fields.animalId).toBeDefined();
+    expect(fields.shelterId).toBeDefined();
+    expect(fields.weight).toBeDefined();
+    expect(fields.unit).toBeDefined();
+    expect(fields.recordedBy).toBeDefined();
+    expect(fields.notes).toBeDefined();
+    expect(fields.recordedAt).toBeDefined();
+  });
 });

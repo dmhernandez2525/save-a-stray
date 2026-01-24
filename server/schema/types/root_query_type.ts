@@ -12,15 +12,18 @@ import UserType from './user_type';
 import AnimalType from './animal_type';
 import ApplicationType from './application_type';
 import ShelterType from './shelter_type';
+import WeightRecordType from './weight_record_type';
 import { ApplicationDocument } from '../../models/Application';
 import { AnimalDocument } from '../../models/Animal';
 import { UserDocument } from '../../models/User';
 import { ShelterDocument } from '../../models/Shelter';
+import { WeightRecordDocument } from '../../models/WeightRecord';
 
 const Application = mongoose.model<ApplicationDocument>('application');
 const Animal = mongoose.model<AnimalDocument>('animal');
 const User = mongoose.model<UserDocument>('user');
 const Shelter = mongoose.model<ShelterDocument>('shelter');
+const WeightRecord = mongoose.model<WeightRecordDocument>('weightRecord');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -127,6 +130,24 @@ const RootQueryType = new GraphQLObjectType({
       args: { _id: { type: GraphQLID } },
       resolve(_, args: { _id: string }) {
         return Shelter.findById(args._id);
+      }
+    },
+    animalWeightHistory: {
+      type: new GraphQLList(WeightRecordType),
+      args: {
+        animalId: { type: new GraphQLNonNull(GraphQLID) }
+      },
+      resolve(_, args: { animalId: string }) {
+        return WeightRecord.find({ animalId: args.animalId }).sort({ recordedAt: -1 });
+      }
+    },
+    shelterWeightRecords: {
+      type: new GraphQLList(WeightRecordType),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) }
+      },
+      resolve(_, args: { shelterId: string }) {
+        return WeightRecord.find({ shelterId: args.shelterId }).sort({ recordedAt: -1 });
       }
     }
   })

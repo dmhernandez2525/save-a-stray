@@ -213,3 +213,25 @@ export interface ShelterFormState {
   paymentEmail: string;
   animals: string;
 }
+
+// Weight Record Types
+export type WeightUnit = 'lbs' | 'kg';
+
+export interface WeightRecord {
+  _id: string;
+  animalId: string;
+  shelterId: string;
+  weight: number;
+  unit: WeightUnit;
+  recordedBy: string;
+  notes: string;
+  recordedAt: string;
+}
+
+export interface AnimalWeightHistoryResponse {
+  animalWeightHistory: WeightRecord[];
+}
+
+export interface ShelterWeightRecordsResponse {
+  shelterWeightRecords: WeightRecord[];
+}

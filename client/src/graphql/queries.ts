@@ -11,6 +11,7 @@ interface Queries {
   FETCH_ANIMAL: DocumentNode;
   USER_FAVORITES: DocumentNode;
   USER_FAVORITE_IDS: DocumentNode;
+  SHELTER_WEIGHT_RECORDS: DocumentNode;
 }
 
 const queries: Queries = {
@@ -154,6 +155,20 @@ const queries: Queries = {
         image
         video
         status
+      }
+    }
+  `,
+  SHELTER_WEIGHT_RECORDS: gql`
+    query ShelterWeightRecords($shelterId: ID!) {
+      shelterWeightRecords(shelterId: $shelterId) {
+        _id
+        animalId
+        shelterId
+        weight
+        unit
+        recordedBy
+        notes
+        recordedAt
       }
     }
   `
