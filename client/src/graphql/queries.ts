@@ -11,6 +11,8 @@ interface Queries {
   FETCH_ANIMAL: DocumentNode;
   USER_FAVORITES: DocumentNode;
   USER_FAVORITE_IDS: DocumentNode;
+  ANIMAL_BEHAVIOR_NOTES: DocumentNode;
+  SHELTER_BEHAVIOR_NOTES: DocumentNode;
 }
 
 const queries: Queries = {
@@ -154,6 +156,36 @@ const queries: Queries = {
         image
         video
         status
+      }
+    }
+  `,
+  ANIMAL_BEHAVIOR_NOTES: gql`
+    query AnimalBehaviorNotes($animalId: ID!) {
+      animalBehaviorNotes(animalId: $animalId) {
+        _id
+        animalId
+        shelterId
+        noteType
+        content
+        author
+        severity
+        resolved
+        createdAt
+      }
+    }
+  `,
+  SHELTER_BEHAVIOR_NOTES: gql`
+    query ShelterBehaviorNotes($shelterId: ID!) {
+      shelterBehaviorNotes(shelterId: $shelterId) {
+        _id
+        animalId
+        shelterId
+        noteType
+        content
+        author
+        severity
+        resolved
+        createdAt
       }
     }
   `

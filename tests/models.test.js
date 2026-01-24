@@ -140,4 +140,64 @@ describe('Mongoose Models Schema Tests', () => {
       expect(Array.isArray(shelterSchema.animals)).toBe(true);
     });
   });
+
+  describe('BehaviorNote Model', () => {
+    const BehaviorNote = require('../server/models/BehaviorNote').default;
+
+    it('should be a valid mongoose model', () => {
+      expect(BehaviorNote).toBeDefined();
+      expect(BehaviorNote.modelName).toBe('behaviorNote');
+    });
+
+    it('should have required fields defined in schema', () => {
+      const schema = BehaviorNote.schema.obj;
+
+      expect(schema.animalId).toBeDefined();
+      expect(schema.animalId.required).toBe(true);
+      expect(schema.animalId.type).toBe(String);
+
+      expect(schema.shelterId).toBeDefined();
+      expect(schema.shelterId.required).toBe(true);
+      expect(schema.shelterId.type).toBe(String);
+
+      expect(schema.content).toBeDefined();
+      expect(schema.content.required).toBe(true);
+      expect(schema.content.type).toBe(String);
+    });
+
+    it('should have noteType field with enum and default', () => {
+      const schema = BehaviorNote.schema.obj;
+      expect(schema.noteType).toBeDefined();
+      expect(schema.noteType.enum).toEqual(['behavior', 'training', 'health', 'general']);
+      expect(schema.noteType.default).toBe('general');
+    });
+
+    it('should have severity field with enum and default', () => {
+      const schema = BehaviorNote.schema.obj;
+      expect(schema.severity).toBeDefined();
+      expect(schema.severity.enum).toEqual(['info', 'warning', 'critical']);
+      expect(schema.severity.default).toBe('info');
+    });
+
+    it('should have resolved field with Boolean type and default false', () => {
+      const schema = BehaviorNote.schema.obj;
+      expect(schema.resolved).toBeDefined();
+      expect(schema.resolved.type).toBe(Boolean);
+      expect(schema.resolved.default).toBe(false);
+    });
+
+    it('should have author field with default empty string', () => {
+      const schema = BehaviorNote.schema.obj;
+      expect(schema.author).toBeDefined();
+      expect(schema.author.type).toBe(String);
+      expect(schema.author.default).toBe('');
+    });
+
+    it('should have createdAt field with Date type', () => {
+      const schema = BehaviorNote.schema.obj;
+      expect(schema.createdAt).toBeDefined();
+      expect(schema.createdAt.type).toBe(Date);
+      expect(schema.createdAt.default).toBe(Date.now);
+    });
+  });
 });

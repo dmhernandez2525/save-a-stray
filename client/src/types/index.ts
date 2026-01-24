@@ -213,3 +213,27 @@ export interface ShelterFormState {
   paymentEmail: string;
   animals: string;
 }
+
+// Behavior Note Types
+export type BehaviorNoteType = 'behavior' | 'training' | 'health' | 'general';
+export type BehaviorNoteSeverity = 'info' | 'warning' | 'critical';
+
+export interface BehaviorNote {
+  _id: string;
+  animalId: string;
+  shelterId: string;
+  noteType: BehaviorNoteType;
+  content: string;
+  author: string;
+  severity: BehaviorNoteSeverity;
+  resolved: boolean;
+  createdAt: string;
+}
+
+export interface AnimalBehaviorNotesResponse {
+  animalBehaviorNotes: BehaviorNote[];
+}
+
+export interface ShelterBehaviorNotesResponse {
+  shelterBehaviorNotes: BehaviorNote[];
+}

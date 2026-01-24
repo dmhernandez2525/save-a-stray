@@ -3,6 +3,7 @@ import {
   GraphQLString,
   GraphQLInt,
   GraphQLID,
+  GraphQLBoolean,
   GraphQLFieldConfigMap
 } from 'graphql';
 import mongoose from 'mongoose';
@@ -10,16 +11,19 @@ import UserType from './types/user_type';
 import AnimalType from './types/animal_type';
 import ShelterType from './types/shelter_type';
 import ApplicationType from './types/application_type';
+import BehaviorNoteType from './types/behavior_note_type';
 import AuthService from '../services/auth';
 import { UserDocument } from '../models/User';
 import { AnimalDocument } from '../models/Animal';
 import { ApplicationDocument } from '../models/Application';
 import { ShelterDocument } from '../models/Shelter';
+import { BehaviorNoteDocument } from '../models/BehaviorNote';
 
 const User = mongoose.model<UserDocument>('user');
 const Animal = mongoose.model<AnimalDocument>('animal');
 const Application = mongoose.model<ApplicationDocument>('application');
 const Shelter = mongoose.model<ShelterDocument>('shelter');
+const BehaviorNote = mongoose.model<BehaviorNoteDocument>('behaviorNote');
 
 interface RegisterArgs {
   name: string;
@@ -355,6 +359,46 @@ const mutation = new GraphQLObjectType({
           if (animals) shelter.animals = animals as unknown as (typeof shelter.animals);
           await shelter.save();
           return shelter;
+        }
+        return null;
+      }
+    },
+    addBehaviorNote: {
+      type: BehaviorNoteType,
+      args: {
+        animalId: { type: GraphQLString },
+        shelterId: { type: GraphQLString },
+        noteType: { type: GraphQLString },
+        content: { type: GraphQLString },
+        author: { type: GraphQLString },
+        severity: { type: GraphQLString }
+      },
+      async resolve(_, args: { animalId: string; shelterId: string; noteType: string; content: string; author: string; severity: string }) {
+        const note = new BehaviorNote({
+          animalId: args.animalId,
+          shelterId: args.shelterId,
+          noteType: args.noteType || 'general',
+          content: args.content,
+          author: args.author || '',
+          severity: args.severity || 'info',
+          resolved: false
+        });
+        await note.save();
+        return note;
+      }
+    },
+    resolveBehaviorNote: {
+      type: BehaviorNoteType,
+      args: {
+        _id: { type: GraphQLID },
+        resolved: { type: GraphQLBoolean }
+      },
+      async resolve(_, args: { _id: string; resolved: boolean }) {
+        const note = await BehaviorNote.findById(args._id);
+        if (note) {
+          note.resolved = args.resolved;
+          await note.save();
+          return note;
         }
         return null;
       }

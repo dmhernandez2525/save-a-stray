@@ -12,6 +12,8 @@ interface Mutations {
   REMOVE_FAVORITE: DocumentNode;
   CREATE_APPLICATION: DocumentNode;
   CREATE_SHELTER: DocumentNode;
+  ADD_BEHAVIOR_NOTE: DocumentNode;
+  RESOLVE_BEHAVIOR_NOTE: DocumentNode;
 }
 
 const mutations: Mutations = {
@@ -157,6 +159,43 @@ const mutations: Mutations = {
         location
         paymentEmail
         _id
+      }
+    }
+  `,
+  ADD_BEHAVIOR_NOTE: gql`
+    mutation AddBehaviorNote(
+      $animalId: String!
+      $shelterId: String!
+      $noteType: String!
+      $content: String!
+      $author: String
+      $severity: String
+    ) {
+      addBehaviorNote(
+        animalId: $animalId
+        shelterId: $shelterId
+        noteType: $noteType
+        content: $content
+        author: $author
+        severity: $severity
+      ) {
+        _id
+        animalId
+        shelterId
+        noteType
+        content
+        author
+        severity
+        resolved
+        createdAt
+      }
+    }
+  `,
+  RESOLVE_BEHAVIOR_NOTE: gql`
+    mutation ResolveBehaviorNote($_id: ID!, $resolved: Boolean!) {
+      resolveBehaviorNote(_id: $_id, resolved: $resolved) {
+        _id
+        resolved
       }
     }
   `

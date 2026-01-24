@@ -12,15 +12,18 @@ import UserType from './user_type';
 import AnimalType from './animal_type';
 import ApplicationType from './application_type';
 import ShelterType from './shelter_type';
+import BehaviorNoteType from './behavior_note_type';
 import { ApplicationDocument } from '../../models/Application';
 import { AnimalDocument } from '../../models/Animal';
 import { UserDocument } from '../../models/User';
 import { ShelterDocument } from '../../models/Shelter';
+import { BehaviorNoteDocument } from '../../models/BehaviorNote';
 
 const Application = mongoose.model<ApplicationDocument>('application');
 const Animal = mongoose.model<AnimalDocument>('animal');
 const User = mongoose.model<UserDocument>('user');
 const Shelter = mongoose.model<ShelterDocument>('shelter');
+const BehaviorNote = mongoose.model<BehaviorNoteDocument>('behaviorNote');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -127,6 +130,24 @@ const RootQueryType = new GraphQLObjectType({
       args: { _id: { type: GraphQLID } },
       resolve(_, args: { _id: string }) {
         return Shelter.findById(args._id);
+      }
+    },
+    animalBehaviorNotes: {
+      type: new GraphQLList(BehaviorNoteType),
+      args: {
+        animalId: { type: new GraphQLNonNull(GraphQLID) }
+      },
+      resolve(_, args: { animalId: string }) {
+        return BehaviorNote.find({ animalId: args.animalId }).sort({ createdAt: -1 });
+      }
+    },
+    shelterBehaviorNotes: {
+      type: new GraphQLList(BehaviorNoteType),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) }
+      },
+      resolve(_, args: { shelterId: string }) {
+        return BehaviorNote.find({ shelterId: args.shelterId }).sort({ createdAt: -1 });
       }
     }
   })

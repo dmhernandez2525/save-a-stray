@@ -329,4 +329,61 @@ describe('GraphQL Schema Tests', () => {
     const args = fields.userApplications.args.map(a => a.name);
     expect(args).toContain('userId');
   });
+
+  it('should have animalBehaviorNotes query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.animalBehaviorNotes).toBeDefined();
+    const args = fields.animalBehaviorNotes.args.map(a => a.name);
+    expect(args).toContain('animalId');
+  });
+
+  it('should have shelterBehaviorNotes query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.shelterBehaviorNotes).toBeDefined();
+    const args = fields.shelterBehaviorNotes.args.map(a => a.name);
+    expect(args).toContain('shelterId');
+  });
+
+  it('should have addBehaviorNote mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.addBehaviorNote).toBeDefined();
+    const args = mutationFields.addBehaviorNote.args.map(a => a.name);
+    expect(args).toContain('animalId');
+    expect(args).toContain('shelterId');
+    expect(args).toContain('noteType');
+    expect(args).toContain('content');
+    expect(args).toContain('author');
+    expect(args).toContain('severity');
+  });
+
+  it('should have resolveBehaviorNote mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.resolveBehaviorNote).toBeDefined();
+    const args = mutationFields.resolveBehaviorNote.args.map(a => a.name);
+    expect(args).toContain('_id');
+    expect(args).toContain('resolved');
+  });
+
+  it('should have correct fields on BehaviorNoteType', () => {
+    const BehaviorNoteType = require('../server/schema/types/behavior_note_type').default;
+    const fields = BehaviorNoteType.getFields();
+
+    expect(fields._id).toBeDefined();
+    expect(fields.animalId).toBeDefined();
+    expect(fields.shelterId).toBeDefined();
+    expect(fields.noteType).toBeDefined();
+    expect(fields.content).toBeDefined();
+    expect(fields.author).toBeDefined();
+    expect(fields.severity).toBeDefined();
+    expect(fields.resolved).toBeDefined();
+    expect(fields.createdAt).toBeDefined();
+  });
 });
