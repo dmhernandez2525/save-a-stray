@@ -7,6 +7,7 @@ interface Queries {
   FETCH_SHELTER: DocumentNode;
   SHELTER_APPLICATIONS: DocumentNode;
   SHELTER_ANALYTICS: DocumentNode;
+  SHELTER_STAFF: DocumentNode;
   USER_APPLICATIONS: DocumentNode;
   FIND_ANIMALS: DocumentNode;
   FETCH_ANIMAL: DocumentNode;
@@ -209,6 +210,15 @@ const queries: Queries = {
         sex
         image
         status
+      }
+    }
+  `,
+  SHELTER_STAFF: gql`
+    query ShelterStaff($shelterId: ID!) {
+      shelterStaff(shelterId: $shelterId) {
+        _id
+        name
+        email
       }
     }
   `,

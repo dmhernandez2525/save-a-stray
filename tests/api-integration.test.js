@@ -574,4 +574,47 @@ describe('GraphQL Schema Tests', () => {
     expect(fields.rejectedApplications).toBeDefined();
     expect(fields.recentApplications).toBeDefined();
   });
+
+  it('should have shelterStaff query with shelterId arg', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+    expect(fields.shelterStaff).toBeDefined();
+    expect(fields.shelterStaff.args).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'shelterId' })
+      ])
+    );
+  });
+
+  it('should have addShelterStaff mutation with shelterId and email args', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const fields = mutation.getFields();
+    expect(fields.addShelterStaff).toBeDefined();
+    const argNames = fields.addShelterStaff.args.map(a => a.name);
+    expect(argNames).toContain('shelterId');
+    expect(argNames).toContain('email');
+  });
+
+  it('should have removeShelterStaff mutation with shelterId and userId args', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const fields = mutation.getFields();
+    expect(fields.removeShelterStaff).toBeDefined();
+    const argNames = fields.removeShelterStaff.args.map(a => a.name);
+    expect(argNames).toContain('shelterId');
+    expect(argNames).toContain('userId');
+  });
+
+  it('should return ShelterType from addShelterStaff mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const ShelterType = require('../server/schema/types/shelter_type').default;
+    const fields = mutation.getFields();
+    expect(fields.addShelterStaff.type).toBe(ShelterType);
+  });
+
+  it('should return ShelterType from removeShelterStaff mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const ShelterType = require('../server/schema/types/shelter_type').default;
+    const fields = mutation.getFields();
+    expect(fields.removeShelterStaff.type).toBe(ShelterType);
+  });
 });
