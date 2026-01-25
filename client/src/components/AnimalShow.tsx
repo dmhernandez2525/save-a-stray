@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { FetchAnimalResponse, SimilarAnimalsResponse, AnimalStatus, MedicalRecord } from "../types";
 import { Link } from "react-router-dom";
 import Mutations from "../graphql/mutations";
+import ShareButtons from "./ShareButtons";
 
 const { FETCH_ANIMAL, SIMILAR_ANIMALS } = Queries;
 const { ADD_MEDICAL_RECORD } = Mutations;
@@ -76,9 +77,16 @@ class AnimalShow extends React.Component<AnimalShowProps, AnimalShowState> {
                 >
                   &larr; Back to browsing
                 </a>
-                <span className={`text-sm font-semibold px-3 py-1 rounded-full ${STATUS_STYLES[status]}`}>
-                  {STATUS_LABELS[status]}
-                </span>
+                <div className="flex items-center gap-3">
+                  <ShareButtons
+                    title={`Meet ${animal.name}!`}
+                    text={`Check out ${animal.name}, a ${animal.age} year old ${animal.type} available for adoption.`}
+                    url={`${window.location.origin}/#/AnimalShow/${animal._id}`}
+                  />
+                  <span className={`text-sm font-semibold px-3 py-1 rounded-full ${STATUS_STYLES[status]}`}>
+                    {STATUS_LABELS[status]}
+                  </span>
+                </div>
               </div>
 
               <Card className="bg-white overflow-hidden">
