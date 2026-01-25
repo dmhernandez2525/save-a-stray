@@ -20,6 +20,26 @@ const ShelterSchema = new Schema<ShelterDocument>({
     type: String,
     required: true
   },
+  phone: {
+    type: String,
+    default: ''
+  },
+  email: {
+    type: String,
+    default: ''
+  },
+  website: {
+    type: String,
+    default: ''
+  },
+  hours: {
+    type: String,
+    default: ''
+  },
+  description: {
+    type: String,
+    default: ''
+  },
   animals: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'animal'

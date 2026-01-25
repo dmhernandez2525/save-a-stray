@@ -399,6 +399,41 @@ describe('GraphQL Schema Tests', () => {
     expect(args).toContain('image');
   });
 
+  it('should have contact fields on ShelterType', () => {
+    const ShelterType = require('../server/schema/types/shelter_type').default;
+    const fields = ShelterType.getFields();
+
+    expect(fields.phone).toBeDefined();
+    expect(fields.email).toBeDefined();
+    expect(fields.website).toBeDefined();
+    expect(fields.hours).toBeDefined();
+    expect(fields.description).toBeDefined();
+  });
+
+  it('should have contact args on editShelter mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    const editArgs = mutationFields.editShelter.args.map(a => a.name);
+    expect(editArgs).toContain('phone');
+    expect(editArgs).toContain('email');
+    expect(editArgs).toContain('website');
+    expect(editArgs).toContain('hours');
+    expect(editArgs).toContain('description');
+  });
+
+  it('should have contact args on newShelter mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    const newArgs = mutationFields.newShelter.args.map(a => a.name);
+    expect(newArgs).toContain('phone');
+    expect(newArgs).toContain('email');
+    expect(newArgs).toContain('website');
+    expect(newArgs).toContain('hours');
+    expect(newArgs).toContain('description');
+  });
+
   it('should have similarAnimals query with correct args', () => {
     const RootQueryType = require('../server/schema/types/root_query_type').default;
     const fields = RootQueryType.getFields();

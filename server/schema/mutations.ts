@@ -78,6 +78,11 @@ interface ShelterArgs {
   location: string;
   users?: string;
   paymentEmail: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  hours?: string;
+  description?: string;
   animals?: string;
 }
 
@@ -342,11 +347,16 @@ const mutation = new GraphQLObjectType({
       args: {
         name: { type: GraphQLString },
         location: { type: GraphQLString },
-        paymentEmail: { type: GraphQLString }
+        paymentEmail: { type: GraphQLString },
+        phone: { type: GraphQLString },
+        email: { type: GraphQLString },
+        website: { type: GraphQLString },
+        hours: { type: GraphQLString },
+        description: { type: GraphQLString }
       },
       async resolve(_, args: ShelterArgs) {
-        const { name, location, paymentEmail } = args;
-        const newShelter = new Shelter({ name, location, paymentEmail });
+        const { name, location, paymentEmail, phone, email, website, hours, description } = args;
+        const newShelter = new Shelter({ name, location, paymentEmail, phone, email, website, hours, description });
         await newShelter.save();
         return newShelter;
       }
@@ -368,16 +378,26 @@ const mutation = new GraphQLObjectType({
         location: { type: GraphQLString },
         users: { type: GraphQLString },
         paymentEmail: { type: GraphQLString },
+        phone: { type: GraphQLString },
+        email: { type: GraphQLString },
+        website: { type: GraphQLString },
+        hours: { type: GraphQLString },
+        description: { type: GraphQLString },
         animals: { type: GraphQLString }
       },
       async resolve(_, args: ShelterArgs & { _id: string }) {
-        const { _id, name, location, users, paymentEmail, animals } = args;
+        const { _id, name, location, users, paymentEmail, phone, email, website, hours, description, animals } = args;
         const shelter = await Shelter.findById(_id);
         if (shelter) {
           shelter.name = name;
           shelter.location = location;
           if (users) shelter.users = users as unknown as (typeof shelter.users);
           shelter.paymentEmail = paymentEmail;
+          if (phone !== undefined) shelter.phone = phone;
+          if (email !== undefined) shelter.email = email;
+          if (website !== undefined) shelter.website = website;
+          if (hours !== undefined) shelter.hours = hours;
+          if (description !== undefined) shelter.description = description;
           if (animals) shelter.animals = animals as unknown as (typeof shelter.animals);
           await shelter.save();
           return shelter;
