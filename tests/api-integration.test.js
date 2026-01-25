@@ -329,4 +329,20 @@ describe('GraphQL Schema Tests', () => {
     const args = fields.userApplications.args.map(a => a.name);
     expect(args).toContain('userId');
   });
+
+  it('should have shelter registration args on register mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.register).toBeDefined();
+    const args = mutationFields.register.args.map(a => a.name);
+    expect(args).toContain('name');
+    expect(args).toContain('email');
+    expect(args).toContain('password');
+    expect(args).toContain('userRole');
+    expect(args).toContain('shelterId');
+    expect(args).toContain('shelterName');
+    expect(args).toContain('shelterLocation');
+    expect(args).toContain('shelterPaymentEmail');
+  });
 });

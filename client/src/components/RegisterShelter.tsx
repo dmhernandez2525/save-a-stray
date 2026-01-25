@@ -25,6 +25,9 @@ class RegisterShelter extends Component<RegisterShelterProps, RegisterShelterSta
       name: "",
       email: "",
       password: "",
+      shelterName: "",
+      shelterLocation: "",
+      shelterPaymentEmail: "",
     };
   }
 

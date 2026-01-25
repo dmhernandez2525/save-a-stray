@@ -27,6 +27,9 @@ interface RegisterArgs {
   password: string;
   userRole: string;
   shelterId?: string;
+  shelterName?: string;
+  shelterLocation?: string;
+  shelterPaymentEmail?: string;
 }
 
 interface LoginArgs {
@@ -83,7 +86,10 @@ const mutation = new GraphQLObjectType({
         email: { type: GraphQLString },
         password: { type: GraphQLString },
         userRole: { type: GraphQLString },
-        shelterId: { type: GraphQLString }
+        shelterId: { type: GraphQLString },
+        shelterName: { type: GraphQLString },
+        shelterLocation: { type: GraphQLString },
+        shelterPaymentEmail: { type: GraphQLString }
       },
       resolve(_, args: RegisterArgs) {
         return AuthService.register(args);

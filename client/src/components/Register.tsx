@@ -21,10 +21,13 @@ class Register extends Component<RegisterProps, RegisterState> {
   constructor(props: RegisterProps) {
     super(props);
     this.state = {
-      userRole: "",
+      userRole: "endUser",
       name: "",
       email: "",
       password: "",
+      shelterName: "",
+      shelterLocation: "",
+      shelterPaymentEmail: "",
     };
   }
 
@@ -58,7 +61,7 @@ class Register extends Component<RegisterProps, RegisterState> {
             onCompleted={(data) => {
               const { token } = data.register;
               localStorage.setItem("auth-token", token);
-              this.props.history.push("/Landing");
+              this.props.history.push(this.state.userRole === "shelter" ? "/Shelter" : "/Landing");
             }}
             update={(cache, data) => this.updateCache(cache, data)}
           >
@@ -98,16 +101,45 @@ class Register extends Component<RegisterProps, RegisterState> {
                         className="flex flex-col gap-4"
                         onSubmit={(e: FormEvent) => {
                           e.preventDefault();
-                          registerUser({
-                            variables: {
-                              name: this.state.name,
-                              userRole: "endUser",
-                              email: this.state.email,
-                              password: this.state.password,
-                            },
-                          });
+                          const variables: Record<string, string> = {
+                            name: this.state.name,
+                            userRole: this.state.userRole,
+                            email: this.state.email,
+                            password: this.state.password,
+                          };
+                          if (this.state.userRole === "shelter") {
+                            variables.shelterName = this.state.shelterName;
+                            variables.shelterLocation = this.state.shelterLocation;
+                            variables.shelterPaymentEmail = this.state.shelterPaymentEmail;
+                          }
+                          registerUser({ variables });
                         }}
                       >
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => this.setState({ userRole: "endUser" })}
+                            className={`flex-1 py-2 rounded-lg font-semibold text-sm transition-colors ${
+                              this.state.userRole === "endUser"
+                                ? "bg-sky-blue text-white"
+                                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                            }`}
+                          >
+                            Adopter
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => this.setState({ userRole: "shelter" })}
+                            className={`flex-1 py-2 rounded-lg font-semibold text-sm transition-colors ${
+                              this.state.userRole === "shelter"
+                                ? "bg-sky-blue text-white"
+                                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                            }`}
+                          >
+                            Shelter Staff
+                          </button>
+                        </div>
+
                         <Input
                           value={this.state.name}
                           onChange={this.update("name")}
@@ -128,8 +160,36 @@ class Register extends Component<RegisterProps, RegisterState> {
                           placeholder="Password"
                           className="bg-blue-50"
                         />
+
+                        {this.state.userRole === "shelter" && (
+                          <>
+                            <div className="border-t pt-4 mt-1">
+                              <p className="text-sm text-gray-500 font-semibold mb-2">Shelter Details</p>
+                            </div>
+                            <Input
+                              value={this.state.shelterName}
+                              onChange={this.update("shelterName")}
+                              placeholder="Shelter Name"
+                              className="bg-blue-50"
+                            />
+                            <Input
+                              value={this.state.shelterLocation}
+                              onChange={this.update("shelterLocation")}
+                              placeholder="Shelter Location"
+                              className="bg-blue-50"
+                            />
+                            <Input
+                              value={this.state.shelterPaymentEmail}
+                              onChange={this.update("shelterPaymentEmail")}
+                              placeholder="Shelter Payment Email"
+                              type="email"
+                              className="bg-blue-50"
+                            />
+                          </>
+                        )}
+
                         <Button variant="salmon" size="lg" type="submit" className="w-full">
-                          Register Account
+                          {this.state.userRole === "shelter" ? "Register Shelter" : "Register Account"}
                         </Button>
                       </form>
 

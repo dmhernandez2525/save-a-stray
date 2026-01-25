@@ -6,6 +6,12 @@ jest.mock('../server/models/User', () => {
   return { __esModule: true, default: mockUser };
 });
 
+jest.mock('../server/models/Shelter', () => {
+  const mockShelter = jest.fn();
+  mockShelter.findById = jest.fn();
+  return { __esModule: true, default: mockShelter };
+});
+
 jest.mock('bcryptjs', () => ({
   __esModule: true,
   default: {
@@ -266,6 +272,168 @@ describe('Auth Service Tests', () => {
       const result = bcrypt.compareSync('wrongpassword', '$2a$10$hashedpassword');
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('Shelter Registration Flow', () => {
+    const Shelter = require('../server/models/Shelter').default;
+
+    it('should validate shelter registration input correctly', () => {
+      const result = validateRegisterInput({
+        name: 'Shelter Admin',
+        email: 'admin@shelter.com',
+        password: 'validpassword123',
+        userRole: 'shelter'
+      });
+
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should accept shelter role as valid userRole', () => {
+      const result = validateRegisterInput({
+        name: 'Shelter User',
+        email: 'shelter@test.com',
+        password: 'password123',
+        userRole: 'shelter'
+      });
+
+      expect(result.isValid).toBe(true);
+      expect(result.message).toBe('');
+    });
+
+    it('should register shelter user with shelter creation data', async () => {
+      const mockShelterId = 'shelter-id-123';
+      const mockUserId = 'user-id-456';
+
+      // Mock User.findOne to return null (no duplicates)
+      User.findOne.mockResolvedValue(null);
+
+      // Mock bcrypt.hash
+      bcrypt.hash.mockResolvedValue('hashed-password');
+
+      // Mock User constructor and save
+      const mockUserInstance = {
+        _id: mockUserId,
+        name: 'Shelter Admin',
+        email: 'admin@shelter.com',
+        userRole: 'shelter',
+        shelterId: mockShelterId,
+        save: jest.fn().mockResolvedValue(true)
+      };
+      User.mockImplementation(() => mockUserInstance);
+
+      // Mock Shelter constructor and save
+      const mockShelterInstance = {
+        _id: mockShelterId,
+        name: 'Happy Paws',
+        location: 'NYC',
+        paymentEmail: 'pay@shelter.com',
+        users: [],
+        save: jest.fn().mockResolvedValue(true)
+      };
+      Shelter.mockImplementation(() => mockShelterInstance);
+      Shelter.findById.mockResolvedValue(mockShelterInstance);
+
+      // Mock jwt.sign
+      jwt.sign.mockReturnValue('mock-token');
+
+      const { register } = require('../server/services/auth');
+
+      const result = await register({
+        name: 'Shelter Admin',
+        email: 'admin@shelter.com',
+        password: 'validpassword123',
+        userRole: 'shelter',
+        shelterName: 'Happy Paws',
+        shelterLocation: 'NYC',
+        shelterPaymentEmail: 'pay@shelter.com'
+      });
+
+      expect(result.token).toBe('mock-token');
+      expect(result.loggedIn).toBe(true);
+      expect(result.userRole).toBe('shelter');
+      expect(result.shelterId).toBe(mockShelterId);
+      expect(mockShelterInstance.save).toHaveBeenCalled();
+      expect(mockUserInstance.save).toHaveBeenCalled();
+    });
+
+    it('should not create shelter for endUser registration', async () => {
+      const mockUserId = 'user-id-789';
+
+      User.findOne.mockResolvedValue(null);
+      bcrypt.hash.mockResolvedValue('hashed-password');
+
+      const mockUserInstance = {
+        _id: mockUserId,
+        name: 'Regular User',
+        email: 'user@test.com',
+        userRole: 'endUser',
+        shelterId: undefined,
+        save: jest.fn().mockResolvedValue(true)
+      };
+      User.mockImplementation(() => mockUserInstance);
+
+      jwt.sign.mockReturnValue('mock-token');
+
+      const { register } = require('../server/services/auth');
+
+      const result = await register({
+        name: 'Regular User',
+        email: 'user@test.com',
+        password: 'validpassword123',
+        userRole: 'endUser'
+      });
+
+      expect(result.token).toBe('mock-token');
+      expect(result.userRole).toBe('endUser');
+      expect(Shelter).not.toHaveBeenCalled();
+    });
+
+    it('should add user to shelter users array after creation', async () => {
+      const mockShelterId = 'shelter-id-abc';
+      const mockUserId = 'user-id-def';
+
+      User.findOne.mockResolvedValue(null);
+      bcrypt.hash.mockResolvedValue('hashed-password');
+
+      const mockUserInstance = {
+        _id: mockUserId,
+        name: 'Admin',
+        email: 'admin@test.com',
+        userRole: 'shelter',
+        shelterId: mockShelterId,
+        save: jest.fn().mockResolvedValue(true)
+      };
+      User.mockImplementation(() => mockUserInstance);
+
+      const mockShelterInstance = {
+        _id: mockShelterId,
+        name: 'Test Shelter',
+        location: 'LA',
+        paymentEmail: 'pay@test.com',
+        users: [],
+        save: jest.fn().mockResolvedValue(true)
+      };
+      Shelter.mockImplementation(() => mockShelterInstance);
+      Shelter.findById.mockResolvedValue(mockShelterInstance);
+
+      jwt.sign.mockReturnValue('mock-token');
+
+      const { register } = require('../server/services/auth');
+
+      await register({
+        name: 'Admin',
+        email: 'admin@test.com',
+        password: 'validpassword123',
+        userRole: 'shelter',
+        shelterName: 'Test Shelter',
+        shelterLocation: 'LA',
+        shelterPaymentEmail: 'pay@test.com'
+      });
+
+      expect(Shelter.findById).toHaveBeenCalledWith(mockShelterId);
+      expect(mockShelterInstance.users).toContain(mockUserId);
+      expect(mockShelterInstance.save).toHaveBeenCalledTimes(2);
     });
   });
 });

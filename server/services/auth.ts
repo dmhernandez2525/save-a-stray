@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User, { UserDocument } from '../models/User';
+import Shelter from '../models/Shelter';
 import keys from '../../config/keys';
 import validateRegisterInput from '../validation/register';
 import validateLoginInput from '../validation/login';
@@ -27,7 +28,7 @@ export const register = async (data: RegisterInput): Promise<UserAuthPayload> =>
       throw new Error(message);
     }
 
-    const { name, email, password, userRole, shelterId } = data;
+    const { name, email, password, userRole, shelterId, shelterName, shelterLocation, shelterPaymentEmail } = data;
 
     const existingEmail = await User.findOne({ email });
     if (existingEmail) {
@@ -41,17 +42,49 @@ export const register = async (data: RegisterInput): Promise<UserAuthPayload> =>
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    let resolvedShelterId = shelterId;
+
+    // Validate shelter registration - require all fields if role is shelter
+    if (userRole === 'shelter') {
+      if (!shelterName || !shelterLocation || !shelterPaymentEmail) {
+        throw new Error("Shelter registration requires name, location, and payment email");
+      }
+
+      // Check for shelter name uniqueness
+      const existingShelter = await Shelter.findOne({ name: shelterName });
+      if (existingShelter) {
+        throw new Error("A shelter with this name already exists");
+      }
+
+      const newShelter = new Shelter({
+        name: shelterName,
+        location: shelterLocation,
+        paymentEmail: shelterPaymentEmail
+      });
+      await newShelter.save();
+      resolvedShelterId = newShelter._id.toString();
+    }
+
     const user = new User({
       name,
       email,
       password: hashedPassword,
       userRole,
-      shelterId
+      shelterId: resolvedShelterId
     });
 
     await user.save();
 
-    const token = jwt.sign({ id: user._id }, keys.secretOrKey);
+    // Add user to shelter's users array
+    if (resolvedShelterId) {
+      const shelter = await Shelter.findById(resolvedShelterId);
+      if (shelter) {
+        shelter.users.push(user._id as unknown as typeof shelter.users[0]);
+        await shelter.save();
+      }
+    }
+
+    const token = jwt.sign({ id: user._id }, keys.secretOrKey, { expiresIn: '7d' });
 
     return {
       token,
@@ -60,7 +93,7 @@ export const register = async (data: RegisterInput): Promise<UserAuthPayload> =>
       name: user.name,
       email: user.email,
       userRole: user.userRole,
-      shelterId: user.shelterId?.toString()
+      shelterId: resolvedShelterId
     };
   } catch (err) {
     throw err;
@@ -87,7 +120,7 @@ export const facebookRegister = async (data: FacebookProfile): Promise<UserAuthP
         throw new Error("Invalid credentials");
       }
 
-      const token = jwt.sign({ id: user._id }, keys.secretOrKey);
+      const token = jwt.sign({ id: user._id }, keys.secretOrKey, { expiresIn: '7d' });
 
       return {
         token,
@@ -111,7 +144,7 @@ export const facebookRegister = async (data: FacebookProfile): Promise<UserAuthP
 
     await user.save();
 
-    const token = jwt.sign({ id: user._id }, keys.secretOrKey);
+    const token = jwt.sign({ id: user._id }, keys.secretOrKey, { expiresIn: '7d' });
 
     return {
       token,
@@ -146,7 +179,7 @@ export const login = async (data: LoginInput): Promise<UserAuthPayload> => {
       throw new Error("Invalid credentials");
     }
 
-    const token = jwt.sign({ id: user._id }, keys.secretOrKey);
+    const token = jwt.sign({ id: user._id }, keys.secretOrKey, { expiresIn: '7d' });
 
     return {
       token,
