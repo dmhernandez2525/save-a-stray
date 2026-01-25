@@ -140,4 +140,53 @@ describe('Mongoose Models Schema Tests', () => {
       expect(Array.isArray(shelterSchema.animals)).toBe(true);
     });
   });
+
+  describe('WeightRecord Model', () => {
+    const WeightRecord = require('../server/models/WeightRecord').default;
+
+    it('should be a valid mongoose model', () => {
+      expect(WeightRecord).toBeDefined();
+      expect(WeightRecord.modelName).toBe('weightRecord');
+    });
+
+    it('should have required fields defined in schema', () => {
+      const schema = WeightRecord.schema.obj;
+
+      expect(schema.animalId).toBeDefined();
+      expect(schema.animalId.required).toBe(true);
+      expect(schema.animalId.type).toBe(String);
+
+      expect(schema.shelterId).toBeDefined();
+      expect(schema.shelterId.required).toBe(true);
+
+      expect(schema.weight).toBeDefined();
+      expect(schema.weight.required).toBe(true);
+      expect(schema.weight.type).toBe(Number);
+    });
+
+    it('should have unit field with enum and default', () => {
+      const schema = WeightRecord.schema.obj;
+      expect(schema.unit).toBeDefined();
+      expect(schema.unit.enum).toEqual(['lbs', 'kg']);
+      expect(schema.unit.default).toBe('lbs');
+    });
+
+    it('should have date fields', () => {
+      const schema = WeightRecord.schema.obj;
+      expect(schema.recordedAt).toBeDefined();
+      expect(schema.recordedAt.type).toBe(Date);
+      expect(schema.recordedAt.default).toBe(Date.now);
+
+      expect(schema.createdAt).toBeDefined();
+      expect(schema.createdAt.type).toBe(Date);
+    });
+
+    it('should have optional fields with defaults', () => {
+      const schema = WeightRecord.schema.obj;
+      expect(schema.recordedBy).toBeDefined();
+      expect(schema.recordedBy.default).toBe('');
+      expect(schema.notes).toBeDefined();
+      expect(schema.notes.default).toBe('');
+    });
+  });
 });

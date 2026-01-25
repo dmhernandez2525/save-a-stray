@@ -24,6 +24,12 @@ jest.mock('mongoose', () => {
         application: {
           find: jest.fn().mockResolvedValue([]),
           findById: jest.fn().mockResolvedValue(null)
+        },
+        weightRecord: {
+          find: jest.fn().mockReturnValue({ sort: jest.fn().mockResolvedValue([]) }),
+          findOne: jest.fn().mockReturnValue({ sort: jest.fn().mockResolvedValue(null) }),
+          findById: jest.fn().mockResolvedValue(null),
+          findByIdAndDelete: jest.fn().mockResolvedValue(null)
         }
       };
       return mockModels[modelName] || {};
@@ -328,5 +334,83 @@ describe('GraphQL Schema Tests', () => {
     expect(fields.userApplications).toBeDefined();
     const args = fields.userApplications.args.map(a => a.name);
     expect(args).toContain('userId');
+  });
+
+  it('should have animalWeightHistory query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.animalWeightHistory).toBeDefined();
+    const args = fields.animalWeightHistory.args.map(a => a.name);
+    expect(args).toContain('animalId');
+  });
+
+  it('should have shelterWeightRecords query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.shelterWeightRecords).toBeDefined();
+    const args = fields.shelterWeightRecords.args.map(a => a.name);
+    expect(args).toContain('shelterId');
+  });
+
+  it('should have latestAnimalWeight query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.latestAnimalWeight).toBeDefined();
+    const args = fields.latestAnimalWeight.args.map(a => a.name);
+    expect(args).toContain('animalId');
+  });
+
+  it('should have recordWeight mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.recordWeight).toBeDefined();
+    const args = mutationFields.recordWeight.args.map(a => a.name);
+    expect(args).toContain('animalId');
+    expect(args).toContain('shelterId');
+    expect(args).toContain('weight');
+    expect(args).toContain('unit');
+    expect(args).toContain('recordedAt');
+    expect(args).toContain('recordedBy');
+    expect(args).toContain('notes');
+  });
+
+  it('should have updateWeightRecord mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.updateWeightRecord).toBeDefined();
+    const args = mutationFields.updateWeightRecord.args.map(a => a.name);
+    expect(args).toContain('_id');
+    expect(args).toContain('weight');
+    expect(args).toContain('unit');
+    expect(args).toContain('notes');
+  });
+
+  it('should have deleteWeightRecord mutation', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    expect(mutationFields.deleteWeightRecord).toBeDefined();
+    const args = mutationFields.deleteWeightRecord.args.map(a => a.name);
+    expect(args).toContain('_id');
+  });
+
+  it('should have WeightRecordType with correct fields', () => {
+    const WeightRecordType = require('../server/schema/types/weight_record_type').default;
+    const fields = WeightRecordType.getFields();
+
+    expect(fields._id).toBeDefined();
+    expect(fields.animalId).toBeDefined();
+    expect(fields.shelterId).toBeDefined();
+    expect(fields.weight).toBeDefined();
+    expect(fields.unit).toBeDefined();
+    expect(fields.recordedAt).toBeDefined();
+    expect(fields.recordedBy).toBeDefined();
+    expect(fields.notes).toBeDefined();
+    expect(fields.createdAt).toBeDefined();
   });
 });

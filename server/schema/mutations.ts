@@ -2,6 +2,7 @@ import {
   GraphQLObjectType,
   GraphQLString,
   GraphQLInt,
+  GraphQLFloat,
   GraphQLID,
   GraphQLFieldConfigMap
 } from 'graphql';
@@ -10,16 +11,19 @@ import UserType from './types/user_type';
 import AnimalType from './types/animal_type';
 import ShelterType from './types/shelter_type';
 import ApplicationType from './types/application_type';
+import WeightRecordType from './types/weight_record_type';
 import AuthService from '../services/auth';
 import { UserDocument } from '../models/User';
 import { AnimalDocument } from '../models/Animal';
 import { ApplicationDocument } from '../models/Application';
 import { ShelterDocument } from '../models/Shelter';
+import { IWeightRecord } from '../models/WeightRecord';
 
 const User = mongoose.model<UserDocument>('user');
 const Animal = mongoose.model<AnimalDocument>('animal');
 const Application = mongoose.model<ApplicationDocument>('application');
 const Shelter = mongoose.model<ShelterDocument>('shelter');
+const WeightRecord = mongoose.model<IWeightRecord>('weightRecord');
 
 interface RegisterArgs {
   name: string;
@@ -357,6 +361,68 @@ const mutation = new GraphQLObjectType({
           return shelter;
         }
         return null;
+      }
+    },
+    recordWeight: {
+      type: WeightRecordType,
+      args: {
+        animalId: { type: GraphQLString },
+        shelterId: { type: GraphQLString },
+        weight: { type: GraphQLFloat },
+        unit: { type: GraphQLString },
+        recordedAt: { type: GraphQLString },
+        recordedBy: { type: GraphQLString },
+        notes: { type: GraphQLString }
+      },
+      async resolve(_, args: {
+        animalId: string;
+        shelterId: string;
+        weight: number;
+        unit?: string;
+        recordedAt?: string;
+        recordedBy?: string;
+        notes?: string;
+      }) {
+        const record = new WeightRecord({
+          animalId: args.animalId,
+          shelterId: args.shelterId,
+          weight: args.weight,
+          unit: args.unit || 'lbs',
+          recordedAt: args.recordedAt ? new Date(args.recordedAt) : new Date(),
+          recordedBy: args.recordedBy || '',
+          notes: args.notes || '',
+        });
+        await record.save();
+        return record;
+      }
+    },
+    updateWeightRecord: {
+      type: WeightRecordType,
+      args: {
+        _id: { type: GraphQLID },
+        weight: { type: GraphQLFloat },
+        unit: { type: GraphQLString },
+        notes: { type: GraphQLString }
+      },
+      async resolve(_, args: { _id: string; weight?: number; unit?: string; notes?: string }) {
+        const record = await WeightRecord.findById(args._id);
+        if (record) {
+          if (args.weight !== undefined) record.weight = args.weight;
+          if (args.unit !== undefined) record.unit = args.unit as typeof record.unit;
+          if (args.notes !== undefined) record.notes = args.notes;
+          await record.save();
+          return record;
+        }
+        return null;
+      }
+    },
+    deleteWeightRecord: {
+      type: WeightRecordType,
+      args: {
+        _id: { type: GraphQLID }
+      },
+      resolve(_, args: { _id: string }) {
+        return WeightRecord.findByIdAndDelete(args._id);
       }
     }
   })

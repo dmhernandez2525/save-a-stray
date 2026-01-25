@@ -12,6 +12,9 @@ interface Mutations {
   REMOVE_FAVORITE: DocumentNode;
   CREATE_APPLICATION: DocumentNode;
   CREATE_SHELTER: DocumentNode;
+  RECORD_WEIGHT: DocumentNode;
+  UPDATE_WEIGHT_RECORD: DocumentNode;
+  DELETE_WEIGHT_RECORD: DocumentNode;
 }
 
 const mutations: Mutations = {
@@ -156,6 +159,54 @@ const mutations: Mutations = {
         name
         location
         paymentEmail
+        _id
+      }
+    }
+  `,
+  RECORD_WEIGHT: gql`
+    mutation RecordWeight(
+      $animalId: String!
+      $shelterId: String!
+      $weight: Float!
+      $unit: String
+      $recordedAt: String
+      $recordedBy: String
+      $notes: String
+    ) {
+      recordWeight(
+        animalId: $animalId
+        shelterId: $shelterId
+        weight: $weight
+        unit: $unit
+        recordedAt: $recordedAt
+        recordedBy: $recordedBy
+        notes: $notes
+      ) {
+        _id
+        animalId
+        shelterId
+        weight
+        unit
+        recordedAt
+        recordedBy
+        notes
+        createdAt
+      }
+    }
+  `,
+  UPDATE_WEIGHT_RECORD: gql`
+    mutation UpdateWeightRecord($_id: ID!, $weight: Float, $unit: String, $notes: String) {
+      updateWeightRecord(_id: $_id, weight: $weight, unit: $unit, notes: $notes) {
+        _id
+        weight
+        unit
+        notes
+      }
+    }
+  `,
+  DELETE_WEIGHT_RECORD: gql`
+    mutation DeleteWeightRecord($_id: ID!) {
+      deleteWeightRecord(_id: $_id) {
         _id
       }
     }

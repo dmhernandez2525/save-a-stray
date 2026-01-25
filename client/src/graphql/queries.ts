@@ -11,6 +11,8 @@ interface Queries {
   FETCH_ANIMAL: DocumentNode;
   USER_FAVORITES: DocumentNode;
   USER_FAVORITE_IDS: DocumentNode;
+  ANIMAL_WEIGHT_HISTORY: DocumentNode;
+  SHELTER_WEIGHT_RECORDS: DocumentNode;
 }
 
 const queries: Queries = {
@@ -154,6 +156,36 @@ const queries: Queries = {
         image
         video
         status
+      }
+    }
+  `,
+  ANIMAL_WEIGHT_HISTORY: gql`
+    query AnimalWeightHistory($animalId: ID!) {
+      animalWeightHistory(animalId: $animalId) {
+        _id
+        animalId
+        shelterId
+        weight
+        unit
+        recordedAt
+        recordedBy
+        notes
+        createdAt
+      }
+    }
+  `,
+  SHELTER_WEIGHT_RECORDS: gql`
+    query ShelterWeightRecords($shelterId: ID!) {
+      shelterWeightRecords(shelterId: $shelterId) {
+        _id
+        animalId
+        shelterId
+        weight
+        unit
+        recordedAt
+        recordedBy
+        notes
+        createdAt
       }
     }
   `
