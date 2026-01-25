@@ -9,6 +9,7 @@ interface Queries {
   SHELTER_ANALYTICS: DocumentNode;
   SHELTER_STAFF: DocumentNode;
   SHELTER_EVENTS: DocumentNode;
+  SHELTER_DONATIONS: DocumentNode;
   USER_APPLICATIONS: DocumentNode;
   FIND_ANIMALS: DocumentNode;
   FETCH_ANIMAL: DocumentNode;
@@ -233,6 +234,17 @@ const queries: Queries = {
         endDate
         location
         eventType
+      }
+    }
+  `,
+  SHELTER_DONATIONS: gql`
+    query ShelterDonations($shelterId: ID!) {
+      shelterDonations(shelterId: $shelterId) {
+        _id
+        donorName
+        amount
+        message
+        createdAt
       }
     }
   `,

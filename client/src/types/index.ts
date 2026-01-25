@@ -242,6 +242,20 @@ export interface ShelterEventsResponse {
   shelterEvents: ShelterEvent[];
 }
 
+export interface Donation {
+  _id: string;
+  shelterId: string;
+  userId?: string;
+  donorName: string;
+  amount: number;
+  message: string;
+  createdAt: string;
+}
+
+export interface ShelterDonationsResponse {
+  shelterDonations: Donation[];
+}
+
 export interface ShelterStaffResponse {
   shelterStaff: ShelterStaffMember[];
 }

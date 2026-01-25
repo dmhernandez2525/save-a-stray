@@ -2,6 +2,7 @@ import {
   GraphQLObjectType,
   GraphQLString,
   GraphQLInt,
+  GraphQLFloat,
   GraphQLID,
   GraphQLList,
   GraphQLInputObjectType,
@@ -22,7 +23,9 @@ import { SuccessStoryDocument } from '../models/SuccessStory';
 import ReviewType from './types/review_type';
 import NotificationType from './types/notification_type';
 import EventType from './types/event_type';
+import DonationType from './types/donation_type';
 import { EventDocument } from '../models/Event';
+import { DonationDocument } from '../models/Donation';
 import { ReviewDocument } from '../models/Review';
 import { NotificationDocument } from '../models/Notification';
 
@@ -34,6 +37,7 @@ const SuccessStoryModel = mongoose.model<SuccessStoryDocument>('successStory');
 const ReviewModel = mongoose.model<ReviewDocument>('review');
 const NotificationModel = mongoose.model<NotificationDocument>('notification');
 const EventModel = mongoose.model<EventDocument>('event');
+const DonationModel = mongoose.model<DonationDocument>('donation');
 
 interface RegisterArgs {
   name: string;
@@ -576,6 +580,45 @@ const mutation = new GraphQLObjectType({
       args: { _id: { type: GraphQLID } },
       resolve(_, args: { _id: string }) {
         return EventModel.findByIdAndDelete(args._id);
+      }
+    },
+    createDonation: {
+      type: DonationType,
+      args: {
+        shelterId: { type: GraphQLID },
+        userId: { type: GraphQLString },
+        donorName: { type: GraphQLString },
+        amount: { type: GraphQLFloat },
+        message: { type: GraphQLString }
+      },
+      async resolve(_, args: { shelterId: string; userId?: string; donorName: string; amount: number; message?: string }) {
+        // Validate required fields
+        if (!args.shelterId || !args.donorName) {
+          throw new Error('Shelter ID and donor name are required');
+        }
+
+        // Validate amount
+        if (!args.amount || args.amount < 1) {
+          throw new Error('Donation amount must be at least $1');
+        }
+        if (args.amount > 1000000) {
+          throw new Error('Donation amount exceeds maximum allowed');
+        }
+
+        // Validate message length
+        if (args.message && args.message.length > 500) {
+          throw new Error('Message cannot exceed 500 characters');
+        }
+
+        const donation = new DonationModel({
+          shelterId: args.shelterId,
+          userId: args.userId || '',
+          donorName: args.donorName.trim(),
+          amount: args.amount,
+          message: args.message?.trim() || ''
+        });
+        await donation.save();
+        return donation;
       }
     },
     bulkCreateAnimals: {
