@@ -303,6 +303,46 @@ const mutation = new GraphQLObjectType({
         return null;
       }
     },
+    updateUser: {
+      type: UserType,
+      args: {
+        _id: { type: GraphQLID },
+        name: { type: GraphQLString },
+        email: { type: GraphQLString }
+      },
+      async resolve(_, args: { _id: string; name?: string; email?: string }) {
+        const user = await User.findById(args._id);
+        if (!user) {
+          throw new Error('User not found');
+        }
+
+        // Validate email format
+        if (args.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(args.email)) {
+          throw new Error('Invalid email format');
+        }
+
+        // Check for name uniqueness if name is being changed
+        if (args.name && args.name !== user.name) {
+          const existingName = await User.findOne({ name: args.name });
+          if (existingName) {
+            throw new Error('This name is already taken');
+          }
+        }
+
+        // Check for email uniqueness if email is being changed
+        if (args.email && args.email !== user.email) {
+          const existingEmail = await User.findOne({ email: args.email });
+          if (existingEmail) {
+            throw new Error('This email is already in use');
+          }
+        }
+
+        if (args.name) user.name = args.name;
+        if (args.email) user.email = args.email;
+        await user.save();
+        return user;
+      }
+    },
     addFavorite: {
       type: UserType,
       args: {
