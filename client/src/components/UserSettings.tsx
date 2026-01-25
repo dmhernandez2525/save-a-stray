@@ -1,174 +1,291 @@
-import React, { Component } from "react";
+import React, { useState } from "react";
 import { Query, Mutation } from "@apollo/client/react/components";
 import { ApolloConsumer, ApolloClient } from "@apollo/client";
+import { Link } from "react-router-dom";
 import { withRouter, WithRouterProps } from "../util/withRouter";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
+import { Skeleton } from "./ui/skeleton";
 import Queries from "../graphql/queries";
 import Mutations from "../graphql/mutations";
 import { FetchUserResponse, UserIdData } from "../types";
+import { ArrowLeft, User, Settings, Building2, Calendar, Mail, Edit2, X, Check } from "lucide-react";
 
 const { FETCH_USER, USER_ID } = Queries;
 const { UPDATE_USER } = Mutations;
 
-interface UserSettingsProps extends WithRouterProps {}
+type UserSettingsProps = WithRouterProps;
 
-interface UserSettingsState {
-  name: string;
-  email: string;
-  editing: boolean;
-  message: string;
-}
+const UserSettings: React.FC<UserSettingsProps> = () => {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [message, setMessage] = useState("");
 
-class UserSettings extends Component<UserSettingsProps, UserSettingsState> {
-  constructor(props: UserSettingsProps) {
-    super(props);
-    this.state = { name: "", email: "", editing: false, message: "" };
-  }
+  const startEditing = (currentName: string, currentEmail: string) => {
+    setName(currentName);
+    setEmail(currentEmail);
+    setEditing(true);
+    setMessage("");
+  };
 
-  startEditing(currentName: string, currentEmail: string) {
-    this.setState({ name: currentName, email: currentEmail, editing: true, message: "" });
-  }
+  return (
+    <div className="min-h-screen bg-background col-start-1 col-end-6 row-start-1 row-end-4">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-sky-blue-500 to-sky-blue-600 text-white">
+        <div className="container-wide py-8 md:py-12">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 text-white/80 hover:text-white transition-colors mb-4"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to home
+          </Link>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
+              <Settings className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="font-capriola text-3xl md:text-4xl">Settings</h1>
+              <p className="text-white/90">Manage your account preferences</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
-  render() {
-    return (
-      <ApolloConsumer>
-        {(client: ApolloClient<object>) => {
-          let userId = "";
-          try {
-            const data = client.readQuery<UserIdData>({ query: USER_ID });
-            userId = data?.userId || "";
-          } catch {
-            userId = "";
-          }
+      <div className="container-tight py-8 px-4">
+        <ApolloConsumer>
+          {(client: ApolloClient<object>) => {
+            let userId = "";
+            try {
+              const data = client.readQuery<UserIdData>({ query: USER_ID });
+              userId = data?.userId || "";
+            } catch {
+              userId = "";
+            }
 
-          if (!userId) {
-            return (
-              <div className="max-w-2xl mx-auto p-4">
-                <Card className="bg-white">
-                  <CardContent className="text-center py-8">
-                    <p className="text-muted-foreground">Please log in to access settings.</p>
+            if (!userId) {
+              return (
+                <Card className="max-w-md mx-auto">
+                  <CardContent className="text-center py-12">
+                    <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h2 className="font-capriola text-xl mb-2">Not Logged In</h2>
+                    <p className="text-muted-foreground mb-6">
+                      Please log in to access your settings.
+                    </p>
+                    <Button variant="skyBlue" asChild>
+                      <Link to="/login">Log In</Link>
+                    </Button>
                   </CardContent>
                 </Card>
-              </div>
-            );
-          }
+              );
+            }
 
-          return (
-            <Query<FetchUserResponse> query={FETCH_USER} variables={{ _id: userId }}>
-              {({ loading, error, data }) => {
-                if (loading) return <p className="text-white font-capriola animate-pulse text-center mt-8">Loading...</p>;
-                if (error || !data?.user) return <p className="text-red-500 text-center mt-8">Error loading user data</p>;
-
-                const user = data.user;
-
-                return (
-                  <div className="max-w-2xl mx-auto p-4">
-                    <h1 className="text-white font-capriola text-3xl mb-6">Settings</h1>
-
-                    {this.state.message && (
-                      <div className="bg-green-100 text-green-800 rounded-lg p-3 mb-4 text-sm font-medium">
-                        {this.state.message}
+            return (
+              <Query<FetchUserResponse> query={FETCH_USER} variables={{ _id: userId }}>
+                {({ loading, error, data }) => {
+                  if (loading) {
+                    return (
+                      <div className="max-w-2xl mx-auto space-y-6">
+                        <Card>
+                          <CardHeader>
+                            <Skeleton className="h-6 w-40" />
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <Skeleton className="h-10 w-full" />
+                            <Skeleton className="h-10 w-full" />
+                            <Skeleton className="h-10 w-32" />
+                          </CardContent>
+                        </Card>
                       </div>
-                    )}
+                    );
+                  }
 
-                    <Card className="bg-white mb-6">
-                      <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle className="text-sky-blue font-capriola text-lg">Profile Information</CardTitle>
-                        {!this.state.editing && (
-                          <Button variant="ghost" size="sm" onClick={() => this.startEditing(user.name, user.email)}>
-                            Edit
-                          </Button>
-                        )}
-                      </CardHeader>
-                      <CardContent>
-                        {this.state.editing ? (
-                          <Mutation
-                            mutation={UPDATE_USER}
-                            refetchQueries={[{ query: FETCH_USER, variables: { _id: userId } }]}
-                            onCompleted={() => this.setState({ editing: false, message: "Profile updated successfully." })}
-                          >
-                            {(updateUser: (opts: { variables: Record<string, string> }) => void) => (
-                              <div className="space-y-4">
-                                <div className="space-y-2">
-                                  <Label htmlFor="settings-name">Name</Label>
-                                  <Input
-                                    id="settings-name"
-                                    value={this.state.name}
-                                    onChange={(e) => this.setState({ name: e.target.value })}
-                                    className="bg-blue-50"
-                                  />
+                  if (error || !data?.user) {
+                    return (
+                      <Card className="max-w-md mx-auto">
+                        <CardContent className="text-center py-12">
+                          <div className="w-12 h-12 rounded-full bg-destructive/10 mx-auto mb-4 flex items-center justify-center">
+                            <X className="h-6 w-6 text-destructive" />
+                          </div>
+                          <h2 className="font-capriola text-xl mb-2">Error</h2>
+                          <p className="text-muted-foreground">
+                            Unable to load user data. Please try again.
+                          </p>
+                        </CardContent>
+                      </Card>
+                    );
+                  }
+
+                  const user = data.user;
+
+                  return (
+                    <div className="max-w-2xl mx-auto space-y-6">
+                      {message && (
+                        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 rounded-xl p-4 flex items-center gap-3">
+                          <Check className="h-5 w-5 flex-shrink-0" />
+                          <span className="font-medium">{message}</span>
+                        </div>
+                      )}
+
+                      <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                          <div>
+                            <CardTitle className="text-sky-blue-600 dark:text-sky-blue-400 font-capriola text-lg flex items-center gap-2">
+                              <User className="h-5 w-5" />
+                              Profile Information
+                            </CardTitle>
+                            <CardDescription>Your personal details</CardDescription>
+                          </div>
+                          {!editing && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => startEditing(user.name, user.email)}
+                              className="gap-2"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                              <span className="hidden sm:inline">Edit</span>
+                            </Button>
+                          )}
+                        </CardHeader>
+                        <CardContent>
+                          {editing ? (
+                            <Mutation
+                              mutation={UPDATE_USER}
+                              refetchQueries={[{ query: FETCH_USER, variables: { _id: userId } }]}
+                              onCompleted={() => {
+                                setEditing(false);
+                                setMessage("Profile updated successfully.");
+                              }}
+                            >
+                              {(updateUser: (opts: { variables: Record<string, string> }) => void) => (
+                                <div className="space-y-4">
+                                  <div className="space-y-2">
+                                    <Label htmlFor="settings-name">Name</Label>
+                                    <Input
+                                      id="settings-name"
+                                      value={name}
+                                      onChange={(e) => setName(e.target.value)}
+                                      className="bg-sky-blue-50 dark:bg-warm-gray-800"
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="settings-email">Email</Label>
+                                    <Input
+                                      id="settings-email"
+                                      type="email"
+                                      value={email}
+                                      onChange={(e) => setEmail(e.target.value)}
+                                      className="bg-sky-blue-50 dark:bg-warm-gray-800"
+                                    />
+                                  </div>
+                                  <div className="flex gap-3 pt-2">
+                                    <Button
+                                      variant="salmon"
+                                      onClick={() =>
+                                        updateUser({
+                                          variables: { _id: userId, name, email },
+                                        })
+                                      }
+                                      className="gap-2"
+                                    >
+                                      <Check className="h-4 w-4" />
+                                      Save Changes
+                                    </Button>
+                                    <Button variant="outline" onClick={() => setEditing(false)}>
+                                      Cancel
+                                    </Button>
+                                  </div>
                                 </div>
-                                <div className="space-y-2">
-                                  <Label htmlFor="settings-email">Email</Label>
-                                  <Input
-                                    id="settings-email"
-                                    type="email"
-                                    value={this.state.email}
-                                    onChange={(e) => this.setState({ email: e.target.value })}
-                                    className="bg-blue-50"
-                                  />
+                              )}
+                            </Mutation>
+                          ) : (
+                            <div className="space-y-4">
+                              <div className="flex items-start gap-3 p-3 bg-warm-gray-50 dark:bg-warm-gray-800/50 rounded-lg">
+                                <User className="h-5 w-5 text-muted-foreground mt-0.5" />
+                                <div>
+                                  <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                                    Name
+                                  </p>
+                                  <p className="font-medium text-foreground">{user.name}</p>
                                 </div>
-                                <div className="flex gap-2">
-                                  <Button variant="salmon" onClick={() => updateUser({
-                                    variables: { _id: userId, name: this.state.name, email: this.state.email }
-                                  })}>Save</Button>
-                                  <Button variant="outline" onClick={() => this.setState({ editing: false })}>Cancel</Button>
+                              </div>
+                              <div className="flex items-start gap-3 p-3 bg-warm-gray-50 dark:bg-warm-gray-800/50 rounded-lg">
+                                <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
+                                <div>
+                                  <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                                    Email
+                                  </p>
+                                  <p className="font-medium text-foreground">{user.email}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-start gap-3 p-3 bg-warm-gray-50 dark:bg-warm-gray-800/50 rounded-lg">
+                                <Settings className="h-5 w-5 text-muted-foreground mt-0.5" />
+                                <div>
+                                  <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                                    Role
+                                  </p>
+                                  <p className="font-medium text-foreground capitalize">
+                                    {user.userRole === "endUser" ? "Adopter" : "Shelter Staff"}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-sky-blue-600 dark:text-sky-blue-400 font-capriola text-lg flex items-center gap-2">
+                            <Calendar className="h-5 w-5" />
+                            Account
+                          </CardTitle>
+                          <CardDescription>Account information and activity</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            <div className="flex items-start gap-3 p-3 bg-warm-gray-50 dark:bg-warm-gray-800/50 rounded-lg">
+                              <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
+                              <div>
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                                  Member Since
+                                </p>
+                                <p className="font-medium text-foreground">
+                                  {new Date().toLocaleDateString("en-US", {
+                                    year: "numeric",
+                                    month: "long",
+                                  })}
+                                </p>
+                              </div>
+                            </div>
+                            {user.shelter && (
+                              <div className="flex items-start gap-3 p-3 bg-salmon-50 dark:bg-salmon-900/20 rounded-lg">
+                                <Building2 className="h-5 w-5 text-salmon-500 mt-0.5" />
+                                <div>
+                                  <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                                    Shelter
+                                  </p>
+                                  <p className="font-medium text-foreground">{user.shelter.name}</p>
                                 </div>
                               </div>
                             )}
-                          </Mutation>
-                        ) : (
-                          <div className="space-y-3">
-                            <div>
-                              <p className="text-xs text-muted-foreground uppercase">Name</p>
-                              <p className="font-medium text-gray-800">{user.name}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground uppercase">Email</p>
-                              <p className="font-medium text-gray-800">{user.email}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground uppercase">Role</p>
-                              <p className="font-medium text-gray-800 capitalize">{user.userRole === 'endUser' ? 'Adopter' : 'Shelter Staff'}</p>
-                            </div>
                           </div>
-                        )}
-                      </CardContent>
-                    </Card>
-
-                    <Card className="bg-white">
-                      <CardHeader>
-                        <CardTitle className="text-sky-blue font-capriola text-lg">Account</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          <div>
-                            <p className="text-xs text-muted-foreground uppercase">Member Since</p>
-                            <p className="font-medium text-gray-800">
-                              {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
-                            </p>
-                          </div>
-                          {user.shelter && (
-                            <div>
-                              <p className="text-xs text-muted-foreground uppercase">Shelter</p>
-                              <p className="font-medium text-gray-800">{user.shelter.name}</p>
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                );
-              }}
-            </Query>
-          );
-        }}
-      </ApolloConsumer>
-    );
-  }
-}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  );
+                }}
+              </Query>
+            );
+          }}
+        </ApolloConsumer>
+      </div>
+    </div>
+  );
+};
 
 export default withRouter(UserSettings);

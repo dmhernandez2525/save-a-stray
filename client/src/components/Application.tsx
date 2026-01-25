@@ -1,455 +1,472 @@
-import React, { Component, FormEvent } from "react";
+import React, { useState, FormEvent } from "react";
 import { Mutation } from "@apollo/client/react/components";
 import Mutations from "../graphql/mutations";
 import { withRouter, WithRouterProps } from "../util/withRouter";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Label } from "./ui/label";
-import { CreateApplicationResponse, ApplicationFormState } from "../types";
+import { CreateApplicationResponse } from "../types";
+import { CheckCircle2, User, Home, FileText, ArrowLeft, ArrowRight } from "lucide-react";
 
 const { CREATE_APPLICATION } = Mutations;
 
 const STEPS = [
-  { title: "Personal Information", description: "Tell us about yourself" },
-  { title: "Housing Details", description: "About your living situation" },
-  { title: "Review & Submit", description: "Confirm your application" },
+  { title: "Personal Info", icon: User, description: "Tell us about yourself" },
+  { title: "Housing", icon: Home, description: "About your living situation" },
+  { title: "Review", icon: FileText, description: "Confirm your application" },
 ];
 
 interface ApplicationProps extends WithRouterProps {
   animalId?: string;
 }
 
-interface ApplicationState extends ApplicationFormState {
-  currentStep: number;
-  stepErrors: Record<string, string>;
+interface FormState {
+  animalId: string;
+  userId: string;
+  firstName: string;
+  lastName: string;
+  streetAddress: string;
+  city: string;
+  state: string;
+  email: string;
+  phoneNumber: string;
+  housing: string;
+  housingType: string;
+  activityLevel: string;
 }
 
-class NewApplication extends Component<ApplicationProps, ApplicationState> {
-  constructor(props: ApplicationProps) {
-    super(props);
-    this.state = {
-      animalId: props.animalId || "",
-      userId: "",
-      applicationData: "",
-      firstName: "",
-      lastName: "",
-      streetAddress: "",
-      city: "",
-      state: "",
-      email: "",
-      phoneNumber: "",
-      housing: "",
-      housingType: "",
-      message: "",
-      activityLevel: "",
-      currentStep: 0,
-      stepErrors: {},
-    };
-    this.submitApp = this.submitApp.bind(this);
-  }
+const NewApplication: React.FC<ApplicationProps> = ({ animalId = "" }) => {
+  const [currentStep, setCurrentStep] = useState(0);
+  const [message, setMessage] = useState("");
+  const [stepErrors, setStepErrors] = useState<Record<string, string>>({});
+  const [form, setForm] = useState<FormState>({
+    animalId,
+    userId: "",
+    firstName: "",
+    lastName: "",
+    streetAddress: "",
+    city: "",
+    state: "",
+    email: "",
+    phoneNumber: "",
+    housing: "",
+    housingType: "",
+    activityLevel: "",
+  });
 
-  update(field: keyof ApplicationFormState) {
-    return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-      this.setState({
-        [field]: e.target.value,
-        stepErrors: {},
-      } as unknown as Pick<ApplicationState, keyof ApplicationState>);
-  }
+  const update = (field: keyof FormState) => (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    setForm({ ...form, [field]: e.target.value });
+    setStepErrors({});
+  };
 
-  validateStep(step: number): boolean {
+  const validateStep = (step: number): boolean => {
     const errors: Record<string, string> = {};
 
     if (step === 0) {
-      if (!this.state.firstName.trim()) errors.firstName = "First name is required";
-      if (!this.state.lastName.trim()) errors.lastName = "Last name is required";
-      if (!this.state.email.trim()) errors.email = "Email is required";
-      if (this.state.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.state.email)) {
+      if (!form.firstName.trim()) errors.firstName = "First name is required";
+      if (!form.lastName.trim()) errors.lastName = "Last name is required";
+      if (!form.email.trim()) errors.email = "Email is required";
+      if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
         errors.email = "Please enter a valid email";
       }
-      if (!this.state.phoneNumber.trim()) errors.phoneNumber = "Phone number is required";
-      else if (!/^[\d\s()+-]{7,20}$/.test(this.state.phoneNumber.trim())) {
+      if (!form.phoneNumber.trim()) errors.phoneNumber = "Phone number is required";
+      else if (!/^[\d\s()+-]{7,20}$/.test(form.phoneNumber.trim())) {
         errors.phoneNumber = "Please enter a valid phone number";
       }
     }
 
     if (step === 1) {
-      if (!this.state.streetAddress.trim()) errors.streetAddress = "Street address is required";
-      if (!this.state.city.trim()) errors.city = "City is required";
-      if (!this.state.state.trim()) errors.state = "State is required";
-      if (!this.state.housing.trim()) errors.housing = "Housing type is required";
-      if (!this.state.housingType.trim()) errors.housingType = "Own/Rent is required";
+      if (!form.streetAddress.trim()) errors.streetAddress = "Street address is required";
+      if (!form.city.trim()) errors.city = "City is required";
+      if (!form.state.trim()) errors.state = "State is required";
+      if (!form.housing.trim()) errors.housing = "Housing type is required";
+      if (!form.housingType.trim()) errors.housingType = "Own/Rent is required";
     }
 
     if (Object.keys(errors).length > 0) {
-      this.setState({ stepErrors: errors });
+      setStepErrors(errors);
       return false;
     }
     return true;
-  }
+  };
 
-  nextStep = () => {
-    if (this.validateStep(this.state.currentStep)) {
-      this.setState((prev) => ({ currentStep: prev.currentStep + 1 }));
+  const nextStep = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep((prev) => prev + 1);
     }
   };
 
-  prevStep = () => {
-    this.setState((prev) => ({
-      currentStep: Math.max(0, prev.currentStep - 1),
-      stepErrors: {},
-    }));
+  const prevStep = () => {
+    setCurrentStep((prev) => Math.max(0, prev - 1));
+    setStepErrors({});
   };
 
-  submitApp() {
-    this.setState({ message: "Application Successfully Submitted" });
-  }
+  const renderFieldError = (field: string) => {
+    const error = stepErrors[field];
+    if (!error) return null;
+    return <p className="text-destructive text-xs mt-1">{error}</p>;
+  };
 
-  renderStepIndicator() {
-    return (
-      <div className="flex items-center justify-between mb-6">
-        {STEPS.map((step, index) => (
+  const renderStepIndicator = () => (
+    <div className="flex items-center justify-between mb-8">
+      {STEPS.map((step, index) => {
+        const Icon = step.icon;
+        const isCompleted = index < currentStep;
+        const isCurrent = index === currentStep;
+
+        return (
           <div key={index} className="flex items-center flex-1">
             <div className="flex flex-col items-center flex-1">
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                  index < this.state.currentStep
+                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
+                  isCompleted
                     ? "bg-green-500 text-white"
-                    : index === this.state.currentStep
-                    ? "bg-sky-blue text-white"
-                    : "bg-gray-200 text-gray-500"
+                    : isCurrent
+                    ? "bg-sky-blue-500 text-white"
+                    : "bg-warm-gray-200 dark:bg-warm-gray-700 text-muted-foreground"
                 }`}
               >
-                {index < this.state.currentStep ? "\u2713" : index + 1}
+                {isCompleted ? (
+                  <CheckCircle2 className="h-5 w-5" />
+                ) : (
+                  <Icon className="h-5 w-5" />
+                )}
               </div>
-              <p className="text-xs mt-1 text-gray-600 text-center hidden sm:block">
+              <p className="text-xs mt-2 text-muted-foreground text-center hidden sm:block font-medium">
                 {step.title}
               </p>
             </div>
             {index < STEPS.length - 1 && (
               <div
-                className={`h-0.5 flex-1 mx-2 ${
-                  index < this.state.currentStep ? "bg-green-500" : "bg-gray-200"
+                className={`h-0.5 flex-1 mx-2 transition-colors ${
+                  isCompleted ? "bg-green-500" : "bg-warm-gray-200 dark:bg-warm-gray-700"
                 }`}
               />
             )}
           </div>
-        ))}
-      </div>
-    );
-  }
+        );
+      })}
+    </div>
+  );
 
-  renderFieldError(field: string) {
-    const error = this.state.stepErrors[field];
-    if (!error) return null;
-    return <p className="text-red-500 text-xs mt-1">{error}</p>;
-  }
+  const inputClassName = (fieldName: string) =>
+    `bg-sky-blue-50 dark:bg-warm-gray-800 border-warm-gray-200 dark:border-warm-gray-700 focus:border-sky-blue-500 focus:ring-sky-blue-500 ${
+      stepErrors[fieldName] ? "border-destructive" : ""
+    }`;
 
-  renderStep0() {
-    return (
-      <div className="space-y-4">
-        <p className="text-sm text-muted-foreground mb-4">
-          {STEPS[0].description}
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="firstName">First Name *</Label>
-            <Input
-              id="firstName"
-              value={this.state.firstName}
-              onChange={this.update("firstName")}
-              placeholder="First name"
-              className={`bg-blue-50 ${this.state.stepErrors.firstName ? "border-red-500" : ""}`}
-            />
-            {this.renderFieldError("firstName")}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="lastName">Last Name *</Label>
-            <Input
-              id="lastName"
-              value={this.state.lastName}
-              onChange={this.update("lastName")}
-              placeholder="Last name"
-              className={`bg-blue-50 ${this.state.stepErrors.lastName ? "border-red-500" : ""}`}
-            />
-            {this.renderFieldError("lastName")}
-          </div>
-        </div>
+  const selectClassName = (fieldName: string) =>
+    `flex h-10 w-full rounded-xl border px-3 py-2 text-sm bg-sky-blue-50 dark:bg-warm-gray-800 border-warm-gray-200 dark:border-warm-gray-700 focus:border-sky-blue-500 focus:ring-sky-blue-500 focus:outline-none ${
+      stepErrors[fieldName] ? "border-destructive" : ""
+    }`;
+
+  const renderStep0 = () => (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground mb-4">{STEPS[0].description}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="email">Email *</Label>
+          <Label htmlFor="firstName">First Name *</Label>
           <Input
-            id="email"
-            type="email"
-            value={this.state.email}
-            onChange={this.update("email")}
-            placeholder="your.email@example.com"
-            className={`bg-blue-50 ${this.state.stepErrors.email ? "border-red-500" : ""}`}
+            id="firstName"
+            value={form.firstName}
+            onChange={update("firstName")}
+            placeholder="First name"
+            className={inputClassName("firstName")}
           />
-          {this.renderFieldError("email")}
+          {renderFieldError("firstName")}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="phoneNumber">Phone Number *</Label>
+          <Label htmlFor="lastName">Last Name *</Label>
           <Input
-            id="phoneNumber"
-            value={this.state.phoneNumber}
-            onChange={this.update("phoneNumber")}
-            placeholder="(555) 123-4567"
-            className={`bg-blue-50 ${this.state.stepErrors.phoneNumber ? "border-red-500" : ""}`}
+            id="lastName"
+            value={form.lastName}
+            onChange={update("lastName")}
+            placeholder="Last name"
+            className={inputClassName("lastName")}
           />
-          {this.renderFieldError("phoneNumber")}
+          {renderFieldError("lastName")}
         </div>
       </div>
-    );
-  }
+      <div className="space-y-2">
+        <Label htmlFor="email">Email *</Label>
+        <Input
+          id="email"
+          type="email"
+          value={form.email}
+          onChange={update("email")}
+          placeholder="your.email@example.com"
+          className={inputClassName("email")}
+        />
+        {renderFieldError("email")}
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="phoneNumber">Phone Number *</Label>
+        <Input
+          id="phoneNumber"
+          value={form.phoneNumber}
+          onChange={update("phoneNumber")}
+          placeholder="(555) 123-4567"
+          className={inputClassName("phoneNumber")}
+        />
+        {renderFieldError("phoneNumber")}
+      </div>
+    </div>
+  );
 
-  renderStep1() {
-    return (
-      <div className="space-y-4">
-        <p className="text-sm text-muted-foreground mb-4">
-          {STEPS[1].description}
-        </p>
+  const renderStep1 = () => (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground mb-4">{STEPS[1].description}</p>
+      <div className="space-y-2">
+        <Label htmlFor="streetAddress">Street Address *</Label>
+        <Input
+          id="streetAddress"
+          value={form.streetAddress}
+          onChange={update("streetAddress")}
+          placeholder="123 Main St"
+          className={inputClassName("streetAddress")}
+        />
+        {renderFieldError("streetAddress")}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="streetAddress">Street Address *</Label>
+          <Label htmlFor="city">City *</Label>
           <Input
-            id="streetAddress"
-            value={this.state.streetAddress}
-            onChange={this.update("streetAddress")}
-            placeholder="123 Main St"
-            className={`bg-blue-50 ${this.state.stepErrors.streetAddress ? "border-red-500" : ""}`}
+            id="city"
+            value={form.city}
+            onChange={update("city")}
+            placeholder="City"
+            className={inputClassName("city")}
           />
-          {this.renderFieldError("streetAddress")}
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="city">City *</Label>
-            <Input
-              id="city"
-              value={this.state.city}
-              onChange={this.update("city")}
-              placeholder="City"
-              className={`bg-blue-50 ${this.state.stepErrors.city ? "border-red-500" : ""}`}
-            />
-            {this.renderFieldError("city")}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="state">State *</Label>
-            <Input
-              id="state"
-              value={this.state.state}
-              onChange={this.update("state")}
-              placeholder="State"
-              className={`bg-blue-50 ${this.state.stepErrors.state ? "border-red-500" : ""}`}
-            />
-            {this.renderFieldError("state")}
-          </div>
+          {renderFieldError("city")}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="housing">Housing Type *</Label>
-          <select
-            id="housing"
-            value={this.state.housing}
-            onChange={this.update("housing") as unknown as React.ChangeEventHandler<HTMLSelectElement>}
-            className={`flex h-10 w-full rounded-md border border-input bg-blue-50 px-3 py-2 text-sm ${
-              this.state.stepErrors.housing ? "border-red-500" : ""
-            }`}
-          >
-            <option value="">Select housing type...</option>
-            <option value="House">House</option>
-            <option value="Apartment">Apartment</option>
-            <option value="Condo">Condo</option>
-            <option value="Townhouse">Townhouse</option>
-            <option value="Other">Other</option>
-          </select>
-          {this.renderFieldError("housing")}
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="housingType">Do you own or rent? *</Label>
-          <select
-            id="housingType"
-            value={this.state.housingType}
-            onChange={this.update("housingType") as unknown as React.ChangeEventHandler<HTMLSelectElement>}
-            className={`flex h-10 w-full rounded-md border border-input bg-blue-50 px-3 py-2 text-sm ${
-              this.state.stepErrors.housingType ? "border-red-500" : ""
-            }`}
-          >
-            <option value="">Select...</option>
-            <option value="Own">Own</option>
-            <option value="Rent">Rent</option>
-          </select>
-          {this.renderFieldError("housingType")}
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="activityLevel">Activity Level</Label>
-          <select
-            id="activityLevel"
-            value={this.state.activityLevel}
-            onChange={this.update("activityLevel") as unknown as React.ChangeEventHandler<HTMLSelectElement>}
-            className="flex h-10 w-full rounded-md border border-input bg-blue-50 px-3 py-2 text-sm"
-          >
-            <option value="">Select activity level...</option>
-            <option value="Low">Low - Quiet household</option>
-            <option value="Moderate">Moderate - Some activity</option>
-            <option value="High">High - Very active household</option>
-          </select>
+          <Label htmlFor="state">State *</Label>
+          <Input
+            id="state"
+            value={form.state}
+            onChange={update("state")}
+            placeholder="State"
+            className={inputClassName("state")}
+          />
+          {renderFieldError("state")}
         </div>
       </div>
-    );
-  }
+      <div className="space-y-2">
+        <Label htmlFor="housing">Housing Type *</Label>
+        <select
+          id="housing"
+          value={form.housing}
+          onChange={update("housing")}
+          className={selectClassName("housing")}
+        >
+          <option value="">Select housing type...</option>
+          <option value="House">House</option>
+          <option value="Apartment">Apartment</option>
+          <option value="Condo">Condo</option>
+          <option value="Townhouse">Townhouse</option>
+          <option value="Other">Other</option>
+        </select>
+        {renderFieldError("housing")}
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="housingType">Do you own or rent? *</Label>
+        <select
+          id="housingType"
+          value={form.housingType}
+          onChange={update("housingType")}
+          className={selectClassName("housingType")}
+        >
+          <option value="">Select...</option>
+          <option value="Own">Own</option>
+          <option value="Rent">Rent</option>
+        </select>
+        {renderFieldError("housingType")}
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="activityLevel">Activity Level</Label>
+        <select
+          id="activityLevel"
+          value={form.activityLevel}
+          onChange={update("activityLevel")}
+          className={selectClassName("activityLevel")}
+        >
+          <option value="">Select activity level...</option>
+          <option value="Low">Low - Quiet household</option>
+          <option value="Moderate">Moderate - Some activity</option>
+          <option value="High">High - Very active household</option>
+        </select>
+      </div>
+    </div>
+  );
 
-  renderStep2() {
-    return (
-      <div className="space-y-4">
-        <p className="text-sm text-muted-foreground mb-4">
-          {STEPS[2].description}
-        </p>
-        <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-          <h3 className="font-semibold text-gray-800 border-b pb-2">Personal Information</h3>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div>
-              <span className="text-gray-500">Name:</span>
-              <p className="text-gray-800 font-medium">{this.state.firstName} {this.state.lastName}</p>
-            </div>
-            <div>
-              <span className="text-gray-500">Email:</span>
-              <p className="text-gray-800 font-medium">{this.state.email}</p>
-            </div>
-            <div>
-              <span className="text-gray-500">Phone:</span>
-              <p className="text-gray-800 font-medium">{this.state.phoneNumber}</p>
-            </div>
+  const renderStep2 = () => (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground mb-4">{STEPS[2].description}</p>
+      <div className="bg-sky-blue-50 dark:bg-warm-gray-800 rounded-xl p-4 sm:p-5 space-y-3">
+        <h3 className="font-semibold text-foreground border-b border-warm-gray-200 dark:border-warm-gray-700 pb-2 flex items-center gap-2">
+          <User className="h-4 w-4 text-sky-blue-500" />
+          Personal Information
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+          <div>
+            <span className="text-muted-foreground">Name:</span>
+            <p className="text-foreground font-medium">
+              {form.firstName} {form.lastName}
+            </p>
           </div>
-        </div>
-        <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-          <h3 className="font-semibold text-gray-800 border-b pb-2">Housing Details</h3>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div>
-              <span className="text-gray-500">Address:</span>
-              <p className="text-gray-800 font-medium">
-                {this.state.streetAddress}, {this.state.city}, {this.state.state}
-              </p>
-            </div>
-            <div>
-              <span className="text-gray-500">Housing:</span>
-              <p className="text-gray-800 font-medium">{this.state.housing} ({this.state.housingType})</p>
-            </div>
-            {this.state.activityLevel && (
-              <div>
-                <span className="text-gray-500">Activity Level:</span>
-                <p className="text-gray-800 font-medium">{this.state.activityLevel}</p>
-              </div>
-            )}
+          <div>
+            <span className="text-muted-foreground">Email:</span>
+            <p className="text-foreground font-medium">{form.email}</p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Phone:</span>
+            <p className="text-foreground font-medium">{form.phoneNumber}</p>
           </div>
         </div>
       </div>
-    );
-  }
+      <div className="bg-salmon-50 dark:bg-warm-gray-800 rounded-xl p-4 sm:p-5 space-y-3">
+        <h3 className="font-semibold text-foreground border-b border-warm-gray-200 dark:border-warm-gray-700 pb-2 flex items-center gap-2">
+          <Home className="h-4 w-4 text-salmon-500" />
+          Housing Details
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+          <div className="sm:col-span-2">
+            <span className="text-muted-foreground">Address:</span>
+            <p className="text-foreground font-medium">
+              {form.streetAddress}, {form.city}, {form.state}
+            </p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Housing:</span>
+            <p className="text-foreground font-medium">
+              {form.housing} ({form.housingType})
+            </p>
+          </div>
+          {form.activityLevel && (
+            <div>
+              <span className="text-muted-foreground">Activity Level:</span>
+              <p className="text-foreground font-medium">{form.activityLevel}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 
-  render() {
-    return (
-      <Mutation<CreateApplicationResponse>
-        mutation={CREATE_APPLICATION}
-        onCompleted={() => {
-          this.submitApp();
-        }}
-      >
-        {(createApplication, { loading, error }) => {
-          if (loading)
-            return (
-              <p className="text-white font-capriola animate-pulse">
-                Submitting...
-              </p>
-            );
-
-          const errorMessage = error?.graphQLErrors?.[0]?.message || "";
-
+  return (
+    <Mutation<CreateApplicationResponse>
+      mutation={CREATE_APPLICATION}
+      onCompleted={() => {
+        setMessage("Application Successfully Submitted");
+      }}
+    >
+      {(createApplication, { loading, error }) => {
+        if (loading) {
           return (
-            <Card className="w-full max-w-2xl mx-auto bg-white">
-              <CardHeader>
-                <CardTitle className="text-sky-blue font-capriola text-2xl text-center">
-                  Application for Adoption
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {this.state.message && (
-                  <p className="text-green-500 text-center mb-4 text-lg font-capriola">
-                    {this.state.message}
-                  </p>
-                )}
-                {errorMessage && (
-                  <p className="text-red-500 text-center mb-4">
-                    {errorMessage}
-                  </p>
-                )}
-
-                {!this.state.message && (
-                  <>
-                    {this.renderStepIndicator()}
-
-                    <form
-                      onSubmit={(e: FormEvent) => {
-                        e.preventDefault();
-                        if (this.state.currentStep === 2) {
-                          createApplication({
-                            variables: {
-                              animalId: this.state.animalId,
-                              userId: this.state.userId,
-                              applicationData: JSON.stringify({
-                                firstName: this.state.firstName,
-                                lastName: this.state.lastName,
-                                email: this.state.email,
-                                phoneNumber: this.state.phoneNumber,
-                                streetAddress: this.state.streetAddress,
-                                city: this.state.city,
-                                state: this.state.state,
-                                housing: this.state.housing,
-                                housingType: this.state.housingType,
-                                activityLevel: this.state.activityLevel,
-                              }),
-                            },
-                          });
-                        }
-                      }}
-                    >
-                      {this.state.currentStep === 0 && this.renderStep0()}
-                      {this.state.currentStep === 1 && this.renderStep1()}
-                      {this.state.currentStep === 2 && this.renderStep2()}
-
-                      <div className="flex justify-between mt-6">
-                        {this.state.currentStep > 0 ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={this.prevStep}
-                          >
-                            Back
-                          </Button>
-                        ) : (
-                          <div />
-                        )}
-                        {this.state.currentStep < 2 ? (
-                          <Button
-                            type="button"
-                            variant="salmon"
-                            onClick={this.nextStep}
-                          >
-                            Next
-                          </Button>
-                        ) : (
-                          <Button variant="salmon" type="submit">
-                            Submit Application
-                          </Button>
-                        )}
-                      </div>
-                    </form>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+            <div className="flex items-center justify-center p-12">
+              <div className="text-center">
+                <div className="w-12 h-12 border-4 border-sky-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-foreground font-capriola">Submitting your application...</p>
+              </div>
+            </div>
           );
-        }}
-      </Mutation>
-    );
-  }
-}
+        }
+
+        const errorMessage = error?.graphQLErrors?.[0]?.message || "";
+
+        return (
+          <Card className="w-full max-w-2xl mx-auto shadow-lg">
+            <CardHeader className="text-center pb-2">
+              <CardTitle className="text-sky-blue-600 dark:text-sky-blue-400 font-capriola text-2xl">
+                Application for Adoption
+              </CardTitle>
+              <CardDescription>
+                Complete the form below to submit your adoption application
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-4">
+              {message && (
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-6 text-center mb-4">
+                  <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-3" />
+                  <p className="text-green-700 dark:text-green-400 text-lg font-capriola">
+                    {message}
+                  </p>
+                  <p className="text-muted-foreground text-sm mt-2">
+                    We'll be in touch with you soon!
+                  </p>
+                </div>
+              )}
+              {errorMessage && (
+                <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-xl p-4 text-center mb-4">
+                  {errorMessage}
+                </div>
+              )}
+
+              {!message && (
+                <>
+                  {renderStepIndicator()}
+
+                  <form
+                    onSubmit={(e: FormEvent) => {
+                      e.preventDefault();
+                      if (currentStep === 2) {
+                        createApplication({
+                          variables: {
+                            animalId: form.animalId,
+                            userId: form.userId,
+                            applicationData: JSON.stringify({
+                              firstName: form.firstName,
+                              lastName: form.lastName,
+                              email: form.email,
+                              phoneNumber: form.phoneNumber,
+                              streetAddress: form.streetAddress,
+                              city: form.city,
+                              state: form.state,
+                              housing: form.housing,
+                              housingType: form.housingType,
+                              activityLevel: form.activityLevel,
+                            }),
+                          },
+                        });
+                      }
+                    }}
+                  >
+                    {currentStep === 0 && renderStep0()}
+                    {currentStep === 1 && renderStep1()}
+                    {currentStep === 2 && renderStep2()}
+
+                    <div className="flex justify-between mt-8 pt-6 border-t border-warm-gray-200 dark:border-warm-gray-700">
+                      {currentStep > 0 ? (
+                        <Button type="button" variant="outline" onClick={prevStep} className="gap-2">
+                          <ArrowLeft className="h-4 w-4" />
+                          <span className="hidden sm:inline">Back</span>
+                        </Button>
+                      ) : (
+                        <div />
+                      )}
+                      {currentStep < 2 ? (
+                        <Button type="button" variant="skyBlue" onClick={nextStep} className="gap-2">
+                          <span className="hidden sm:inline">Next</span>
+                          <ArrowRight className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <Button variant="salmon" type="submit" className="gap-2">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Submit Application
+                        </Button>
+                      )}
+                    </div>
+                  </form>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        );
+      }}
+    </Mutation>
+  );
+};
 
 export default withRouter(NewApplication);
