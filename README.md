@@ -14,13 +14,14 @@ Save A Stray addresses three key challenges faced by animal shelters:
 
 ### Key Features
 
-- **Animal Listings**: Browse adoptable pets with photos, video, breed tags, and status tracking
+- **Animal Listings**: Browse adoptable pets with photos, image galleries, video, breed tags, and status tracking
 - **Shelter Dashboard**: Shelters can add, edit, and manage their animals with application management
 - **Unified Registration**: Register as an adopter or shelter staff with inline shelter creation
 - **Adoption Applications**: Submit and track applications with status workflow (submitted → under review → approved/rejected)
 - **Favorites**: Save animals to your favorites list for quick access
 - **User Profile**: View your favorites and application history
 - **Search & Filters**: Find animals by type, breed, sex, color, age range, status, and name with pagination
+- **Success Stories**: Adopters can share their adoption stories with photos to inspire others
 - **OAuth Authentication**: Sign in with Google or Facebook
 - **Real-Time Sync**: <5 min listing updates to external platforms (planned)
 
@@ -140,6 +141,7 @@ cd client && npm run dev
 | `userFavorites` | `userId: ID!` | User's favorited animals |
 | `shelterApplications` | `shelterId: ID!` | Applications for shelter's animals |
 | `userApplications` | `userId: ID!` | User's submitted applications |
+| `successStories` | - | All success stories (newest first) |
 
 ### Mutations
 
@@ -156,6 +158,7 @@ cd client && npm run dev
 | `addFavorite` | Add animal to user's favorites |
 | `removeFavorite` | Remove animal from favorites |
 | `newShelter` | Create shelter |
+| `createSuccessStory` | Share an adoption success story |
 
 ---
 

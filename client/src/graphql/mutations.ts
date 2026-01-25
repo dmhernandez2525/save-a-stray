@@ -12,6 +12,7 @@ interface Mutations {
   REMOVE_FAVORITE: DocumentNode;
   CREATE_APPLICATION: DocumentNode;
   CREATE_SHELTER: DocumentNode;
+  CREATE_SUCCESS_STORY: DocumentNode;
 }
 
 const mutations: Mutations = {
@@ -166,6 +167,33 @@ const mutations: Mutations = {
         location
         paymentEmail
         _id
+      }
+    }
+  `,
+  CREATE_SUCCESS_STORY: gql`
+    mutation CreateSuccessStory(
+      $userId: String!
+      $animalName: String!
+      $animalType: String!
+      $title: String!
+      $story: String!
+      $image: String
+    ) {
+      createSuccessStory(
+        userId: $userId
+        animalName: $animalName
+        animalType: $animalType
+        title: $title
+        story: $story
+        image: $image
+      ) {
+        _id
+        animalName
+        animalType
+        title
+        story
+        image
+        createdAt
       }
     }
   `

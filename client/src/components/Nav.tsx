@@ -60,6 +60,12 @@ const Nav: React.FC<NavProps> = (props) => {
                       >
                         Profile
                       </Link>
+                      <Link
+                        to="/success-stories"
+                        className="font-capriola text-sky-blue no-underline self-center hover:underline hover:decoration-salmon text-sm"
+                      >
+                        Stories
+                      </Link>
                       {BackButton}
                     </div>
                   );

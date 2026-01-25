@@ -11,6 +11,7 @@ import Shelter from "./Shelter";
 import ShelterLanding from "./ShelterLanding";
 import Landing from "./Landing";
 import ProfilePage from "./ProfilePage";
+import SuccessStories from "./SuccessStories";
 import UserLanding from "./UserLanding";
 import AuthRoute from "../util/route_util";
 import ProtectedRoute from "../util/protected_route";
@@ -62,6 +63,7 @@ const App: React.FC = () => {
             path="/login"
             element={<AuthRoute element={<Login />} routeType="auth" />}
           />
+          <Route path="/success-stories" element={<SuccessStories />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/tos" element={<TermsOfService />} />
         </Routes>

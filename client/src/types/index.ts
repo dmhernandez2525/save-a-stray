@@ -133,6 +133,26 @@ export interface CreateShelterResponse {
   newShelter: Shelter;
 }
 
+// Success Story Types
+export interface SuccessStory {
+  _id: string;
+  userId: string;
+  animalName: string;
+  animalType: string;
+  title: string;
+  story: string;
+  image?: string;
+  createdAt: string;
+}
+
+export interface SuccessStoriesResponse {
+  successStories: SuccessStory[];
+}
+
+export interface CreateSuccessStoryResponse {
+  createSuccessStory: SuccessStory;
+}
+
 // Local State Types
 export interface IsLoggedInData {
   isLoggedIn: boolean;
