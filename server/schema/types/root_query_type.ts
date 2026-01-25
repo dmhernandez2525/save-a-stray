@@ -16,6 +16,8 @@ import ShelterType from './shelter_type';
 import SuccessStoryType from './success_story_type';
 import ShelterAnalyticsType from './shelter_analytics_type';
 import ReviewType from './review_type';
+import NotificationType from './notification_type';
+import { NotificationDocument } from '../../models/Notification';
 import { ApplicationDocument } from '../../models/Application';
 import { AnimalDocument } from '../../models/Animal';
 import { UserDocument } from '../../models/User';
@@ -29,6 +31,7 @@ const User = mongoose.model<UserDocument>('user');
 const Shelter = mongoose.model<ShelterDocument>('shelter');
 const SuccessStoryModel = mongoose.model<SuccessStoryDocument>('successStory');
 const ReviewModel = mongoose.model<ReviewDocument>('review');
+const NotificationModel = mongoose.model<NotificationDocument>('notification');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -141,6 +144,13 @@ const RootQueryType = new GraphQLObjectType({
       type: new GraphQLList(SuccessStoryType),
       resolve() {
         return SuccessStoryModel.find({}).sort({ createdAt: -1 });
+      }
+    },
+    userNotifications: {
+      type: new GraphQLList(NotificationType),
+      args: { userId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { userId: string }) {
+        return NotificationModel.find({ userId: args.userId }).sort({ createdAt: -1 }).limit(50);
       }
     },
     shelterReviews: {

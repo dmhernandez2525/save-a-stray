@@ -12,6 +12,7 @@ interface Queries {
   FETCH_ANIMAL: DocumentNode;
   SIMILAR_ANIMALS: DocumentNode;
   SHELTER_REVIEWS: DocumentNode;
+  USER_NOTIFICATIONS: DocumentNode;
   USER_FAVORITES: DocumentNode;
   USER_FAVORITE_IDS: DocumentNode;
   SUCCESS_STORIES: DocumentNode;
@@ -171,6 +172,18 @@ const queries: Queries = {
           description
           veterinarian
         }
+      }
+    }
+  `,
+  USER_NOTIFICATIONS: gql`
+    query UserNotifications($userId: ID!) {
+      userNotifications(userId: $userId) {
+        _id
+        message
+        type
+        read
+        link
+        createdAt
       }
     }
   `,
