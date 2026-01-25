@@ -2,15 +2,29 @@ import React, { Component } from "react";
 import { Link } from "react-router-dom";
 import { Query, Mutation } from "@apollo/client/react/components";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Shelter, Animal, AnimalStatus, FetchShelterResponse } from "../types";
 import Queries from "../graphql/queries";
 import Mutations from "../graphql/mutations";
 import ShelterApplications from "./ShelterApplications";
-import WaitlistManager from "./WaitlistManager";
+import ShelterAnalytics from "./ShelterAnalytics";
+import StaffManagement from "./StaffManagement";
+import BulkImport from "./BulkImport";
+import EventCalendar from "./EventCalendar";
+import DonationTracker from "./DonationTracker";
+import FosterManagement from "./FosterManagement";
+import ApplicationTemplateManager from "./ApplicationTemplateManager";
+import VerificationBadge from "./VerificationBadge";
+import ActivityFeed from "./ActivityFeed";
+import TerminalReaderManager from "./TerminalReaderManager";
+import MessagingPanel from "./MessagingPanel";
+import VolunteerManager from "./VolunteerManager";
+import { exportAnimalsCsv } from "../util/exportCsv";
 
 const { FETCH_SHELTER } = Queries;
-const { UPDATE_ANIMAL_STATUS } = Mutations;
+const { UPDATE_ANIMAL_STATUS, EDIT_SHELTER } = Mutations;
 
 const STATUS_STYLES: Record<AnimalStatus, string> = {
   available: "bg-green-500",
@@ -30,14 +44,28 @@ interface ShelterLandingProps {
   shelterInfo?: Shelter;
 }
 
+interface ContactFormState {
+  phone: string;
+  email: string;
+  website: string;
+  hours: string;
+  description: string;
+}
+
 interface ShelterLandingState {
   statusFilter: AnimalStatus | "all";
+  editingContact: boolean;
+  contactForm: ContactFormState;
 }
 
 class ShelterLanding extends Component<ShelterLandingProps, ShelterLandingState> {
   constructor(props: ShelterLandingProps) {
     super(props);
-    this.state = { statusFilter: "all" };
+    this.state = {
+      statusFilter: "all",
+      editingContact: false,
+      contactForm: { phone: '', email: '', website: '', hours: '', description: '' }
+    };
   }
 
   filterAnimals(animals: Animal[]): Animal[] {
@@ -84,18 +112,149 @@ class ShelterLanding extends Component<ShelterLandingProps, ShelterLandingState>
     );
   }
 
+  startEditContact(shelter: Shelter) {
+    this.setState({
+      editingContact: true,
+      contactForm: {
+        phone: shelter.phone || '',
+        email: shelter.email || '',
+        website: shelter.website || '',
+        hours: shelter.hours || '',
+        description: shelter.description || ''
+      }
+    });
+  }
+
+  updateContactField(field: keyof ContactFormState, value: string) {
+    this.setState((prev) => ({
+      contactForm: { ...prev.contactForm, [field]: value }
+    }));
+  }
+
+  renderContactInfo(shelter: Shelter) {
+    const hasContact = shelter.phone || shelter.email || shelter.website || shelter.hours || shelter.description;
+
+    if (this.state.editingContact) {
+      return (
+        <Mutation
+          mutation={EDIT_SHELTER}
+          refetchQueries={[{ query: FETCH_SHELTER, variables: { _id: shelter._id } }]}
+          onCompleted={() => this.setState({ editingContact: false })}
+        >
+          {(editShelter: (opts: { variables: Record<string, string> }) => void) => (
+            <Card className="bg-white mb-6">
+              <CardHeader>
+                <CardTitle className="text-sky-blue font-capriola text-lg">Edit Contact Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="contact-phone">Phone</Label>
+                    <Input id="contact-phone" value={this.state.contactForm.phone}
+                      onChange={(e) => this.updateContactField('phone', e.target.value)}
+                      placeholder="(555) 123-4567" className="bg-blue-50" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="contact-email">Contact Email</Label>
+                    <Input id="contact-email" value={this.state.contactForm.email}
+                      onChange={(e) => this.updateContactField('email', e.target.value)}
+                      placeholder="info@shelter.org" className="bg-blue-50" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="contact-website">Website</Label>
+                    <Input id="contact-website" value={this.state.contactForm.website}
+                      onChange={(e) => this.updateContactField('website', e.target.value)}
+                      placeholder="https://www.shelter.org" className="bg-blue-50" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="contact-hours">Hours</Label>
+                    <Input id="contact-hours" value={this.state.contactForm.hours}
+                      onChange={(e) => this.updateContactField('hours', e.target.value)}
+                      placeholder="Mon-Fri 9am-5pm" className="bg-blue-50" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="contact-description">About</Label>
+                  <Input id="contact-description" value={this.state.contactForm.description}
+                    onChange={(e) => this.updateContactField('description', e.target.value)}
+                    placeholder="Brief description of your shelter" className="bg-blue-50" />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button variant="salmon" onClick={() => editShelter({
+                    variables: {
+                      _id: shelter._id,
+                      name: shelter.name,
+                      location: shelter.location,
+                      paymentEmail: shelter.paymentEmail,
+                      ...this.state.contactForm
+                    }
+                  })}>Save</Button>
+                  <Button variant="outline" onClick={() => this.setState({ editingContact: false })}>Cancel</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </Mutation>
+      );
+    }
+
+    return (
+      <Card className="bg-white mb-6">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-sky-blue font-capriola text-lg">Contact Information</CardTitle>
+          <Button variant="ghost" size="sm" onClick={() => this.startEditContact(shelter)}>
+            Edit
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {!hasContact ? (
+            <p className="text-muted-foreground text-sm">
+              No contact information added yet. Click Edit to add your shelter&apos;s contact details.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              {shelter.phone && (
+                <div><span className="text-muted-foreground">Phone:</span> <span className="font-medium">{shelter.phone}</span></div>
+              )}
+              {shelter.email && (
+                <div><span className="text-muted-foreground">Email:</span> <span className="font-medium">{shelter.email}</span></div>
+              )}
+              {shelter.website && (
+                <div><span className="text-muted-foreground">Website:</span> <a href={shelter.website} target="_blank" rel="noopener noreferrer" className="font-medium text-sky-blue hover:underline">{shelter.website}</a></div>
+              )}
+              {shelter.hours && (
+                <div><span className="text-muted-foreground">Hours:</span> <span className="font-medium">{shelter.hours}</span></div>
+              )}
+              {shelter.description && (
+                <div className="col-span-full"><span className="text-muted-foreground">About:</span> <span className="font-medium">{shelter.description}</span></div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
   render() {
     const shelterId = this.props.shelterInfo?._id;
 
     return (
       <div className="max-w-4xl mx-auto p-4">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-white font-capriola text-3xl">
-            {this.props.shelterInfo?.name || "Shelter"} Dashboard
-          </h1>
-          <Button variant="salmon" size="lg" asChild>
-            <Link to="/newAnimal">+ Add Animal</Link>
-          </Button>
+          <div className="flex items-center gap-3">
+            <h1 className="text-white font-capriola text-3xl">
+              {this.props.shelterInfo?.name || "Shelter"} Dashboard
+            </h1>
+            <VerificationBadge
+              verified={this.props.shelterInfo?.verified}
+              verifiedAt={this.props.shelterInfo?.verifiedAt}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button variant="salmon" size="lg" asChild>
+              <Link to="/newAnimal">+ Add Animal</Link>
+            </Button>
+          </div>
         </div>
 
         {shelterId ? (
@@ -119,6 +278,8 @@ class ShelterLanding extends Component<ShelterLandingProps, ShelterLandingState>
 
               return (
                 <>
+                  {this.renderContactInfo(data?.shelter || {} as Shelter)}
+
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
                     {(["all", ...STATUS_OPTIONS] as const).map((filter) => (
                       <button
@@ -137,10 +298,19 @@ class ShelterLanding extends Component<ShelterLandingProps, ShelterLandingState>
                   </div>
 
                   <Card className="bg-white">
-                    <CardHeader>
+                    <CardHeader className="flex flex-row items-center justify-between">
                       <CardTitle className="text-sky-blue font-capriola">
                         Animals ({filtered.length})
                       </CardTitle>
+                      {animals.length > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => exportAnimalsCsv(animals, data?.shelter?.name || "shelter")}
+                        >
+                          Export CSV
+                        </Button>
+                      )}
                     </CardHeader>
                     <CardContent>
                       {filtered.length === 0 ? (
@@ -156,12 +326,54 @@ class ShelterLanding extends Component<ShelterLandingProps, ShelterLandingState>
                   </Card>
 
                   <div className="mt-6">
+                    <h2 className="text-white font-capriola text-xl mb-4">Analytics</h2>
+                    <ShelterAnalytics shelterId={shelterId} />
+                  </div>
+
+                  <div className="mt-6">
                     <h2 className="text-white font-capriola text-xl mb-4">Applications</h2>
                     <ShelterApplications shelterId={shelterId} />
                   </div>
 
                   <div className="mt-6">
-                    <WaitlistManager shelterId={shelterId} />
+                    <h2 className="text-white font-capriola text-xl mb-4">Staff</h2>
+                    <StaffManagement shelterId={shelterId} />
+                  </div>
+
+                  <div className="mt-6">
+                    <BulkImport shelterId={shelterId} />
+                  </div>
+
+                  <div className="mt-6">
+                    <EventCalendar shelterId={shelterId} />
+                  </div>
+
+                  <div className="mt-6">
+                    <DonationTracker shelterId={shelterId} />
+                  </div>
+
+                  <div className="mt-6">
+                    <FosterManagement shelterId={shelterId} />
+                  </div>
+
+                  <div className="mt-6">
+                    <ApplicationTemplateManager shelterId={shelterId} />
+                  </div>
+
+                  <div className="mt-6">
+                    <ActivityFeed shelterId={shelterId} />
+                  </div>
+
+                  <div className="mt-6">
+                    <TerminalReaderManager shelterId={shelterId} />
+                  </div>
+
+                  <div className="mt-6">
+                    <MessagingPanel shelterId={shelterId} currentUserId={shelterId} />
+                  </div>
+
+                  <div className="mt-6">
+                    <VolunteerManager shelterId={shelterId} />
                   </div>
                 </>
               );

@@ -14,6 +14,14 @@ export interface User {
 // Animal Types
 export type AnimalStatus = 'available' | 'pending' | 'adopted';
 
+export interface MedicalRecord {
+  _id?: string;
+  date: string;
+  recordType: string;
+  description: string;
+  veterinarian?: string;
+}
+
 export interface Animal {
   _id: string;
   name: string;
@@ -24,8 +32,10 @@ export interface Animal {
   color: string;
   description: string;
   image: string;
+  images?: string[];
   video: string;
   status: AnimalStatus;
+  medicalRecords?: MedicalRecord[];
   applications?: Application[];
 }
 
@@ -35,6 +45,13 @@ export interface Shelter {
   name: string;
   location: string;
   paymentEmail: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  hours?: string;
+  description?: string;
+  verified?: boolean;
+  verifiedAt?: string;
   animals?: Animal[];
   users?: User[];
 }
@@ -120,6 +137,10 @@ export interface FetchAnimalResponse {
   animal: Animal;
 }
 
+export interface SimilarAnimalsResponse {
+  similarAnimals: Animal[];
+}
+
 export interface CreateAnimalResponse {
   newAnimal: Animal;
 }
@@ -130,6 +151,212 @@ export interface CreateApplicationResponse {
 
 export interface CreateShelterResponse {
   newShelter: Shelter;
+}
+
+// Notification Types
+export interface AppNotification {
+  _id: string;
+  userId: string;
+  message: string;
+  type: string;
+  read: boolean;
+  link?: string;
+  createdAt: string;
+}
+
+export interface UserNotificationsResponse {
+  userNotifications: AppNotification[];
+}
+
+// Review Types
+export interface Review {
+  _id: string;
+  userId: string;
+  shelterId: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+}
+
+export interface ShelterReviewsResponse {
+  shelterReviews: Review[];
+}
+
+// Success Story Types
+export interface SuccessStory {
+  _id: string;
+  userId: string;
+  animalName: string;
+  animalType: string;
+  title: string;
+  story: string;
+  image?: string;
+  createdAt: string;
+}
+
+export interface SuccessStoriesResponse {
+  successStories: SuccessStory[];
+}
+
+export interface CreateSuccessStoryResponse {
+  createSuccessStory: SuccessStory;
+}
+
+// Shelter Analytics Types
+export interface ShelterAnalytics {
+  totalAnimals: number;
+  availableAnimals: number;
+  pendingAnimals: number;
+  adoptedAnimals: number;
+  adoptionRate: number;
+  totalApplications: number;
+  submittedApplications: number;
+  underReviewApplications: number;
+  approvedApplications: number;
+  rejectedApplications: number;
+  recentApplications: number;
+}
+
+export interface ShelterAnalyticsResponse {
+  shelterAnalytics: ShelterAnalytics;
+}
+
+export interface ShelterStaffMember {
+  _id: string;
+  name: string;
+  email: string;
+}
+
+export type ShelterEventType = 'adoption_day' | 'fundraiser' | 'volunteer' | 'education' | 'other';
+
+export interface ShelterEvent {
+  _id: string;
+  shelterId: string;
+  title: string;
+  description: string;
+  date: string;
+  endDate?: string;
+  location: string;
+  eventType: ShelterEventType;
+}
+
+export interface ShelterEventsResponse {
+  shelterEvents: ShelterEvent[];
+}
+
+export interface Donation {
+  _id: string;
+  shelterId: string;
+  userId?: string;
+  donorName: string;
+  amount: number;
+  message: string;
+  createdAt: string;
+}
+
+export interface ShelterDonationsResponse {
+  shelterDonations: Donation[];
+}
+
+export interface PlatformStats {
+  totalUsers: number;
+  totalShelters: number;
+  totalAnimals: number;
+  totalApplications: number;
+  availableAnimals: number;
+  adoptedAnimals: number;
+  totalDonations: number;
+}
+
+export interface PlatformStatsResponse {
+  platformStats: PlatformStats;
+}
+
+export interface ShelterStaffResponse {
+  shelterStaff: ShelterStaffMember[];
+}
+
+// Foster Types
+export type FosterStatus = 'active' | 'completed' | 'cancelled';
+
+export interface Foster {
+  _id: string;
+  shelterId: string;
+  animalId: string;
+  userId: string;
+  fosterName: string;
+  fosterEmail: string;
+  startDate: string;
+  endDate?: string;
+  status: FosterStatus;
+  notes: string;
+  createdAt: string;
+}
+
+export interface ShelterFostersResponse {
+  shelterFosters: Foster[];
+}
+
+// Saved Search Types
+export interface SavedSearchFilters {
+  type?: string;
+  breed?: string;
+  sex?: string;
+  color?: string;
+  status?: string;
+  minAge?: number;
+  maxAge?: number;
+}
+
+export interface SavedSearch {
+  _id: string;
+  userId: string;
+  name: string;
+  filters: SavedSearchFilters;
+  createdAt: string;
+}
+
+export interface UserSavedSearchesResponse {
+  userSavedSearches: SavedSearch[];
+}
+
+// Activity Log Types
+export type ActivityEntityType = 'animal' | 'application' | 'user' | 'shelter' | 'event' | 'donation';
+
+export interface ActivityLogEntry {
+  _id: string;
+  shelterId: string;
+  action: string;
+  entityType: ActivityEntityType;
+  entityId: string;
+  description: string;
+  createdAt: string;
+}
+
+export interface ShelterActivityLogResponse {
+  shelterActivityLog: ActivityLogEntry[];
+}
+
+// Application Template Types
+export type TemplateFieldType = 'text' | 'textarea' | 'select' | 'checkbox' | 'number';
+
+export interface TemplateField {
+  label: string;
+  fieldType: TemplateFieldType;
+  required: boolean;
+  options: string[];
+}
+
+export interface ApplicationTemplate {
+  _id: string;
+  shelterId: string;
+  name: string;
+  fields: TemplateField[];
+  createdAt: string;
+}
+
+export interface ShelterApplicationTemplatesResponse {
+  shelterApplicationTemplates: ApplicationTemplate[];
 }
 
 // Local State Types
@@ -175,6 +402,9 @@ export interface RegisterFormState {
   email: string;
   password: string;
   userRole: string;
+  shelterName: string;
+  shelterLocation: string;
+  shelterPaymentEmail: string;
 }
 
 export interface AnimalFormState {
@@ -185,6 +415,7 @@ export interface AnimalFormState {
   color: string;
   description: string;
   image: string;
+  images: string[];
   video: string;
   application: string;
 }
@@ -214,27 +445,76 @@ export interface ShelterFormState {
   animals: string;
 }
 
-// Waitlist Types
-export type WaitlistStatus = 'waiting' | 'notified' | 'expired' | 'adopted';
+// Terminal Reader Types
+export type TerminalReaderStatus = 'online' | 'offline';
 
-export interface WaitlistEntry {
+export interface TerminalReader {
   _id: string;
-  animalId: string;
+  shelterId: string;
+  stripeReaderId: string;
+  label: string;
+  deviceType: string;
+  serialNumber: string;
+  location: string;
+  status: TerminalReaderStatus;
+  registeredAt: string;
+}
+
+export interface ShelterTerminalReadersResponse {
+  shelterTerminalReaders: TerminalReader[];
+}
+
+export interface PaymentIntent {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  description: string;
+  clientSecret: string;
+}
+
+// Message Types
+export interface Message {
+  _id: string;
+  senderId: string;
+  recipientId: string;
+  shelterId: string;
+  content: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface ConversationMessagesResponse {
+  conversationMessages: Message[];
+}
+
+export interface ShelterConversationsResponse {
+  shelterConversations: Message[];
+}
+
+export interface UserConversationsResponse {
+  userConversations: Message[];
+}
+
+// Volunteer Types
+export type VolunteerStatus = 'active' | 'inactive' | 'pending';
+
+export interface Volunteer {
+  _id: string;
   shelterId: string;
   userId: string;
-  userName: string;
-  userEmail: string;
-  userPhone: string;
-  position: number;
-  status: WaitlistStatus;
+  name: string;
+  email: string;
+  phone: string;
+  skills: string[];
+  availability: string;
+  status: VolunteerStatus;
+  startDate: string;
+  totalHours: number;
   notes: string;
   createdAt: string;
 }
 
-export interface AnimalWaitlistResponse {
-  animalWaitlist: WaitlistEntry[];
-}
-
-export interface ShelterWaitlistsResponse {
-  shelterWaitlists: WaitlistEntry[];
+export interface ShelterVolunteersResponse {
+  shelterVolunteers: Volunteer[];
 }

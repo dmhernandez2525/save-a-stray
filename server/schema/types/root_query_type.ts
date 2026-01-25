@@ -6,24 +6,60 @@ import {
   GraphQLNonNull,
   GraphQLString,
   GraphQLInt,
+  GraphQLFloat,
   GraphQLFieldConfigMap
 } from 'graphql';
 import UserType from './user_type';
 import AnimalType from './animal_type';
 import ApplicationType from './application_type';
 import ShelterType from './shelter_type';
-import WaitlistType from './waitlist_type';
+import SuccessStoryType from './success_story_type';
+import ShelterAnalyticsType from './shelter_analytics_type';
+import ReviewType from './review_type';
+import NotificationType from './notification_type';
+import { NotificationDocument } from '../../models/Notification';
+import EventType from './event_type';
+import DonationType from './donation_type';
+import PlatformStatsType from './platform_stats_type';
+import FosterType from './foster_type';
+import SavedSearchType from './saved_search_type';
+import ApplicationTemplateType from './application_template_type';
+import ActivityLogType from './activity_log_type';
+import TerminalReaderType from './terminal_reader_type';
+import MessageType from './message_type';
+import VolunteerType from './volunteer_type';
+import { EventDocument } from '../../models/Event';
+import { DonationDocument } from '../../models/Donation';
+import { FosterDocument } from '../../models/Foster';
+import { SavedSearchDocument } from '../../models/SavedSearch';
+import { ApplicationTemplateDocument } from '../../models/ApplicationTemplate';
+import { ActivityLogDocument } from '../../models/ActivityLog';
+import { TerminalReaderDocument } from '../../models/TerminalReader';
+import { MessageDocument } from '../../models/Message';
+import { VolunteerDocument } from '../../models/Volunteer';
 import { ApplicationDocument } from '../../models/Application';
 import { AnimalDocument } from '../../models/Animal';
 import { UserDocument } from '../../models/User';
 import { ShelterDocument } from '../../models/Shelter';
-import { WaitlistDocument } from '../../models/Waitlist';
+import { SuccessStoryDocument } from '../../models/SuccessStory';
+import { ReviewDocument } from '../../models/Review';
 
 const Application = mongoose.model<ApplicationDocument>('application');
 const Animal = mongoose.model<AnimalDocument>('animal');
 const User = mongoose.model<UserDocument>('user');
 const Shelter = mongoose.model<ShelterDocument>('shelter');
-const WaitlistModel = mongoose.model<WaitlistDocument>('waitlist');
+const SuccessStoryModel = mongoose.model<SuccessStoryDocument>('successStory');
+const ReviewModel = mongoose.model<ReviewDocument>('review');
+const NotificationModel = mongoose.model<NotificationDocument>('notification');
+const EventModel = mongoose.model<EventDocument>('event');
+const DonationModel = mongoose.model<DonationDocument>('donation');
+const FosterModel = mongoose.model<FosterDocument>('foster');
+const SavedSearchModel = mongoose.model<SavedSearchDocument>('savedSearch');
+const ApplicationTemplateModel = mongoose.model<ApplicationTemplateDocument>('applicationTemplate');
+const ActivityLogModel = mongoose.model<ActivityLogDocument>('activityLog');
+const TerminalReaderModel = mongoose.model<TerminalReaderDocument>('terminalReader');
+const MessageModel = mongoose.model<MessageDocument>('message');
+const VolunteerModel = mongoose.model<VolunteerDocument>('volunteer');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -132,18 +168,258 @@ const RootQueryType = new GraphQLObjectType({
         return Shelter.findById(args._id);
       }
     },
-    animalWaitlist: {
-      type: new GraphQLList(WaitlistType),
-      args: { animalId: { type: new GraphQLNonNull(GraphQLID) } },
-      resolve(_, args: { animalId: string }) {
-        return WaitlistModel.find({ animalId: args.animalId, status: 'waiting' }).sort({ position: 1 });
+    shelterStaff: {
+      type: new GraphQLList(UserType),
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      async resolve(_, args: { shelterId: string }) {
+        const shelter = await Shelter.findById(args.shelterId);
+        if (!shelter || !shelter.users || shelter.users.length === 0) return [];
+        return User.find({ _id: { $in: shelter.users } });
       }
     },
-    shelterWaitlists: {
-      type: new GraphQLList(WaitlistType),
+    shelterEvents: {
+      type: new GraphQLList(EventType),
       args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
       resolve(_, args: { shelterId: string }) {
-        return WaitlistModel.find({ shelterId: args.shelterId }).sort({ createdAt: -1 });
+        return EventModel.find({ shelterId: args.shelterId }).sort({ date: 1 });
+      }
+    },
+    shelterDonations: {
+      type: new GraphQLList(DonationType),
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { shelterId: string }) {
+        return DonationModel.find({ shelterId: args.shelterId }).sort({ createdAt: -1 }).limit(50);
+      }
+    },
+    shelterFosters: {
+      type: new GraphQLList(FosterType),
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { shelterId: string }) {
+        return FosterModel.find({ shelterId: args.shelterId }).sort({ createdAt: -1 });
+      }
+    },
+    userSavedSearches: {
+      type: new GraphQLList(SavedSearchType),
+      args: { userId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { userId: string }) {
+        return SavedSearchModel.find({ userId: args.userId }).sort({ createdAt: -1 });
+      }
+    },
+    shelterApplicationTemplates: {
+      type: new GraphQLList(ApplicationTemplateType),
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { shelterId: string }) {
+        return ApplicationTemplateModel.find({ shelterId: args.shelterId }).sort({ createdAt: -1 });
+      }
+    },
+    shelterActivityLog: {
+      type: new GraphQLList(ActivityLogType),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        limit: { type: GraphQLInt }
+      },
+      resolve(_, args: { shelterId: string; limit?: number }) {
+        const limit = args.limit || 30;
+        return ActivityLogModel.find({ shelterId: args.shelterId }).sort({ createdAt: -1 }).limit(limit);
+      }
+    },
+    shelterTerminalReaders: {
+      type: new GraphQLList(TerminalReaderType),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) }
+      },
+      resolve(_, args: { shelterId: string }) {
+        return TerminalReaderModel.find({ shelterId: args.shelterId }).sort({ registeredAt: -1 });
+      }
+    },
+    conversationMessages: {
+      type: new GraphQLList(MessageType),
+      args: {
+        userId: { type: new GraphQLNonNull(GraphQLID) },
+        shelterId: { type: new GraphQLNonNull(GraphQLID) }
+      },
+      resolve(_, args: { userId: string; shelterId: string }) {
+        return MessageModel.find({
+          shelterId: args.shelterId,
+          $or: [
+            { senderId: args.userId },
+            { recipientId: args.userId }
+          ]
+        }).sort({ createdAt: 1 });
+      }
+    },
+    shelterConversations: {
+      type: new GraphQLList(MessageType),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) }
+      },
+      async resolve(_, args: { shelterId: string }) {
+        const messages = await MessageModel.find({ shelterId: args.shelterId }).sort({ createdAt: -1 });
+        const seen = new Set<string>();
+        const latest: MessageDocument[] = [];
+        for (const msg of messages) {
+          const otherId = msg.senderId === args.shelterId ? msg.recipientId : msg.senderId;
+          if (!seen.has(otherId)) {
+            seen.add(otherId);
+            latest.push(msg);
+          }
+        }
+        return latest;
+      }
+    },
+    userConversations: {
+      type: new GraphQLList(MessageType),
+      args: {
+        userId: { type: new GraphQLNonNull(GraphQLID) }
+      },
+      async resolve(_, args: { userId: string }) {
+        const messages = await MessageModel.find({
+          $or: [
+            { senderId: args.userId },
+            { recipientId: args.userId }
+          ]
+        }).sort({ createdAt: -1 });
+        const seen = new Set<string>();
+        const latest: MessageDocument[] = [];
+        for (const msg of messages) {
+          if (!seen.has(msg.shelterId)) {
+            seen.add(msg.shelterId);
+            latest.push(msg);
+          }
+        }
+        return latest;
+      }
+    },
+    shelterVolunteers: {
+      type: new GraphQLList(VolunteerType),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) }
+      },
+      resolve(_, args: { shelterId: string }) {
+        return VolunteerModel.find({ shelterId: args.shelterId }).sort({ createdAt: -1 });
+      }
+    },
+    platformStats: {
+      type: PlatformStatsType,
+      async resolve() {
+        const [totalUsers, totalShelters, totalAnimals, totalApplications, availableAnimals, adoptedAnimals, totalDonations] = await Promise.all([
+          User.countDocuments({}),
+          Shelter.countDocuments({}),
+          Animal.countDocuments({}),
+          Application.countDocuments({}),
+          Animal.countDocuments({ status: 'available' }),
+          Animal.countDocuments({ status: 'adopted' }),
+          DonationModel.countDocuments({})
+        ]);
+        return { totalUsers, totalShelters, totalAnimals, totalApplications, availableAnimals, adoptedAnimals, totalDonations };
+      }
+    },
+    successStories: {
+      type: new GraphQLList(SuccessStoryType),
+      resolve() {
+        return SuccessStoryModel.find({}).sort({ createdAt: -1 });
+      }
+    },
+    userNotifications: {
+      type: new GraphQLList(NotificationType),
+      args: { userId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { userId: string }) {
+        return NotificationModel.find({ userId: args.userId }).sort({ createdAt: -1 }).limit(50);
+      }
+    },
+    shelterReviews: {
+      type: new GraphQLList(ReviewType),
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { shelterId: string }) {
+        return ReviewModel.find({ shelterId: args.shelterId }).sort({ createdAt: -1 });
+      }
+    },
+    similarAnimals: {
+      type: new GraphQLList(AnimalType),
+      args: {
+        animalId: { type: new GraphQLNonNull(GraphQLID) },
+        limit: { type: GraphQLInt }
+      },
+      async resolve(_, args: { animalId: string; limit?: number }) {
+        const animal = await Animal.findById(args.animalId);
+        if (!animal) return [];
+        const limit = args.limit || 4;
+        // Find animals of same type, excluding current, preferring same breed
+        const sameBreed = await Animal.find({
+          _id: { $ne: args.animalId },
+          type: animal.type,
+          breed: animal.breed,
+          status: 'available'
+        }).limit(limit);
+        if (sameBreed.length >= limit) return sameBreed;
+        // Fill remaining slots with same type
+        const existingIds = sameBreed.map(a => a._id.toString());
+        existingIds.push(args.animalId);
+        const sameType = await Animal.find({
+          _id: { $nin: existingIds },
+          type: animal.type,
+          status: 'available'
+        }).limit(limit - sameBreed.length);
+        return [...sameBreed, ...sameType];
+      }
+    },
+    shelterAnalytics: {
+      type: ShelterAnalyticsType,
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      async resolve(_, args: { shelterId: string }) {
+        const shelter = await Shelter.findById(args.shelterId);
+        if (!shelter || !shelter.animals || shelter.animals.length === 0) {
+          return {
+            totalAnimals: 0,
+            availableAnimals: 0,
+            pendingAnimals: 0,
+            adoptedAnimals: 0,
+            adoptionRate: 0,
+            totalApplications: 0,
+            submittedApplications: 0,
+            underReviewApplications: 0,
+            approvedApplications: 0,
+            rejectedApplications: 0,
+            recentApplications: 0
+          };
+        }
+
+        const animalIds = shelter.animals.map((id) => id.toString());
+        const animals = await Animal.find({ _id: { $in: animalIds } });
+
+        const totalAnimals = animals.length;
+        const availableAnimals = animals.filter((a) => a.status === 'available').length;
+        const pendingAnimals = animals.filter((a) => a.status === 'pending').length;
+        const adoptedAnimals = animals.filter((a) => a.status === 'adopted').length;
+        const adoptionRate = totalAnimals > 0 ? (adoptedAnimals / totalAnimals) * 100 : 0;
+
+        const applications = await Application.find({ animalId: { $in: animalIds } });
+
+        const totalApplications = applications.length;
+        const submittedApplications = applications.filter((a) => a.status === 'submitted').length;
+        const underReviewApplications = applications.filter((a) => a.status === 'under_review').length;
+        const approvedApplications = applications.filter((a) => a.status === 'approved').length;
+        const rejectedApplications = applications.filter((a) => a.status === 'rejected').length;
+
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const recentApplications = applications.filter(
+          (a) => a.submittedAt && new Date(a.submittedAt) >= thirtyDaysAgo
+        ).length;
+
+        return {
+          totalAnimals,
+          availableAnimals,
+          pendingAnimals,
+          adoptedAnimals,
+          adoptionRate,
+          totalApplications,
+          submittedApplications,
+          underReviewApplications,
+          approvedApplications,
+          rejectedApplications,
+          recentApplications
+        };
       }
     }
   })

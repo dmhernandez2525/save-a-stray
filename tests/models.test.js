@@ -4,7 +4,10 @@ const mongoose = require('mongoose');
 const Animal = require('../server/models/Animal').default;
 const User = require('../server/models/User').default;
 const Shelter = require('../server/models/Shelter').default;
-const Waitlist = require('../server/models/Waitlist').default;
+const ActivityLog = require('../server/models/ActivityLog').default;
+const TerminalReader = require('../server/models/TerminalReader').default;
+const Message = require('../server/models/Message').default;
+const Volunteer = require('../server/models/Volunteer').default;
 
 describe('Mongoose Models Schema Tests', () => {
   describe('Animal Model', () => {
@@ -39,6 +42,12 @@ describe('Mongoose Models Schema Tests', () => {
       expect(animalSchema.status).toBeDefined();
       expect(animalSchema.status.enum).toEqual(['available', 'pending', 'adopted']);
       expect(animalSchema.status.default).toBe('available');
+    });
+
+    it('should have images array field with default empty array', () => {
+      const animalSchema = Animal.schema.obj;
+      expect(animalSchema.images).toBeDefined();
+      expect(animalSchema.images.type).toEqual([String]);
     });
 
     it('should have applications reference field', () => {
@@ -112,6 +121,46 @@ describe('Mongoose Models Schema Tests', () => {
     });
   });
 
+  describe('SuccessStory Model', () => {
+    const SuccessStory = require('../server/models/SuccessStory').default;
+
+    it('should be a valid mongoose model', () => {
+      expect(SuccessStory).toBeDefined();
+      expect(SuccessStory.modelName).toBe('successStory');
+    });
+
+    it('should have required fields defined in schema', () => {
+      const schema = SuccessStory.schema.obj;
+
+      expect(schema.userId).toBeDefined();
+      expect(schema.userId.required).toBe(true);
+
+      expect(schema.animalName).toBeDefined();
+      expect(schema.animalName.required).toBe(true);
+
+      expect(schema.animalType).toBeDefined();
+      expect(schema.animalType.required).toBe(true);
+
+      expect(schema.title).toBeDefined();
+      expect(schema.title.required).toBe(true);
+
+      expect(schema.story).toBeDefined();
+      expect(schema.story.required).toBe(true);
+    });
+
+    it('should have optional image field with default', () => {
+      const schema = SuccessStory.schema.obj;
+      expect(schema.image).toBeDefined();
+      expect(schema.image.default).toBe('');
+    });
+
+    it('should have createdAt field with Date type', () => {
+      const schema = SuccessStory.schema.obj;
+      expect(schema.createdAt).toBeDefined();
+      expect(schema.createdAt.type).toBe(Date);
+    });
+  });
+
   describe('Shelter Model', () => {
     it('should be a valid mongoose model', () => {
       expect(Shelter).toBeDefined();
@@ -142,37 +191,129 @@ describe('Mongoose Models Schema Tests', () => {
     });
   });
 
-  describe('Waitlist Model', () => {
+  describe('ActivityLog Model', () => {
     it('should have required fields defined in schema', () => {
-      const schema = Waitlist.schema.obj;
-      expect(schema.animalId).toBeDefined();
-      expect(schema.animalId.required).toBe(true);
+      const schema = ActivityLog.schema.obj;
       expect(schema.shelterId).toBeDefined();
       expect(schema.shelterId.required).toBe(true);
-      expect(schema.userName).toBeDefined();
-      expect(schema.userName.required).toBe(true);
-      expect(schema.userEmail).toBeDefined();
-      expect(schema.userEmail.required).toBe(true);
-      expect(schema.position).toBeDefined();
-      expect(schema.position.required).toBe(true);
+      expect(schema.action).toBeDefined();
+      expect(schema.action.required).toBe(true);
+      expect(schema.description).toBeDefined();
+      expect(schema.description.required).toBe(true);
     });
 
-    it('should have status with enum values and default to waiting', () => {
-      const schema = Waitlist.schema.obj;
-      expect(schema.status).toBeDefined();
-      expect(schema.status.enum).toEqual(['waiting', 'notified', 'expired', 'adopted']);
-      expect(schema.status.default).toBe('waiting');
+    it('should have entityType with enum values', () => {
+      const schema = ActivityLog.schema.obj;
+      expect(schema.entityType).toBeDefined();
+      expect(schema.entityType.required).toBe(true);
+      expect(schema.entityType.enum).toEqual(['animal', 'application', 'user', 'shelter', 'event', 'donation']);
     });
 
-    it('should have optional fields with defaults', () => {
-      const schema = Waitlist.schema.obj;
-      expect(schema.userId.default).toBe('');
-      expect(schema.userPhone.default).toBe('');
-      expect(schema.notes.default).toBe('');
+    it('should have entityId with default empty string', () => {
+      const schema = ActivityLog.schema.obj;
+      expect(schema.entityId).toBeDefined();
+      expect(schema.entityId.default).toBe('');
     });
 
     it('should have createdAt field with Date type', () => {
-      const schema = Waitlist.schema.obj;
+      const schema = ActivityLog.schema.obj;
+      expect(schema.createdAt).toBeDefined();
+      expect(schema.createdAt.type).toBe(Date);
+    });
+  });
+
+  describe('TerminalReader Model', () => {
+    it('should have required fields defined in schema', () => {
+      const schema = TerminalReader.schema.obj;
+      expect(schema.shelterId).toBeDefined();
+      expect(schema.shelterId.required).toBe(true);
+      expect(schema.stripeReaderId).toBeDefined();
+      expect(schema.stripeReaderId.required).toBe(true);
+      expect(schema.label).toBeDefined();
+      expect(schema.label.required).toBe(true);
+    });
+
+    it('should have status field with enum values', () => {
+      const schema = TerminalReader.schema.obj;
+      expect(schema.status).toBeDefined();
+      expect(schema.status.enum).toEqual(['online', 'offline']);
+      expect(schema.status.default).toBe('offline');
+    });
+
+    it('should have optional fields with defaults', () => {
+      const schema = TerminalReader.schema.obj;
+      expect(schema.deviceType.default).toBe('simulated');
+      expect(schema.serialNumber.default).toBe('');
+      expect(schema.location.default).toBe('');
+    });
+  });
+
+  describe('Message Model', () => {
+    it('should have required fields defined in schema', () => {
+      const schema = Message.schema.obj;
+      expect(schema.senderId).toBeDefined();
+      expect(schema.senderId.required).toBe(true);
+      expect(schema.recipientId).toBeDefined();
+      expect(schema.recipientId.required).toBe(true);
+      expect(schema.shelterId).toBeDefined();
+      expect(schema.shelterId.required).toBe(true);
+      expect(schema.content).toBeDefined();
+      expect(schema.content.required).toBe(true);
+    });
+
+    it('should have read field defaulting to false', () => {
+      const schema = Message.schema.obj;
+      expect(schema.read).toBeDefined();
+      expect(schema.read.default).toBe(false);
+    });
+
+    it('should have createdAt field with Date type', () => {
+      const schema = Message.schema.obj;
+      expect(schema.createdAt).toBeDefined();
+      expect(schema.createdAt.type).toBe(Date);
+    });
+  });
+
+  describe('Volunteer Model', () => {
+    it('should have required fields defined in schema', () => {
+      const schema = Volunteer.schema.obj;
+      expect(schema.shelterId).toBeDefined();
+      expect(schema.shelterId.required).toBe(true);
+      expect(schema.name).toBeDefined();
+      expect(schema.name.required).toBe(true);
+    });
+
+    it('should have contact fields with defaults', () => {
+      const schema = Volunteer.schema.obj;
+      expect(schema.email.default).toBe('');
+      expect(schema.phone.default).toBe('');
+    });
+
+    it('should have skills as array of strings', () => {
+      const schema = Volunteer.schema.obj;
+      expect(schema.skills).toBeDefined();
+      expect(schema.skills.type).toEqual([String]);
+      expect(schema.skills.default).toEqual([]);
+    });
+
+    it('should have status with enum values and default to pending', () => {
+      const schema = Volunteer.schema.obj;
+      expect(schema.status).toBeDefined();
+      expect(schema.status.enum).toEqual(['active', 'inactive', 'pending']);
+      expect(schema.status.default).toBe('pending');
+    });
+
+    it('should have totalHours defaulting to 0', () => {
+      const schema = Volunteer.schema.obj;
+      expect(schema.totalHours).toBeDefined();
+      expect(schema.totalHours.type).toBe(Number);
+      expect(schema.totalHours.default).toBe(0);
+    });
+
+    it('should have startDate and createdAt with Date type', () => {
+      const schema = Volunteer.schema.obj;
+      expect(schema.startDate).toBeDefined();
+      expect(schema.startDate.type).toBe(Date);
       expect(schema.createdAt).toBeDefined();
       expect(schema.createdAt.type).toBe(Date);
     });
