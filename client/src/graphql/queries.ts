@@ -29,6 +29,7 @@ interface Queries {
   USER_FAVORITE_IDS: DocumentNode;
   SUCCESS_STORIES: DocumentNode;
   SHELTER_BEHAVIOR_NOTES: DocumentNode;
+  SHELTER_ANNOUNCEMENTS: DocumentNode;
 }
 
 const queries: Queries = {
@@ -454,6 +455,21 @@ const queries: Queries = {
         author
         resolved
         resolvedAt
+        createdAt
+      }
+    }
+  `,
+  SHELTER_ANNOUNCEMENTS: gql`
+    query ShelterAnnouncements($shelterId: ID!) {
+      shelterAnnouncements(shelterId: $shelterId) {
+        _id
+        shelterId
+        title
+        content
+        category
+        author
+        pinned
+        active
         createdAt
       }
     }

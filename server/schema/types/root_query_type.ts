@@ -29,6 +29,7 @@ import TerminalReaderType from './terminal_reader_type';
 import MessageType from './message_type';
 import VolunteerType from './volunteer_type';
 import BehaviorNoteType from './behavior_note_type';
+import AnnouncementType from './announcement_type';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
 import { FosterDocument } from '../../models/Foster';
@@ -39,6 +40,7 @@ import { TerminalReaderDocument } from '../../models/TerminalReader';
 import { MessageDocument } from '../../models/Message';
 import { VolunteerDocument } from '../../models/Volunteer';
 import { BehaviorNoteDocument } from '../../models/BehaviorNote';
+import { AnnouncementDocument } from '../../models/Announcement';
 import { ApplicationDocument } from '../../models/Application';
 import { AnimalDocument } from '../../models/Animal';
 import { UserDocument } from '../../models/User';
@@ -63,6 +65,7 @@ const TerminalReaderModel = mongoose.model<TerminalReaderDocument>('terminalRead
 const MessageModel = mongoose.model<MessageDocument>('message');
 const VolunteerModel = mongoose.model<VolunteerDocument>('volunteer');
 const BehaviorNoteModel = mongoose.model<BehaviorNoteDocument>('behaviorNote');
+const AnnouncementModel = mongoose.model<AnnouncementDocument>('announcement');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -430,6 +433,13 @@ const RootQueryType = new GraphQLObjectType({
       args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
       resolve(_, args: { shelterId: string }) {
         return BehaviorNoteModel.find({ shelterId: args.shelterId }).sort({ createdAt: -1 });
+      }
+    },
+    shelterAnnouncements: {
+      type: new GraphQLList(AnnouncementType),
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { shelterId: string }) {
+        return AnnouncementModel.find({ shelterId: args.shelterId, active: true }).sort({ pinned: -1, createdAt: -1 });
       }
     }
   })

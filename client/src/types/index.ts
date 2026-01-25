@@ -539,3 +539,22 @@ export interface BehaviorNote {
 export interface ShelterBehaviorNotesResponse {
   shelterBehaviorNotes: BehaviorNote[];
 }
+
+// Announcement Types
+export type AnnouncementCategory = 'general' | 'event' | 'urgent' | 'adoption';
+
+export interface Announcement {
+  _id: string;
+  shelterId: string;
+  title: string;
+  content: string;
+  category: AnnouncementCategory;
+  author: string;
+  pinned: boolean;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface ShelterAnnouncementsResponse {
+  shelterAnnouncements: Announcement[];
+}

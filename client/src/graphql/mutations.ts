@@ -38,6 +38,9 @@ interface Mutations {
   MARK_MESSAGES_READ: DocumentNode;
   ADD_BEHAVIOR_NOTE: DocumentNode;
   RESOLVE_BEHAVIOR_NOTE: DocumentNode;
+  CREATE_ANNOUNCEMENT: DocumentNode;
+  TOGGLE_ANNOUNCEMENT_PIN: DocumentNode;
+  DELETE_ANNOUNCEMENT: DocumentNode;
 }
 
 const mutations: Mutations = {
@@ -711,6 +714,48 @@ const mutations: Mutations = {
         _id
         resolved
         resolvedAt
+      }
+    }
+  `,
+  CREATE_ANNOUNCEMENT: gql`
+    mutation CreateAnnouncement(
+      $shelterId: ID!
+      $title: String!
+      $content: String!
+      $category: String!
+      $author: String
+    ) {
+      createAnnouncement(
+        shelterId: $shelterId
+        title: $title
+        content: $content
+        category: $category
+        author: $author
+      ) {
+        _id
+        shelterId
+        title
+        content
+        category
+        author
+        pinned
+        active
+        createdAt
+      }
+    }
+  `,
+  TOGGLE_ANNOUNCEMENT_PIN: gql`
+    mutation ToggleAnnouncementPin($_id: ID!) {
+      toggleAnnouncementPin(_id: $_id) {
+        _id
+        pinned
+      }
+    }
+  `,
+  DELETE_ANNOUNCEMENT: gql`
+    mutation DeleteAnnouncement($_id: ID!) {
+      deleteAnnouncement(_id: $_id) {
+        _id
       }
     }
   `

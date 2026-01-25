@@ -34,6 +34,7 @@ import MessageType from './types/message_type';
 import VolunteerType from './types/volunteer_type';
 import PaymentIntentType from './types/payment_intent_type';
 import BehaviorNoteType from './types/behavior_note_type';
+import AnnouncementType from './types/announcement_type';
 import * as stripeTerminal from '../services/stripeTerminal';
 import { EventDocument } from '../models/Event';
 import { DonationDocument } from '../models/Donation';
@@ -47,6 +48,7 @@ import { VolunteerDocument } from '../models/Volunteer';
 import { ReviewDocument } from '../models/Review';
 import { NotificationDocument } from '../models/Notification';
 import { BehaviorNoteDocument } from '../models/BehaviorNote';
+import { AnnouncementDocument } from '../models/Announcement';
 
 const User = mongoose.model<UserDocument>('user');
 const Animal = mongoose.model<AnimalDocument>('animal');
@@ -65,6 +67,7 @@ const TerminalReaderModel = mongoose.model<TerminalReaderDocument>('terminalRead
 const MessageModel = mongoose.model<MessageDocument>('message');
 const VolunteerModel = mongoose.model<VolunteerDocument>('volunteer');
 const BehaviorNoteModel = mongoose.model<BehaviorNoteDocument>('behaviorNote');
+const AnnouncementModel = mongoose.model<AnnouncementDocument>('announcement');
 
 interface RegisterArgs {
   name: string;
@@ -1161,6 +1164,71 @@ const mutation = new GraphQLObjectType({
         note.resolvedAt = new Date();
         await note.save();
         return note;
+      }
+    },
+    createAnnouncement: {
+      type: AnnouncementType,
+      args: {
+        shelterId: { type: GraphQLID },
+        title: { type: GraphQLString },
+        content: { type: GraphQLString },
+        category: { type: GraphQLString },
+        author: { type: GraphQLString }
+      },
+      async resolve(_, args: {
+        shelterId: string;
+        title: string;
+        content: string;
+        category: string;
+        author?: string;
+      }) {
+        if (!args.shelterId) {
+          throw new Error('Shelter ID is required');
+        }
+        if (!args.title || args.title.length > 200) {
+          throw new Error('Title is required and must be less than 200 characters');
+        }
+        if (!args.content || args.content.length > 5000) {
+          throw new Error('Content is required and must be less than 5000 characters');
+        }
+
+        const announcement = new AnnouncementModel({
+          shelterId: args.shelterId,
+          title: args.title,
+          content: args.content,
+          category: args.category || 'general',
+          author: args.author || '',
+          pinned: false,
+          active: true,
+          createdAt: new Date()
+        });
+        await announcement.save();
+        return announcement;
+      }
+    },
+    toggleAnnouncementPin: {
+      type: AnnouncementType,
+      args: {
+        _id: { type: GraphQLID }
+      },
+      async resolve(_, args: { _id: string }) {
+        const announcement = await AnnouncementModel.findById(args._id);
+        if (!announcement) {
+          throw new Error('Announcement not found');
+        }
+        announcement.pinned = !announcement.pinned;
+        await announcement.save();
+        return announcement;
+      }
+    },
+    deleteAnnouncement: {
+      type: AnnouncementType,
+      args: {
+        _id: { type: GraphQLID }
+      },
+      async resolve(_, args: { _id: string }) {
+        const announcement = await AnnouncementModel.findByIdAndDelete(args._id);
+        return announcement;
       }
     }
   })
