@@ -11,8 +11,15 @@ import Message from './Message';
 import Volunteer from './Volunteer';
 import BehaviorNote from './BehaviorNote';
 import Announcement from './Announcement';
+import Microchip from './Microchip';
+import WeightRecord from './WeightRecord';
+import Vaccination from './Vaccination';
+import AdoptionFee from './AdoptionFee';
+import SpayNeuter from './SpayNeuter';
+import IntakeLog from './IntakeLog';
+import OutcomeLog from './OutcomeLog';
 
-export { User, Animal, Application, Shelter, Foster, SavedSearch, ApplicationTemplate, ActivityLog, TerminalReader, Message, Volunteer, BehaviorNote, Announcement };
+export { User, Animal, Application, Shelter, Foster, SavedSearch, ApplicationTemplate, ActivityLog, TerminalReader, Message, Volunteer, BehaviorNote, Announcement, Microchip, WeightRecord, Vaccination, AdoptionFee, SpayNeuter, IntakeLog, OutcomeLog };
 
 // Also import models to ensure they are registered with Mongoose
 import './User';
@@ -28,3 +35,10 @@ import './Message';
 import './Volunteer';
 import './BehaviorNote';
 import './Announcement';
+import './Microchip';
+import './WeightRecord';
+import './Vaccination';
+import './AdoptionFee';
+import './SpayNeuter';
+import './IntakeLog';
+import './OutcomeLog';
