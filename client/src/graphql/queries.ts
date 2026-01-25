@@ -440,6 +440,40 @@ const queries: Queries = {
         createdAt
       }
     }
+  `,
+  ANIMAL_WAITLIST: gql`
+    query AnimalWaitlist($animalId: ID!) {
+      animalWaitlist(animalId: $animalId) {
+        _id
+        animalId
+        shelterId
+        userId
+        userName
+        userEmail
+        userPhone
+        position
+        status
+        notes
+        createdAt
+      }
+    }
+  `,
+  SHELTER_WAITLISTS: gql`
+    query ShelterWaitlists($shelterId: ID!) {
+      shelterWaitlists(shelterId: $shelterId) {
+        _id
+        animalId
+        shelterId
+        userId
+        userName
+        userEmail
+        userPhone
+        position
+        status
+        notes
+        createdAt
+      }
+    }
   `
 };
 
