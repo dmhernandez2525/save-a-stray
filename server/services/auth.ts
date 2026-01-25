@@ -44,8 +44,18 @@ export const register = async (data: RegisterInput): Promise<UserAuthPayload> =>
 
     let resolvedShelterId = shelterId;
 
-    // If shelter fields are provided, create the shelter first
-    if (userRole === 'shelter' && shelterName && shelterLocation && shelterPaymentEmail) {
+    // Validate shelter registration - require all fields if role is shelter
+    if (userRole === 'shelter') {
+      if (!shelterName || !shelterLocation || !shelterPaymentEmail) {
+        throw new Error("Shelter registration requires name, location, and payment email");
+      }
+
+      // Check for shelter name uniqueness
+      const existingShelter = await Shelter.findOne({ name: shelterName });
+      if (existingShelter) {
+        throw new Error("A shelter with this name already exists");
+      }
+
       const newShelter = new Shelter({
         name: shelterName,
         location: shelterLocation,
@@ -74,7 +84,7 @@ export const register = async (data: RegisterInput): Promise<UserAuthPayload> =>
       }
     }
 
-    const token = jwt.sign({ id: user._id }, keys.secretOrKey);
+    const token = jwt.sign({ id: user._id }, keys.secretOrKey, { expiresIn: '7d' });
 
     return {
       token,
@@ -110,7 +120,7 @@ export const facebookRegister = async (data: FacebookProfile): Promise<UserAuthP
         throw new Error("Invalid credentials");
       }
 
-      const token = jwt.sign({ id: user._id }, keys.secretOrKey);
+      const token = jwt.sign({ id: user._id }, keys.secretOrKey, { expiresIn: '7d' });
 
       return {
         token,
@@ -134,7 +144,7 @@ export const facebookRegister = async (data: FacebookProfile): Promise<UserAuthP
 
     await user.save();
 
-    const token = jwt.sign({ id: user._id }, keys.secretOrKey);
+    const token = jwt.sign({ id: user._id }, keys.secretOrKey, { expiresIn: '7d' });
 
     return {
       token,
@@ -169,7 +179,7 @@ export const login = async (data: LoginInput): Promise<UserAuthPayload> => {
       throw new Error("Invalid credentials");
     }
 
-    const token = jwt.sign({ id: user._id }, keys.secretOrKey);
+    const token = jwt.sign({ id: user._id }, keys.secretOrKey, { expiresIn: '7d' });
 
     return {
       token,
