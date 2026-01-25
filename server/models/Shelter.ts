@@ -40,6 +40,13 @@ const ShelterSchema = new Schema<ShelterDocument>({
     type: String,
     default: ''
   },
+  verified: {
+    type: Boolean,
+    default: false
+  },
+  verifiedAt: {
+    type: Date
+  },
   animals: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'animal'

@@ -76,6 +76,8 @@ export interface IShelter {
   website?: string;
   hours?: string;
   description?: string;
+  verified?: boolean;
+  verifiedAt?: Date;
   animals: (Types.ObjectId | string)[];
 }
 

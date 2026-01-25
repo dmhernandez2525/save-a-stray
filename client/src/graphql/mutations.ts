@@ -29,6 +29,7 @@ interface Mutations {
   DELETE_SAVED_SEARCH: DocumentNode;
   CREATE_APPLICATION_TEMPLATE: DocumentNode;
   DELETE_APPLICATION_TEMPLATE: DocumentNode;
+  VERIFY_SHELTER: DocumentNode;
 }
 
 const mutations: Mutations = {
@@ -499,6 +500,15 @@ const mutations: Mutations = {
     mutation DeleteApplicationTemplate($_id: ID!) {
       deleteApplicationTemplate(_id: $_id) {
         _id
+      }
+    }
+  `,
+  VERIFY_SHELTER: gql`
+    mutation VerifyShelter($shelterId: ID!, $verified: Boolean!) {
+      verifyShelter(shelterId: $shelterId, verified: $verified) {
+        _id
+        verified
+        verifiedAt
       }
     }
   `

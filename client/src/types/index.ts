@@ -50,6 +50,8 @@ export interface Shelter {
   website?: string;
   hours?: string;
   description?: string;
+  verified?: boolean;
+  verifiedAt?: string;
   animals?: Animal[];
   users?: User[];
 }
