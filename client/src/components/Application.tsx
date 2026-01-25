@@ -68,6 +68,9 @@ class NewApplication extends Component<ApplicationProps, ApplicationState> {
         errors.email = "Please enter a valid email";
       }
       if (!this.state.phoneNumber.trim()) errors.phoneNumber = "Phone number is required";
+      else if (!/^[\d\s()+-]{7,20}$/.test(this.state.phoneNumber.trim())) {
+        errors.phoneNumber = "Please enter a valid phone number";
+      }
     }
 
     if (step === 1) {
