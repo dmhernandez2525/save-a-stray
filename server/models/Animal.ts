@@ -38,7 +38,13 @@ const AnimalSchema = new Schema<AnimalDocument>({
   },
   images: {
     type: [String],
-    default: []
+    default: [],
+    validate: {
+      validator: function(v: string[]) {
+        return v.length <= 10;
+      },
+      message: 'Maximum of 10 images allowed'
+    }
   },
   video: {
     type: String,

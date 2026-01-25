@@ -152,6 +152,12 @@ const mutation = new GraphQLObjectType({
       },
       async resolve(_, args: AnimalArgs) {
         const { name, type, breed, age, sex, color, description, image, images, video, status } = args;
+
+        // Validate image count
+        if (images && images.length > 10) {
+          throw new Error('Maximum of 10 images allowed');
+        }
+
         const newAnimal = new Animal({ name, type, breed: breed || '', age, sex, color, description, image, images: images || [], video, status: status || 'available' });
         await newAnimal.save();
         return newAnimal;
@@ -185,6 +191,12 @@ const mutation = new GraphQLObjectType({
       },
       async resolve(_, args: AnimalArgs & { _id: string }) {
         const { _id, name, type, breed, age, sex, color, description, image, images, video, status } = args;
+
+        // Validate image count
+        if (images && images.length > 10) {
+          throw new Error('Maximum of 10 images allowed');
+        }
+
         const animal = await Animal.findById(_id);
         if (animal) {
           animal.name = name;
