@@ -15,11 +15,11 @@ import {
 } from "./ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "./ui/sheet";
 import { IsLoggedInData, UserIdData } from "../types";
-import { PawPrint, Menu, User, Settings, LogOut, Heart, BookOpen, ChevronDown, X } from "lucide-react";
+import { PawPrint, Menu, User, Settings, LogOut, Heart, BookOpen, ChevronDown } from "lucide-react";
 
 const { IS_LOGGED_IN, USER_ID } = Queries;
 
-interface NavProps extends WithRouterProps {}
+type NavProps = WithRouterProps;
 
 const Nav: React.FC<NavProps> = (props) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

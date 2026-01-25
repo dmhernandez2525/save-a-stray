@@ -35,7 +35,7 @@ describe('User Settings Page', () => {
               <input id="email-input" data-testid="email-input" type="email" value={email}
                 onChange={e => setEmail(e.target.value)} />
               <button data-testid="save-btn" onClick={() => {
-                onSave && onSave({ name, email });
+                if (onSave) onSave({ name, email });
                 setEditing(false);
                 setMessage('Profile updated successfully.');
               }}>Save</button>

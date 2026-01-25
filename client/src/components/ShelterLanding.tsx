@@ -7,9 +7,7 @@ import { Label } from "./ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Skeleton } from "./ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Separator } from "./ui/separator";
 import { Shelter, Animal, AnimalStatus, FetchShelterResponse } from "../types";
 import Queries from "../graphql/queries";
 import Mutations from "../graphql/mutations";
@@ -39,7 +37,7 @@ import { exportAnimalsCsv } from "../util/exportCsv";
 import {
   PawPrint, Plus, Download, Search, Eye, Edit2,
   Phone, Mail, Globe, Clock, FileText, ChevronRight,
-  TrendingUp, Users, ClipboardList, Heart, CheckCircle2,
+  TrendingUp, ClipboardList, Heart, CheckCircle2,
   AlertCircle, XCircle
 } from "lucide-react";
 

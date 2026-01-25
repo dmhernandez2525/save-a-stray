@@ -15,7 +15,7 @@ import FavoriteButton from "./FavoriteButton";
 import SavedSearches from "./SavedSearches";
 import { FindAnimalsResponse, FindAnimalsVariables, Animal, UserIdData, AnimalStatus } from "../types";
 import {
-  Search, SlidersHorizontal, Grid3X3, List, Heart, MapPin,
+  Search, SlidersHorizontal, Grid3X3, List,
   Dog, Cat, Rabbit, X, ChevronRight, Sparkles
 } from "lucide-react";
 
@@ -60,7 +60,6 @@ const UserLanding: React.FC<UserLandingProps> = ({ splash }) => {
   const [hasMore, setHasMore] = useState(true);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
 
   // Debounce timer ref
   const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
@@ -103,7 +102,6 @@ const UserLanding: React.FC<UserLandingProps> = ({ splash }) => {
   const clearFilters = () => {
     setFilters({});
     setQueryFilters({});
-    setSearchQuery("");
     setHasMore(true);
   };
 
