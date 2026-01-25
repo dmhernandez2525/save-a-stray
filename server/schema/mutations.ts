@@ -1033,9 +1033,24 @@ const mutation = new GraphQLObjectType({
         notes: { type: GraphQLString }
       },
       async resolve(_, args: { shelterId: string; name: string; email?: string; phone?: string; skills?: string[]; availability?: string; notes?: string }) {
+        // Validate required fields
+        if (!args.shelterId || !args.name || !args.name.trim()) {
+          throw new Error('Shelter ID and volunteer name are required');
+        }
+
+        // Validate email format if provided
+        if (args.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(args.email)) {
+          throw new Error('Invalid email format');
+        }
+
+        // Validate skills limit
+        if (args.skills && args.skills.length > 20) {
+          throw new Error('Cannot specify more than 20 skills');
+        }
+
         const volunteer = new VolunteerModel({
           shelterId: args.shelterId,
-          name: args.name,
+          name: args.name.trim(),
           email: args.email || '',
           phone: args.phone || '',
           skills: args.skills || [],
@@ -1072,13 +1087,21 @@ const mutation = new GraphQLObjectType({
         hours: { type: GraphQLInt }
       },
       async resolve(_, args: { _id: string; hours: number }) {
-        const volunteer = await VolunteerModel.findById(args._id);
-        if (volunteer) {
-          volunteer.totalHours += args.hours;
-          await volunteer.save();
-          return volunteer;
+        // Validate hours
+        if (!args.hours || args.hours < 0) {
+          throw new Error('Hours must be a positive number');
         }
-        return null;
+        if (args.hours > 24) {
+          throw new Error('Cannot log more than 24 hours at once');
+        }
+
+        const volunteer = await VolunteerModel.findById(args._id);
+        if (!volunteer) {
+          throw new Error('Volunteer not found');
+        }
+        volunteer.totalHours += args.hours;
+        await volunteer.save();
+        return volunteer;
       }
     }
   })
