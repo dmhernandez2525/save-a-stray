@@ -8,6 +8,7 @@ import {
   GraphQLFieldConfigMap
 } from 'graphql';
 import { AnimalDocument } from '../../models/Animal';
+import MedicalRecordType from './medical_record_type';
 
 const Animal = mongoose.model<AnimalDocument>('animal');
 
@@ -40,6 +41,7 @@ const AnimalType: GraphQLObjectType = new GraphQLObjectType({
     video: { type: GraphQLString },
     description: { type: GraphQLString },
     status: { type: GraphQLString },
+    medicalRecords: { type: new GraphQLList(MedicalRecordType) },
     applications: {
       type: new GraphQLList(require("./application_type").default),
       resolve(parentValue: AnimalParentValue) {

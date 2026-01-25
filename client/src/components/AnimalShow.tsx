@@ -1,14 +1,16 @@
 import React from "react";
-import { Query } from "@apollo/client/react/components";
+import { Query, Mutation } from "@apollo/client/react/components";
 import Queries from "../graphql/queries";
 import NewApplication from "./Application";
 import { withRouter, WithRouterProps } from "../util/withRouter";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { FetchAnimalResponse, SimilarAnimalsResponse, AnimalStatus } from "../types";
+import { FetchAnimalResponse, SimilarAnimalsResponse, AnimalStatus, MedicalRecord } from "../types";
 import { Link } from "react-router-dom";
+import Mutations from "../graphql/mutations";
 
 const { FETCH_ANIMAL, SIMILAR_ANIMALS } = Queries;
+const { ADD_MEDICAL_RECORD } = Mutations;
 
 const STATUS_STYLES: Record<AnimalStatus, string> = {
   available: "bg-green-500 text-white",
@@ -184,6 +186,30 @@ class AnimalShow extends React.Component<AnimalShowProps, AnimalShowState> {
                     >
                       Your browser does not support the video tag.
                     </video>
+                  </CardContent>
+                </Card>
+              )}
+
+              {animal.medicalRecords && animal.medicalRecords.length > 0 && (
+                <Card className="bg-white mt-4">
+                  <CardHeader>
+                    <CardTitle className="text-sky-blue font-capriola text-lg">Medical History</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {animal.medicalRecords.map((record: MedicalRecord, idx: number) => (
+                        <div key={record._id || idx} className="border-l-4 border-sky-blue pl-3 py-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs bg-gray-100 px-2 py-0.5 rounded font-medium">{record.recordType}</span>
+                            <span className="text-xs text-muted-foreground">{record.date}</span>
+                          </div>
+                          <p className="text-sm text-gray-800 mt-1">{record.description}</p>
+                          {record.veterinarian && (
+                            <p className="text-xs text-muted-foreground mt-0.5">Vet: {record.veterinarian}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </CardContent>
                 </Card>
               )}

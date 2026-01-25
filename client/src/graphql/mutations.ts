@@ -14,6 +14,7 @@ interface Mutations {
   CREATE_APPLICATION: DocumentNode;
   CREATE_SHELTER: DocumentNode;
   EDIT_SHELTER: DocumentNode;
+  ADD_MEDICAL_RECORD: DocumentNode;
   CREATE_SUCCESS_STORY: DocumentNode;
 }
 
@@ -213,6 +214,32 @@ const mutations: Mutations = {
         website
         hours
         description
+      }
+    }
+  `,
+  ADD_MEDICAL_RECORD: gql`
+    mutation AddMedicalRecord(
+      $animalId: ID!
+      $date: String!
+      $recordType: String!
+      $description: String!
+      $veterinarian: String
+    ) {
+      addMedicalRecord(
+        animalId: $animalId
+        date: $date
+        recordType: $recordType
+        description: $description
+        veterinarian: $veterinarian
+      ) {
+        _id
+        medicalRecords {
+          _id
+          date
+          recordType
+          description
+          veterinarian
+        }
       }
     }
   `,
