@@ -25,12 +25,13 @@ interface AnimalShowProps extends WithRouterProps {}
 
 interface AnimalShowState {
   showApplication: boolean;
+  selectedImageIndex: number;
 }
 
 class AnimalShow extends React.Component<AnimalShowProps, AnimalShowState> {
   constructor(props: AnimalShowProps) {
     super(props);
-    this.state = { showApplication: false };
+    this.state = { showApplication: false, selectedImageIndex: 0 };
   }
 
   render() {
@@ -79,12 +80,43 @@ class AnimalShow extends React.Component<AnimalShowProps, AnimalShowState> {
 
               <Card className="bg-white overflow-hidden">
                 <div className="grid grid-cols-1 md:grid-cols-2">
-                  <div className="min-h-[300px] md:min-h-[400px]">
-                    <img
-                      src={animal.image}
-                      alt={animal.name}
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="flex flex-col">
+                    <div className="min-h-[300px] md:min-h-[400px] flex-1">
+                      {(() => {
+                        const allImages = [animal.image, ...(animal.images || [])].filter(Boolean);
+                        const currentImage = allImages[this.state.selectedImageIndex] || animal.image;
+                        return (
+                          <>
+                            <img
+                              src={currentImage}
+                              alt={`${animal.name} - Photo ${this.state.selectedImageIndex + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                            {allImages.length > 1 && (
+                              <div className="flex gap-2 p-2 bg-gray-100 overflow-x-auto">
+                                {allImages.map((img, idx) => (
+                                  <button
+                                    key={idx}
+                                    onClick={() => this.setState({ selectedImageIndex: idx })}
+                                    className={`w-16 h-16 flex-shrink-0 rounded overflow-hidden border-2 transition-colors ${
+                                      this.state.selectedImageIndex === idx
+                                        ? "border-sky-blue"
+                                        : "border-transparent hover:border-gray-300"
+                                    }`}
+                                  >
+                                    <img
+                                      src={img}
+                                      alt={`${animal.name} thumbnail ${idx + 1}`}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
                   </div>
                   <div className="p-6 flex flex-col">
                     <CardHeader className="p-0 mb-4">

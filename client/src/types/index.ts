@@ -24,6 +24,7 @@ export interface Animal {
   color: string;
   description: string;
   image: string;
+  images?: string[];
   video: string;
   status: AnimalStatus;
   applications?: Application[];
@@ -188,6 +189,7 @@ export interface AnimalFormState {
   color: string;
   description: string;
   image: string;
+  images: string[];
   video: string;
   application: string;
 }

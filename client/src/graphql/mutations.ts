@@ -76,6 +76,7 @@ const mutations: Mutations = {
       $color: String!
       $description: String!
       $image: String
+      $images: [String]
       $video: String
       $applications: ID
     ) {
@@ -87,6 +88,7 @@ const mutations: Mutations = {
         color: $color
         description: $description
         image: $image
+        images: $images
         video: $video
         applications: $applications
       ) {
@@ -96,6 +98,7 @@ const mutations: Mutations = {
         sex
         color
         description
+        images
       }
     }
   `,

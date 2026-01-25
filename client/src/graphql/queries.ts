@@ -152,6 +152,7 @@ const queries: Queries = {
         color
         description
         image
+        images
         video
         status
       }

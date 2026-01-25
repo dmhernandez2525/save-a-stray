@@ -330,6 +330,24 @@ describe('GraphQL Schema Tests', () => {
     expect(args).toContain('userId');
   });
 
+  it('should have images field on AnimalType', () => {
+    const AnimalType = require('../server/schema/types/animal_type').default;
+    const fields = AnimalType.getFields();
+
+    expect(fields.images).toBeDefined();
+  });
+
+  it('should have images arg on newAnimal and updateAnimal mutations', () => {
+    const schema = require('../server/schema/schema').default;
+    const mutationFields = schema._mutationType.getFields();
+
+    const newAnimalArgs = mutationFields.newAnimal.args.map(a => a.name);
+    expect(newAnimalArgs).toContain('images');
+
+    const updateAnimalArgs = mutationFields.updateAnimal.args.map(a => a.name);
+    expect(updateAnimalArgs).toContain('images');
+  });
+
   it('should have shelter registration args on register mutation', () => {
     const schema = require('../server/schema/schema').default;
     const mutationFields = schema._mutationType.getFields();
