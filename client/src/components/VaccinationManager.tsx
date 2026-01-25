@@ -314,7 +314,7 @@ class VaccinationManager extends Component<VaccinationManagerProps, VaccinationM
                           {vaccination.administeredBy && ` - by ${vaccination.administeredBy}`}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Administered: {this.formatDate(vaccination.administeredDate)}
+                          Administered: {this.formatDate(vaccination.administeredDate || vaccination.dateAdministered)}
                           {vaccination.expirationDate && ` | Expires: ${this.formatDate(vaccination.expirationDate)}`}
                         </p>
                         {vaccination.batchNumber && (

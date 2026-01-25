@@ -568,7 +568,10 @@ export interface Microchip {
   shelterId: string;
   chipNumber: string;
   manufacturer: string;
+  chipBrand?: string;
+  ownerName?: string;
   registrationDate: string;
+  registeredDate?: string;
   status: MicrochipStatus;
   createdAt: string;
 }
@@ -587,6 +590,7 @@ export interface WeightRecord {
   weight: number;
   unit: WeightUnit;
   notes: string;
+  recordedBy?: string;
   recordedAt: string;
   createdAt: string;
 }
@@ -595,8 +599,12 @@ export interface AnimalWeightRecordsResponse {
   animalWeightRecords: WeightRecord[];
 }
 
+export interface ShelterWeightRecordsResponse {
+  shelterWeightRecords: WeightRecord[];
+}
+
 // Vaccination Types
-export type VaccinationStatus = 'completed' | 'scheduled' | 'overdue';
+export type VaccinationStatus = 'current' | 'expired' | 'due';
 
 export interface Vaccination {
   _id: string;
@@ -604,7 +612,11 @@ export interface Vaccination {
   shelterId: string;
   vaccineName: string;
   dateAdministered: string;
+  administeredDate?: string;
+  administeredBy?: string;
   nextDueDate: string;
+  expirationDate?: string;
+  batchNumber?: string;
   veterinarian: string;
   status: VaccinationStatus;
   notes: string;
@@ -615,15 +627,28 @@ export interface AnimalVaccinationsResponse {
   animalVaccinations: Vaccination[];
 }
 
+export interface ShelterVaccinationsResponse {
+  shelterVaccinations: Vaccination[];
+}
+
 // Adoption Fee Types
+export type AdoptionFeeStatus = 'pending' | 'paid' | 'waived' | 'refunded';
+
 export interface AdoptionFee {
   _id: string;
   shelterId: string;
+  animalId?: string;
   animalType: string;
   baseFee: number;
+  amount?: number;
+  currency?: string;
   seniorDiscount: number;
   specialNeedsDiscount: number;
   description: string;
+  status?: AdoptionFeeStatus;
+  waived?: boolean;
+  waivedReason?: string;
+  paidBy?: string;
   active: boolean;
   createdAt: string;
 }
@@ -633,26 +658,36 @@ export interface ShelterAdoptionFeesResponse {
 }
 
 // Spay/Neuter Types
-export type SpayNeuterStatus = 'completed' | 'scheduled' | 'not_scheduled';
+export type SpayNeuterStatus = 'completed' | 'scheduled' | 'cancelled';
 
 export interface SpayNeuter {
   _id: string;
   animalId: string;
   shelterId: string;
   status: SpayNeuterStatus;
+  procedureType?: string;
   scheduledDate: string;
   completedDate: string;
   veterinarian: string;
+  clinic?: string;
   notes: string;
   createdAt: string;
 }
+
+// Alias for component compatibility
+export type SpayNeuterRecord = SpayNeuter;
 
 export interface AnimalSpayNeuterResponse {
   animalSpayNeuter: SpayNeuter;
 }
 
+export interface ShelterSpayNeuterResponse {
+  shelterSpayNeuter: SpayNeuter[];
+}
+
 // Intake Log Types
-export type IntakeType = 'stray' | 'owner_surrender' | 'transfer' | 'return' | 'born_in_shelter';
+export type IntakeType = 'stray' | 'surrender' | 'transfer' | 'return' | 'born_in_care';
+export type IntakeCondition = 'healthy' | 'injured' | 'sick' | 'unknown';
 
 export interface IntakeLog {
   _id: string;
@@ -663,6 +698,8 @@ export interface IntakeLog {
   source: string;
   condition: string;
   notes: string;
+  intakeNotes?: string;
+  receivedBy?: string;
   createdBy: string;
   createdAt: string;
 }
@@ -671,8 +708,13 @@ export interface AnimalIntakeLogsResponse {
   animalIntakeLogs: IntakeLog[];
 }
 
+export interface ShelterIntakeLogsResponse {
+  shelterIntakeLogs: IntakeLog[];
+}
+
 // Outcome Log Types
-export type OutcomeType = 'adoption' | 'transfer' | 'return_to_owner' | 'euthanasia' | 'died' | 'escaped';
+export type OutcomeType = 'adoption' | 'transfer' | 'return_to_owner' | 'euthanasia' | 'died' | 'escaped' | 'release' | 'other';
+export type OutcomeCondition = 'healthy' | 'injured' | 'sick' | 'unknown';
 
 export interface OutcomeLog {
   _id: string;
@@ -681,11 +723,18 @@ export interface OutcomeLog {
   outcomeType: OutcomeType;
   outcomeDate: string;
   destination: string;
+  condition?: string;
   notes: string;
+  outcomeNotes?: string;
+  processedBy?: string;
   createdBy: string;
   createdAt: string;
 }
 
 export interface AnimalOutcomeLogsResponse {
   animalOutcomeLogs: OutcomeLog[];
+}
+
+export interface ShelterOutcomeLogsResponse {
+  shelterOutcomeLogs: OutcomeLog[];
 }

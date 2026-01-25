@@ -298,8 +298,8 @@ class IntakeLogManager extends Component<IntakeLogManagerProps, IntakeLogManager
                             <span className="text-xs font-medium text-blue-700">
                               {INTAKE_TYPE_LABELS[log.intakeType]}
                             </span>
-                            <span className={`text-xs text-white px-2 py-0.5 rounded-full ${CONDITION_STYLES[log.condition]}`}>
-                              {CONDITION_LABELS[log.condition]}
+                            <span className={`text-xs text-white px-2 py-0.5 rounded-full ${CONDITION_STYLES[log.condition as IntakeCondition] || "bg-gray-500"}`}>
+                              {CONDITION_LABELS[log.condition as IntakeCondition] || log.condition}
                             </span>
                           </div>
                           <span className="text-xs text-muted-foreground">

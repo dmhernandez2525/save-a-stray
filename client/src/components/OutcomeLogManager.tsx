@@ -312,8 +312,8 @@ class OutcomeLogManager extends Component<OutcomeLogManagerProps, OutcomeLogMana
                             <span className={`text-xs text-white px-2 py-0.5 rounded-full ${OUTCOME_TYPE_STYLES[log.outcomeType]}`}>
                               {OUTCOME_TYPE_LABELS[log.outcomeType]}
                             </span>
-                            <span className={`text-xs text-white px-2 py-0.5 rounded-full ${CONDITION_STYLES[log.condition]}`}>
-                              {CONDITION_LABELS[log.condition]}
+                            <span className={`text-xs text-white px-2 py-0.5 rounded-full ${log.condition ? CONDITION_STYLES[log.condition as OutcomeCondition] || "bg-gray-500" : "bg-gray-500"}`}>
+                              {log.condition ? CONDITION_LABELS[log.condition as OutcomeCondition] || log.condition : "Unknown"}
                             </span>
                           </div>
                           <span className="text-xs text-muted-foreground">

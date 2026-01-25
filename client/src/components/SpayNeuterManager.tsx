@@ -229,7 +229,7 @@ class SpayNeuterManager extends Component<SpayNeuterManagerProps, SpayNeuterMana
             if (loading) return <p className="text-white animate-pulse">Loading records...</p>;
             if (error) return <p className="text-red-500">Error loading records</p>;
 
-            const records = data?.shelterSpayNeuterRecords || [];
+            const records = data?.shelterSpayNeuter || [];
             const filtered = this.filterRecords(records);
 
             if (filtered.length === 0) {

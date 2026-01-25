@@ -41,14 +41,23 @@ interface Mutations {
   CREATE_ANNOUNCEMENT: DocumentNode;
   TOGGLE_ANNOUNCEMENT_PIN: DocumentNode;
   DELETE_ANNOUNCEMENT: DocumentNode;
+  ADD_VOLUNTEER: DocumentNode;
+  UPDATE_VOLUNTEER_STATUS: DocumentNode;
+  LOG_VOLUNTEER_HOURS: DocumentNode;
   REGISTER_MICROCHIP: DocumentNode;
   UPDATE_MICROCHIP_STATUS: DocumentNode;
   ADD_WEIGHT_RECORD: DocumentNode;
+  DELETE_WEIGHT_RECORD: DocumentNode;
   ADD_VACCINATION: DocumentNode;
   UPDATE_VACCINATION_STATUS: DocumentNode;
   CREATE_ADOPTION_FEE: DocumentNode;
   UPDATE_ADOPTION_FEE: DocumentNode;
+  SET_ADOPTION_FEE: DocumentNode;
+  UPDATE_ADOPTION_FEE_STATUS: DocumentNode;
+  WAIVE_ADOPTION_FEE: DocumentNode;
   UPDATE_SPAY_NEUTER: DocumentNode;
+  SCHEDULE_SPAY_NEUTER: DocumentNode;
+  UPDATE_SPAY_NEUTER_STATUS: DocumentNode;
   CREATE_INTAKE_LOG: DocumentNode;
   CREATE_OUTCOME_LOG: DocumentNode;
 }
@@ -867,6 +876,62 @@ const mutations: Mutations = {
         animalId
         outcomeType
         outcomeDate
+      }
+    }
+  `,
+  DELETE_WEIGHT_RECORD: gql`
+    mutation DeleteWeightRecord($_id: ID!) {
+      deleteWeightRecord(_id: $_id) {
+        _id
+      }
+    }
+  `,
+  SET_ADOPTION_FEE: gql`
+    mutation SetAdoptionFee($animalId: ID!, $shelterId: ID!, $amount: Float!, $currency: String, $description: String) {
+      setAdoptionFee(animalId: $animalId, shelterId: $shelterId, amount: $amount, currency: $currency, description: $description) {
+        _id
+        animalId
+        amount
+        currency
+        status
+      }
+    }
+  `,
+  UPDATE_ADOPTION_FEE_STATUS: gql`
+    mutation UpdateAdoptionFeeStatus($_id: ID!, $status: String!, $paidBy: String) {
+      updateAdoptionFeeStatus(_id: $_id, status: $status, paidBy: $paidBy) {
+        _id
+        status
+        paidBy
+      }
+    }
+  `,
+  WAIVE_ADOPTION_FEE: gql`
+    mutation WaiveAdoptionFee($_id: ID!, $waivedReason: String) {
+      waiveAdoptionFee(_id: $_id, waivedReason: $waivedReason) {
+        _id
+        status
+        waived
+        waivedReason
+      }
+    }
+  `,
+  SCHEDULE_SPAY_NEUTER: gql`
+    mutation ScheduleSpayNeuter($animalId: ID!, $shelterId: ID!, $scheduledDate: String!, $veterinarian: String, $notes: String) {
+      scheduleSpayNeuter(animalId: $animalId, shelterId: $shelterId, scheduledDate: $scheduledDate, veterinarian: $veterinarian, notes: $notes) {
+        _id
+        animalId
+        status
+        scheduledDate
+      }
+    }
+  `,
+  UPDATE_SPAY_NEUTER_STATUS: gql`
+    mutation UpdateSpayNeuterStatus($_id: ID!, $status: String!, $completedDate: String) {
+      updateSpayNeuterStatus(_id: $_id, status: $status, completedDate: $completedDate) {
+        _id
+        status
+        completedDate
       }
     }
   `

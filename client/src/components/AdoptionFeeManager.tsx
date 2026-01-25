@@ -238,13 +238,13 @@ class AdoptionFeeManager extends Component<AdoptionFeeManagerProps, AdoptionFeeM
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2">
                             <span className="font-semibold text-gray-800">
-                              {this.getAnimalName(fee.animalId)}
+                              {fee.animalId ? this.getAnimalName(fee.animalId) : fee.animalType}
                             </span>
                             <span className="font-bold text-green-700">
-                              {this.formatCurrency(fee.amount, fee.currency)}
+                              {this.formatCurrency(fee.amount || fee.baseFee, fee.currency || "USD")}
                             </span>
-                            <span className={`text-xs text-white px-2 py-0.5 rounded-full ${STATUS_STYLES[fee.status]}`}>
-                              {STATUS_LABELS[fee.status]}
+                            <span className={`text-xs text-white px-2 py-0.5 rounded-full ${fee.status ? STATUS_STYLES[fee.status] : "bg-gray-500"}`}>
+                              {fee.status ? STATUS_LABELS[fee.status] : "N/A"}
                             </span>
                           </div>
                         </div>
