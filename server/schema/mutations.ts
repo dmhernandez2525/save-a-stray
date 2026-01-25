@@ -385,6 +385,20 @@ const mutation = new GraphQLObjectType({
       },
       async resolve(_, args: { userId: string; animalName: string; animalType: string; title: string; story: string; image?: string }) {
         const { userId, animalName, animalType, title, story, image } = args;
+
+        // Validate required fields
+        if (!userId || !animalName || !animalType || !title || !story) {
+          throw new Error('All fields are required');
+        }
+
+        // Validate length limits
+        if (title.length > 200) {
+          throw new Error('Title cannot exceed 200 characters');
+        }
+        if (story.length > 5000) {
+          throw new Error('Story cannot exceed 5000 characters');
+        }
+
         const successStory = new SuccessStoryModel({
           userId,
           animalName,
