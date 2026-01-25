@@ -1,24 +1,26 @@
-import React from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { ArrowLeft, Shield, Database, Cookie, Lock, Phone, User, Activity } from "lucide-react";
 
-const Privacy: React.FC = () => {
+/**
+ * Privacy policy page with structured sections about data collection and usage.
+ */
+export default function Privacy() {
   return (
     <div className="min-h-screen bg-background col-start-1 col-end-6 row-start-1 row-end-4">
       {/* Header */}
-      <div className="bg-gradient-to-r from-salmon-400 to-salmon-500 text-white">
+      <header className="bg-gradient-to-r from-salmon-400 to-salmon-500 text-white">
         <div className="container-wide py-8 md:py-12">
           <Link
             to="/"
             className="inline-flex items-center gap-2 text-white/80 hover:text-white transition-colors mb-4"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             Back to home
           </Link>
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
-              <Shield className="h-6 w-6" />
+              <Shield className="h-6 w-6" aria-hidden="true" />
             </div>
             <div>
               <h1 className="font-capriola text-3xl md:text-4xl">Privacy Policy</h1>
@@ -26,17 +28,15 @@ const Privacy: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="container-tight py-8 px-4">
+      <main className="container-tight py-8 px-4">
         <Card className="max-w-4xl mx-auto">
           <CardHeader>
             <CardTitle className="text-salmon-600 dark:text-salmon-400 font-capriola text-2xl">
               Privacy Policy
             </CardTitle>
-            <CardDescription>
-              Effective date: October 08, 2019
-            </CardDescription>
+            <CardDescription>Effective date: October 08, 2019</CardDescription>
           </CardHeader>
           <CardContent className="prose prose-sm max-w-none text-foreground space-y-6">
             <p className="text-muted-foreground">
@@ -46,20 +46,20 @@ const Privacy: React.FC = () => {
               Service and the choices you have associated with that data.
             </p>
 
-            <div className="bg-salmon-50 dark:bg-salmon-900/20 rounded-xl p-5">
+            <section className="bg-salmon-50 dark:bg-salmon-900/20 rounded-xl p-5">
               <h2 className="text-lg font-bold text-salmon-600 dark:text-salmon-400 flex items-center gap-2 mt-0 mb-3">
-                <Database className="h-5 w-5" />
+                <Database className="h-5 w-5" aria-hidden="true" />
                 Information Collection And Use
               </h2>
               <p className="text-muted-foreground mb-0">
                 We collect several different types of information for various
                 purposes to provide and improve our Service to you.
               </p>
-            </div>
+            </section>
 
-            <div className="bg-warm-gray-50 dark:bg-warm-gray-800/50 rounded-xl p-5">
+            <section className="bg-warm-gray-50 dark:bg-warm-gray-800/50 rounded-xl p-5">
               <h3 className="text-base font-semibold text-foreground flex items-center gap-2 mt-0 mb-3">
-                <User className="h-4 w-4 text-sky-blue-500" />
+                <User className="h-4 w-4 text-sky-blue-500" aria-hidden="true" />
                 Personal Data
               </h3>
               <p className="text-muted-foreground mb-3">
@@ -75,33 +75,33 @@ const Privacy: React.FC = () => {
                 <li>Address, State, Province, ZIP/Postal code, City</li>
                 <li>Cookies and Usage Data</li>
               </ul>
-            </div>
+            </section>
 
-            <div className="bg-warm-gray-50 dark:bg-warm-gray-800/50 rounded-xl p-5">
+            <section className="bg-warm-gray-50 dark:bg-warm-gray-800/50 rounded-xl p-5">
               <h3 className="text-base font-semibold text-foreground flex items-center gap-2 mt-0 mb-3">
-                <Activity className="h-4 w-4 text-sky-blue-500" />
+                <Activity className="h-4 w-4 text-sky-blue-500" aria-hidden="true" />
                 Usage Data
               </h3>
               <p className="text-muted-foreground mb-0">
                 We may also collect information how the Service is accessed and used
                 ("Usage Data").
               </p>
-            </div>
+            </section>
 
-            <div className="bg-warm-gray-50 dark:bg-warm-gray-800/50 rounded-xl p-5">
+            <section className="bg-warm-gray-50 dark:bg-warm-gray-800/50 rounded-xl p-5">
               <h3 className="text-base font-semibold text-foreground flex items-center gap-2 mt-0 mb-3">
-                <Cookie className="h-4 w-4 text-salmon-500" />
+                <Cookie className="h-4 w-4 text-salmon-500" aria-hidden="true" />
                 Tracking & Cookies Data
               </h3>
               <p className="text-muted-foreground mb-0">
                 We use cookies and similar tracking technologies to track the
                 activity on our Service and hold certain information.
               </p>
-            </div>
+            </section>
 
-            <div className="bg-sky-blue-50 dark:bg-sky-blue-900/20 rounded-xl p-5">
+            <section className="bg-sky-blue-50 dark:bg-sky-blue-900/20 rounded-xl p-5">
               <h2 className="text-lg font-bold text-sky-blue-600 dark:text-sky-blue-400 flex items-center gap-2 mt-0 mb-3">
-                <Database className="h-5 w-5" />
+                <Database className="h-5 w-5" aria-hidden="true" />
                 Use of Data
               </h2>
               <p className="text-muted-foreground mb-3">
@@ -114,11 +114,11 @@ const Privacy: React.FC = () => {
                 <li>To monitor the usage of the Service</li>
                 <li>To detect, prevent and address technical issues</li>
               </ul>
-            </div>
+            </section>
 
-            <div className="bg-warm-gray-50 dark:bg-warm-gray-800/50 rounded-xl p-5">
+            <section className="bg-warm-gray-50 dark:bg-warm-gray-800/50 rounded-xl p-5">
               <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mt-0 mb-3">
-                <Lock className="h-5 w-5 text-green-500" />
+                <Lock className="h-5 w-5 text-green-500" aria-hidden="true" />
                 Security Of Data
               </h2>
               <p className="text-muted-foreground mb-0">
@@ -126,23 +126,21 @@ const Privacy: React.FC = () => {
                 method of transmission over the Internet, or method of electronic
                 storage is 100% secure.
               </p>
-            </div>
+            </section>
 
-            <div className="border-t border-warm-gray-200 dark:border-warm-gray-700 pt-6">
+            <section className="border-t border-warm-gray-200 dark:border-warm-gray-700 pt-6">
               <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mt-0 mb-3">
-                <Phone className="h-5 w-5 text-salmon-500" />
+                <Phone className="h-5 w-5 text-salmon-500" aria-hidden="true" />
                 Contact Us
               </h2>
               <p className="text-muted-foreground mb-0">
                 If you have any questions about this Privacy Policy, please contact
                 us by phone: 217-508-9193
               </p>
-            </div>
+            </section>
           </CardContent>
         </Card>
-      </div>
+      </main>
     </div>
   );
-};
-
-export default Privacy;
+}
