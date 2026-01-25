@@ -37,6 +37,11 @@ export interface Animal {
   status: AnimalStatus;
   medicalRecords?: MedicalRecord[];
   applications?: Application[];
+  shelter?: {
+    _id: string;
+    name: string;
+    location?: string;
+  };
 }
 
 // Shelter Types

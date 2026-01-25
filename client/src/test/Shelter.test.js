@@ -358,7 +358,7 @@ describe('Shelter Contact Information', () => {
             onChange={e => setForm({...form, hours: e.target.value})} placeholder="Hours" />
           <input data-testid="edit-description" value={form.description}
             onChange={e => setForm({...form, description: e.target.value})} placeholder="About" />
-          <button data-testid="save-contact" onClick={() => { onEdit && onEdit(form); setEditing(false); }}>Save</button>
+          <button data-testid="save-contact" onClick={() => { if (onEdit) onEdit(form); setEditing(false); }}>Save</button>
           <button data-testid="cancel-edit" onClick={() => setEditing(false)}>Cancel</button>
         </div>
       );
