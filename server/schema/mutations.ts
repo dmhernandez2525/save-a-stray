@@ -18,12 +18,15 @@ import { AnimalDocument } from '../models/Animal';
 import { ApplicationDocument } from '../models/Application';
 import { ShelterDocument } from '../models/Shelter';
 import { SuccessStoryDocument } from '../models/SuccessStory';
+import ReviewType from './types/review_type';
+import { ReviewDocument } from '../models/Review';
 
 const User = mongoose.model<UserDocument>('user');
 const Animal = mongoose.model<AnimalDocument>('animal');
 const Application = mongoose.model<ApplicationDocument>('application');
 const Shelter = mongoose.model<ShelterDocument>('shelter');
 const SuccessStoryModel = mongoose.model<SuccessStoryDocument>('successStory');
+const ReviewModel = mongoose.model<ReviewDocument>('review');
 
 interface RegisterArgs {
   name: string;
@@ -301,6 +304,49 @@ const mutation = new GraphQLObjectType({
           return application;
         }
         return null;
+      }
+    },
+    createReview: {
+      type: ReviewType,
+      args: {
+        userId: { type: GraphQLString },
+        shelterId: { type: GraphQLString },
+        rating: { type: GraphQLInt },
+        comment: { type: GraphQLString }
+      },
+      async resolve(_, args: { userId: string; shelterId: string; rating: number; comment?: string }) {
+        // Validate required fields
+        if (!args.userId || !args.shelterId) {
+          throw new Error('User ID and Shelter ID are required');
+        }
+
+        // Validate rating range
+        if (args.rating < 1 || args.rating > 5) {
+          throw new Error('Rating must be between 1 and 5');
+        }
+
+        // Validate comment length
+        if (args.comment && args.comment.length > 2000) {
+          throw new Error('Comment cannot exceed 2000 characters');
+        }
+
+        // Check if user already reviewed this shelter
+        const existingReview = await ReviewModel.findOne({
+          userId: args.userId,
+          shelterId: args.shelterId
+        });
+        if (existingReview) {
+          throw new Error('You have already reviewed this shelter');
+        }
+
+        const review = new ReviewModel({
+          userId: args.userId,
+          shelterId: args.shelterId,
+          rating: args.rating,
+          comment: args.comment || ''
+        });
+        await review.save();
+        return review;
       }
     },
     addMedicalRecord: {

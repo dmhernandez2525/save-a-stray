@@ -151,6 +151,20 @@ export interface CreateShelterResponse {
   newShelter: Shelter;
 }
 
+// Review Types
+export interface Review {
+  _id: string;
+  userId: string;
+  shelterId: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+}
+
+export interface ShelterReviewsResponse {
+  shelterReviews: Review[];
+}
+
 // Success Story Types
 export interface SuccessStory {
   _id: string;
