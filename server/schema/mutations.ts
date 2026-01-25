@@ -608,6 +608,25 @@ const mutation = new GraphQLObjectType({
         shelterId: { type: GraphQLID }
       },
       async resolve(_, args: { animals: Array<{ name: string; type: string; breed?: string; age: number; sex: string; color: string; description: string; image?: string; video?: string }>; shelterId?: string }) {
+        // Validate bulk import limit
+        if (!args.animals || args.animals.length === 0) {
+          throw new Error('At least one animal is required');
+        }
+        if (args.animals.length > 100) {
+          throw new Error('Cannot import more than 100 animals at once');
+        }
+
+        // Validate each animal has required fields
+        for (let i = 0; i < args.animals.length; i++) {
+          const animal = args.animals[i];
+          if (!animal.name || !animal.type || !animal.sex || !animal.color || !animal.description) {
+            throw new Error(`Animal at index ${i} is missing required fields`);
+          }
+          if (animal.age < 0) {
+            throw new Error(`Animal at index ${i} has invalid age`);
+          }
+        }
+
         const created = [];
         for (const animalData of args.animals) {
           const newAnimal = new Animal({
