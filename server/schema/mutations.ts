@@ -315,6 +315,30 @@ const mutation = new GraphQLObjectType({
         comment: { type: GraphQLString }
       },
       async resolve(_, args: { userId: string; shelterId: string; rating: number; comment?: string }) {
+        // Validate required fields
+        if (!args.userId || !args.shelterId) {
+          throw new Error('User ID and Shelter ID are required');
+        }
+
+        // Validate rating range
+        if (args.rating < 1 || args.rating > 5) {
+          throw new Error('Rating must be between 1 and 5');
+        }
+
+        // Validate comment length
+        if (args.comment && args.comment.length > 2000) {
+          throw new Error('Comment cannot exceed 2000 characters');
+        }
+
+        // Check if user already reviewed this shelter
+        const existingReview = await ReviewModel.findOne({
+          userId: args.userId,
+          shelterId: args.shelterId
+        });
+        if (existingReview) {
+          throw new Error('You have already reviewed this shelter');
+        }
+
         const review = new ReviewModel({
           userId: args.userId,
           shelterId: args.shelterId,
