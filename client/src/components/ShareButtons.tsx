@@ -1,6 +1,10 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "./ui/button";
 import { Share2, Facebook, Twitter, Mail, Copy, Check } from "lucide-react";
+
+// =============================================================================
+// Types
+// =============================================================================
 
 interface ShareButtonsProps {
   title: string;
@@ -8,113 +12,194 @@ interface ShareButtonsProps {
   url: string;
 }
 
-const ShareButtons: React.FC<ShareButtonsProps> = ({ title, text, url }) => {
+interface ShareOption {
+  id: string;
+  label: string;
+  icon: typeof Facebook;
+  iconColor: string;
+  action: "link" | "copy";
+  getUrl?: () => string;
+}
+
+// =============================================================================
+// Utilities
+// =============================================================================
+
+function buildShareUrl(platform: string, title: string, text: string, url: string): string {
+  const encodedUrl = encodeURIComponent(url);
+  const encodedText = encodeURIComponent(`${title} - ${text}`);
+
+  switch (platform) {
+    case "facebook":
+      return `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
+    case "twitter":
+      return `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`;
+    case "email":
+      return `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(`${text}\n\n${url}`)}`;
+    default:
+      return "";
+  }
+}
+
+async function copyToClipboard(text: string): Promise<boolean> {
+  // Try modern clipboard API first
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // Fall through to fallback
+    }
+  }
+
+  // Fallback for older browsers
+  try {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-9999px";
+    textArea.setAttribute("readonly", "");
+    document.body.appendChild(textArea);
+    textArea.select();
+    const success = document.execCommand("copy");
+    document.body.removeChild(textArea);
+    return success;
+  } catch {
+    return false;
+  }
+}
+
+// =============================================================================
+// Component
+// =============================================================================
+
+/**
+ * Share button with dropdown menu for sharing content on social platforms.
+ * Supports Facebook, Twitter/X, Email, and copy-to-clipboard.
+ */
+export default function ShareButtons({ title, text, url }: ShareButtonsProps) {
   const [copied, setCopied] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // Close menu when clicking outside
   useEffect(() => {
+    if (!isOpen) return;
+
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setShowMenu(false);
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
       }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [isOpen]);
 
-  const getShareUrl = (platform: string): string => {
-    const encodedUrl = encodeURIComponent(url);
-    const encodedText = encodeURIComponent(`${title} - ${text}`);
+  // Handle keyboard navigation
+  useEffect(() => {
+    if (!isOpen) return;
 
-    switch (platform) {
-      case "facebook":
-        return `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
-      case "twitter":
-        return `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`;
-      case "email":
-        return `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(`${text}\n\n${url}`)}`;
-      default:
-        return "";
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen]);
+
+  const handleCopy = useCallback(async () => {
+    const success = await copyToClipboard(url);
+    if (success) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
-  };
+  }, [url]);
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(url).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }).catch(() => {
-      // Fallback for older browsers or permission denied
-      const textArea = document.createElement("textarea");
-      textArea.value = url;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textArea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
+  const menuItemClass = `flex items-center gap-3 px-4 py-2.5 text-sm text-foreground
+    hover:bg-warm-gray-100 dark:hover:bg-warm-gray-700 w-full text-left transition-colors`;
 
   return (
-    <div className="relative inline-block" ref={menuRef}>
+    <div className="relative inline-block" ref={containerRef}>
       <Button
         variant="outline"
         size="sm"
-        onClick={() => setShowMenu(!showMenu)}
+        onClick={() => setIsOpen((prev) => !prev)}
         className="gap-2"
-        aria-expanded={showMenu}
+        aria-expanded={isOpen}
         aria-haspopup="menu"
+        aria-controls="share-menu"
       >
-        <Share2 className="h-4 w-4" />
+        <Share2 className="h-4 w-4" aria-hidden="true" />
         Share
       </Button>
 
-      {showMenu && (
+      {isOpen && (
         <div
-          className="absolute right-0 mt-2 w-48 bg-white dark:bg-warm-gray-800 rounded-xl shadow-lg border border-warm-gray-200 dark:border-warm-gray-700 z-50 py-2 animate-fade-in"
+          id="share-menu"
+          ref={menuRef}
+          className="absolute right-0 mt-2 w-48 bg-white dark:bg-warm-gray-800 rounded-xl shadow-lg
+            border border-warm-gray-200 dark:border-warm-gray-700 z-50 py-2 animate-fade-in"
           role="menu"
           aria-label="Share options"
         >
+          {/* Facebook */}
           <a
-            href={getShareUrl("facebook")}
+            href={buildShareUrl("facebook", title, text, url)}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-warm-gray-100 dark:hover:bg-warm-gray-700 no-underline transition-colors"
+            role="menuitem"
+            className={`${menuItemClass} no-underline`}
+            onClick={() => setIsOpen(false)}
           >
-            <Facebook className="h-4 w-4 text-blue-600" />
+            <Facebook className="h-4 w-4 text-blue-600" aria-hidden="true" />
             Facebook
           </a>
+
+          {/* Twitter */}
           <a
-            href={getShareUrl("twitter")}
+            href={buildShareUrl("twitter", title, text, url)}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-warm-gray-100 dark:hover:bg-warm-gray-700 no-underline transition-colors"
+            role="menuitem"
+            className={`${menuItemClass} no-underline`}
+            onClick={() => setIsOpen(false)}
           >
-            <Twitter className="h-4 w-4 text-sky-blue-500" />
+            <Twitter className="h-4 w-4 text-sky-blue-500" aria-hidden="true" />
             Twitter / X
           </a>
+
+          {/* Email */}
           <a
-            href={getShareUrl("email")}
-            className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-warm-gray-100 dark:hover:bg-warm-gray-700 no-underline transition-colors"
+            href={buildShareUrl("email", title, text, url)}
+            role="menuitem"
+            className={`${menuItemClass} no-underline`}
+            onClick={() => setIsOpen(false)}
           >
-            <Mail className="h-4 w-4 text-muted-foreground" />
+            <Mail className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
             Email
           </a>
-          <div className="border-t border-warm-gray-200 dark:border-warm-gray-700 my-1" />
+
+          <div className="border-t border-warm-gray-200 dark:border-warm-gray-700 my-1" role="separator" />
+
+          {/* Copy Link */}
           <button
-            onClick={copyToClipboard}
-            className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-warm-gray-100 dark:hover:bg-warm-gray-700 w-full text-left transition-colors"
+            type="button"
+            role="menuitem"
+            onClick={handleCopy}
+            className={menuItemClass}
           >
             {copied ? (
               <>
-                <Check className="h-4 w-4 text-green-500" />
+                <Check className="h-4 w-4 text-green-500" aria-hidden="true" />
                 <span className="text-green-600 dark:text-green-400">Copied!</span>
               </>
             ) : (
               <>
-                <Copy className="h-4 w-4 text-muted-foreground" />
+                <Copy className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                 Copy Link
               </>
             )}
@@ -123,6 +208,4 @@ const ShareButtons: React.FC<ShareButtonsProps> = ({ title, text, url }) => {
       )}
     </div>
   );
-};
-
-export default ShareButtons;
+}

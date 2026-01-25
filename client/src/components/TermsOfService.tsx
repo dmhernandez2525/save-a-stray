@@ -1,24 +1,26 @@
-import React from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { ArrowLeft, FileText, Shield, Link2, AlertCircle, Scale } from "lucide-react";
 
-const TermsOfService: React.FC = () => {
+/**
+ * Terms of service page with structured sections about usage policies.
+ */
+export default function TermsOfService() {
   return (
     <div className="min-h-screen bg-background col-start-1 col-end-6 row-start-1 row-end-4">
       {/* Header */}
-      <div className="bg-gradient-to-r from-sky-blue-500 to-sky-blue-600 text-white">
+      <header className="bg-gradient-to-r from-sky-blue-500 to-sky-blue-600 text-white">
         <div className="container-wide py-8 md:py-12">
           <Link
             to="/"
             className="inline-flex items-center gap-2 text-white/80 hover:text-white transition-colors mb-4"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             Back to home
           </Link>
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
-              <FileText className="h-6 w-6" />
+              <FileText className="h-6 w-6" aria-hidden="true" />
             </div>
             <div>
               <h1 className="font-capriola text-3xl md:text-4xl">Terms of Service</h1>
@@ -26,17 +28,15 @@ const TermsOfService: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="container-tight py-8 px-4">
+      <main className="container-tight py-8 px-4">
         <Card className="max-w-4xl mx-auto">
           <CardHeader>
             <CardTitle className="text-sky-blue-600 dark:text-sky-blue-400 font-capriola text-2xl">
               Welcome to Save A Stray
             </CardTitle>
-            <CardDescription>
-              Last updated: October 2019
-            </CardDescription>
+            <CardDescription>Last updated: October 2019</CardDescription>
           </CardHeader>
           <CardContent className="prose prose-sm max-w-none text-foreground space-y-6">
             <p className="text-muted-foreground">
@@ -47,9 +47,9 @@ const TermsOfService: React.FC = () => {
               conditions stated on this page.
             </p>
 
-            <div className="bg-sky-blue-50 dark:bg-sky-blue-900/20 rounded-xl p-5">
+            <section className="bg-sky-blue-50 dark:bg-sky-blue-900/20 rounded-xl p-5">
               <h2 className="text-lg font-bold text-sky-blue-600 dark:text-sky-blue-400 flex items-center gap-2 mt-0 mb-3">
-                <Shield className="h-5 w-5" />
+                <Shield className="h-5 w-5" aria-hidden="true" />
                 Cookies
               </h2>
               <p className="text-muted-foreground mb-0">
@@ -57,11 +57,11 @@ const TermsOfService: React.FC = () => {
                 consent to the use of cookies in accordance with Save A Stray's
                 privacy policy.
               </p>
-            </div>
+            </section>
 
-            <div className="bg-warm-gray-50 dark:bg-warm-gray-800/50 rounded-xl p-5">
+            <section className="bg-warm-gray-50 dark:bg-warm-gray-800/50 rounded-xl p-5">
               <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mt-0 mb-3">
-                <Scale className="h-5 w-5 text-salmon-500" />
+                <Scale className="h-5 w-5 text-salmon-500" aria-hidden="true" />
                 License
               </h2>
               <p className="text-muted-foreground mb-3">
@@ -75,11 +75,11 @@ const TermsOfService: React.FC = () => {
                 <li>Sell, rent or sub-license material from Save A Stray</li>
                 <li>Reproduce, duplicate or copy material from Save A Stray</li>
               </ul>
-            </div>
+            </section>
 
-            <div className="bg-warm-gray-50 dark:bg-warm-gray-800/50 rounded-xl p-5">
+            <section className="bg-warm-gray-50 dark:bg-warm-gray-800/50 rounded-xl p-5">
               <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mt-0 mb-3">
-                <Link2 className="h-5 w-5 text-sky-blue-500" />
+                <Link2 className="h-5 w-5 text-sky-blue-500" aria-hidden="true" />
                 Hyperlinking to our Content
               </h2>
               <p className="text-muted-foreground mb-2">
@@ -92,11 +92,11 @@ const TermsOfService: React.FC = () => {
                 <li>News organizations</li>
                 <li>Online directory distributors</li>
               </ul>
-            </div>
+            </section>
 
-            <div className="bg-warm-gray-50 dark:bg-warm-gray-800/50 rounded-xl p-5">
+            <section className="bg-warm-gray-50 dark:bg-warm-gray-800/50 rounded-xl p-5">
               <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mt-0 mb-3">
-                <AlertCircle className="h-5 w-5 text-salmon-500" />
+                <AlertCircle className="h-5 w-5 text-salmon-500" aria-hidden="true" />
                 Reservation of Rights
               </h2>
               <p className="text-muted-foreground mb-0">
@@ -104,9 +104,9 @@ const TermsOfService: React.FC = () => {
                 request that you remove all links or any particular link to our Web
                 site.
               </p>
-            </div>
+            </section>
 
-            <div className="border-t border-warm-gray-200 dark:border-warm-gray-700 pt-6">
+            <section className="border-t border-warm-gray-200 dark:border-warm-gray-700 pt-6">
               <h2 className="text-lg font-bold text-foreground mt-0 mb-3">
                 Content Liability
               </h2>
@@ -114,9 +114,9 @@ const TermsOfService: React.FC = () => {
                 We shall have no responsibility or liability for any content
                 appearing on your Web site.
               </p>
-            </div>
+            </section>
 
-            <div className="border-t border-warm-gray-200 dark:border-warm-gray-700 pt-6">
+            <section className="border-t border-warm-gray-200 dark:border-warm-gray-700 pt-6">
               <h2 className="text-lg font-bold text-foreground mt-0 mb-3">
                 Disclaimer
               </h2>
@@ -125,12 +125,10 @@ const TermsOfService: React.FC = () => {
                 representations, warranties and conditions relating to our website
                 and the use of this website.
               </p>
-            </div>
+            </section>
           </CardContent>
         </Card>
-      </div>
+      </main>
     </div>
   );
-};
-
-export default TermsOfService;
+}
