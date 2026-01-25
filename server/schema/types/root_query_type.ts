@@ -20,6 +20,7 @@ import NotificationType from './notification_type';
 import { NotificationDocument } from '../../models/Notification';
 import EventType from './event_type';
 import DonationType from './donation_type';
+import PlatformStatsType from './platform_stats_type';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
 import { ApplicationDocument } from '../../models/Application';
@@ -167,6 +168,21 @@ const RootQueryType = new GraphQLObjectType({
       args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
       resolve(_, args: { shelterId: string }) {
         return DonationModel.find({ shelterId: args.shelterId }).sort({ createdAt: -1 }).limit(50);
+      }
+    },
+    platformStats: {
+      type: PlatformStatsType,
+      async resolve() {
+        const [totalUsers, totalShelters, totalAnimals, totalApplications, availableAnimals, adoptedAnimals, totalDonations] = await Promise.all([
+          User.countDocuments({}),
+          Shelter.countDocuments({}),
+          Animal.countDocuments({}),
+          Application.countDocuments({}),
+          Animal.countDocuments({ status: 'available' }),
+          Animal.countDocuments({ status: 'adopted' }),
+          DonationModel.countDocuments({})
+        ]);
+        return { totalUsers, totalShelters, totalAnimals, totalApplications, availableAnimals, adoptedAnimals, totalDonations };
       }
     },
     successStories: {

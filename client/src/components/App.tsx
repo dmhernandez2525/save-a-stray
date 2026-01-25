@@ -14,6 +14,7 @@ import ProfilePage from "./ProfilePage";
 import SuccessStories from "./SuccessStories";
 import UserSettings from "./UserSettings";
 import CompatibilityQuiz from "./CompatibilityQuiz";
+import AdminPanel from "./AdminPanel";
 import UserLanding from "./UserLanding";
 import AuthRoute from "../util/route_util";
 import ProtectedRoute from "../util/protected_route";
@@ -70,6 +71,10 @@ const App: React.FC = () => {
             element={<ProtectedRoute element={<UserSettings />} />}
           />
           <Route path="/quiz" element={<CompatibilityQuiz />} />
+          <Route
+            path="/admin"
+            element={<ProtectedRoute element={<AdminPanel />} />}
+          />
           <Route path="/success-stories" element={<SuccessStories />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/tos" element={<TermsOfService />} />
