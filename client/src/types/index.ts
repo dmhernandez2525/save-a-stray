@@ -121,6 +121,10 @@ export interface FetchAnimalResponse {
   animal: Animal;
 }
 
+export interface SimilarAnimalsResponse {
+  similarAnimals: Animal[];
+}
+
 export interface CreateAnimalResponse {
   newAnimal: Animal;
 }

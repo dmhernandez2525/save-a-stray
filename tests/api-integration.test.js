@@ -399,6 +399,16 @@ describe('GraphQL Schema Tests', () => {
     expect(args).toContain('image');
   });
 
+  it('should have similarAnimals query with correct args', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+
+    expect(fields.similarAnimals).toBeDefined();
+    const args = fields.similarAnimals.args.map(a => a.name);
+    expect(args).toContain('animalId');
+    expect(args).toContain('limit');
+  });
+
   it('should have shelterAnalytics query with shelterId arg', () => {
     const RootQueryType = require('../server/schema/types/root_query_type').default;
     const fields = RootQueryType.getFields();

@@ -5,9 +5,10 @@ import NewApplication from "./Application";
 import { withRouter, WithRouterProps } from "../util/withRouter";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { FetchAnimalResponse, AnimalStatus } from "../types";
+import { FetchAnimalResponse, SimilarAnimalsResponse, AnimalStatus } from "../types";
+import { Link } from "react-router-dom";
 
-const { FETCH_ANIMAL } = Queries;
+const { FETCH_ANIMAL, SIMILAR_ANIMALS } = Queries;
 
 const STATUS_STYLES: Record<AnimalStatus, string> = {
   available: "bg-green-500 text-white",
@@ -192,6 +193,49 @@ class AnimalShow extends React.Component<AnimalShowProps, AnimalShowState> {
                   <NewApplication animalId={animal._id} />
                 </div>
               )}
+
+              <Query<SimilarAnimalsResponse>
+                query={SIMILAR_ANIMALS}
+                variables={{ animalId: animal._id, limit: 4 }}
+              >
+                {({ data: similarData }) => {
+                  if (!similarData?.similarAnimals?.length) return null;
+                  return (
+                    <div className="mt-6">
+                      <h3 className="font-capriola text-sky-blue text-xl mb-4">
+                        Similar Animals You May Like
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {similarData.similarAnimals.map((sim) => (
+                          <Link
+                            key={sim._id}
+                            to={`/animal/${sim._id}`}
+                            className="no-underline"
+                          >
+                            <Card className="bg-white hover:shadow-lg transition-shadow overflow-hidden h-full">
+                              <div className="h-32 overflow-hidden">
+                                <img
+                                  src={sim.image}
+                                  alt={sim.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <CardContent className="p-3">
+                                <p className="font-capriola text-sky-blue text-sm truncate">
+                                  {sim.name}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {sim.breed || sim.type} &middot; {sim.age} yrs
+                                </p>
+                              </CardContent>
+                            </Card>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }}
+              </Query>
             </div>
           );
         }}

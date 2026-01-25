@@ -10,6 +10,7 @@ interface Queries {
   USER_APPLICATIONS: DocumentNode;
   FIND_ANIMALS: DocumentNode;
   FETCH_ANIMAL: DocumentNode;
+  SIMILAR_ANIMALS: DocumentNode;
   USER_FAVORITES: DocumentNode;
   USER_FAVORITE_IDS: DocumentNode;
   SUCCESS_STORIES: DocumentNode;
@@ -156,6 +157,20 @@ const queries: Queries = {
         image
         images
         video
+        status
+      }
+    }
+  `,
+  SIMILAR_ANIMALS: gql`
+    query SimilarAnimals($animalId: ID!, $limit: Int) {
+      similarAnimals(animalId: $animalId, limit: $limit) {
+        _id
+        name
+        type
+        breed
+        age
+        sex
+        image
         status
       }
     }
