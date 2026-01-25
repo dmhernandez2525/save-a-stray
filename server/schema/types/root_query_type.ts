@@ -9,6 +9,7 @@ import {
   GraphQLFloat,
   GraphQLFieldConfigMap
 } from 'graphql';
+import { isMongoConnected, mockAnimals, filterMockAnimals, mockPlatformStats, mockSuccessStories } from '../../mockData';
 import UserType from './user_type';
 import AnimalType from './animal_type';
 import ApplicationType from './application_type';
@@ -107,6 +108,9 @@ const RootQueryType = new GraphQLObjectType({
     animals: {
       type: new GraphQLList(AnimalType),
       resolve() {
+        if (!isMongoConnected()) {
+          return mockAnimals;
+        }
         return Animal.find({});
       }
     },
@@ -125,6 +129,10 @@ const RootQueryType = new GraphQLObjectType({
         offset: { type: GraphQLInt }
       },
       resolve(_, args: { type?: string; breed?: string; sex?: string; color?: string; name?: string; status?: string; minAge?: number; maxAge?: number; limit?: number; offset?: number }) {
+        // Return mock data if MongoDB is not connected
+        if (!isMongoConnected()) {
+          return filterMockAnimals(args);
+        }
         const filter: Record<string, unknown> = {};
         if (args.type) filter.type = args.type;
         if (args.breed) filter.breed = { $regex: args.breed, $options: 'i' };
@@ -329,6 +337,9 @@ const RootQueryType = new GraphQLObjectType({
     platformStats: {
       type: PlatformStatsType,
       async resolve() {
+        if (!isMongoConnected()) {
+          return mockPlatformStats;
+        }
         const [totalUsers, totalShelters, totalAnimals, totalApplications, availableAnimals, adoptedAnimals, totalDonations] = await Promise.all([
           User.countDocuments({}),
           Shelter.countDocuments({}),
@@ -344,6 +355,9 @@ const RootQueryType = new GraphQLObjectType({
     successStories: {
       type: new GraphQLList(SuccessStoryType),
       resolve() {
+        if (!isMongoConnected()) {
+          return mockSuccessStories;
+        }
         return SuccessStoryModel.find({}).sort({ createdAt: -1 });
       }
     },
