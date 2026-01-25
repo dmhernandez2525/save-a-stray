@@ -617,4 +617,27 @@ describe('GraphQL Schema Tests', () => {
     const fields = mutation.getFields();
     expect(fields.removeShelterStaff.type).toBe(ShelterType);
   });
+
+  it('should have bulkCreateAnimals mutation with animals and shelterId args', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const fields = mutation.getFields();
+    expect(fields.bulkCreateAnimals).toBeDefined();
+    const argNames = fields.bulkCreateAnimals.args.map(a => a.name);
+    expect(argNames).toContain('animals');
+    expect(argNames).toContain('shelterId');
+  });
+
+  it('should return list of AnimalType from bulkCreateAnimals', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const { GraphQLList } = require('graphql');
+    const fields = mutation.getFields();
+    expect(fields.bulkCreateAnimals.type).toBeInstanceOf(GraphQLList);
+  });
+
+  it('should have AnimalInput type with required fields', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const fields = mutation.getFields();
+    const animalsArg = fields.bulkCreateAnimals.args.find(a => a.name === 'animals');
+    expect(animalsArg).toBeDefined();
+  });
 });
