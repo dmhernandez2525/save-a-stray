@@ -1,5 +1,7 @@
 import mongoose, { Document, Schema } from "mongoose";
 
+export type OutcomeLogDocument = IOutcomeLog;
+
 export interface IOutcomeLog extends Document {
   animalId: string;
   shelterId: string;

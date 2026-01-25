@@ -1,9 +1,13 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface AdoptionFeeDocument extends Document {
-  animalId: string;
+  animalId?: string;
+  animalType?: string;
   shelterId: string;
-  amount: number;
+  amount?: number;
+  baseFee?: number;
+  seniorDiscount?: number;
+  specialNeedsDiscount?: number;
   currency: string;
   description: string;
   waived: boolean;
@@ -11,13 +15,18 @@ export interface AdoptionFeeDocument extends Document {
   paidAt: Date | null;
   paidBy: string;
   status: 'pending' | 'paid' | 'waived' | 'refunded';
+  active: boolean;
   createdAt: Date;
 }
 
 const AdoptionFeeSchema = new Schema<AdoptionFeeDocument>({
-  animalId: { type: String, required: true },
+  animalId: { type: String },
+  animalType: { type: String },
   shelterId: { type: String, required: true },
-  amount: { type: Number, required: true },
+  amount: { type: Number },
+  baseFee: { type: Number },
+  seniorDiscount: { type: Number, default: 0 },
+  specialNeedsDiscount: { type: Number, default: 0 },
   currency: { type: String, default: 'USD' },
   description: { type: String, default: '' },
   waived: { type: Boolean, default: false },
@@ -25,6 +34,7 @@ const AdoptionFeeSchema = new Schema<AdoptionFeeDocument>({
   paidAt: { type: Date, default: null },
   paidBy: { type: String, default: '' },
   status: { type: String, enum: ['pending', 'paid', 'waived', 'refunded'], default: 'pending' },
+  active: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now }
 });
 
