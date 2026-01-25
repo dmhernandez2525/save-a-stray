@@ -872,6 +872,16 @@ const mutation = new GraphQLObjectType({
         location: { type: GraphQLString }
       },
       async resolve(_, args: { shelterId: string; registrationCode: string; label: string; location?: string }) {
+        // Validate required fields
+        if (!args.shelterId || !args.registrationCode || !args.label) {
+          throw new Error('Shelter ID, registration code, and label are required');
+        }
+
+        // Validate label length
+        if (args.label.length > 100) {
+          throw new Error('Label cannot exceed 100 characters');
+        }
+
         const reader = await stripeTerminal.registerReader({
           registrationCode: args.registrationCode,
           label: args.label,
@@ -916,6 +926,19 @@ const mutation = new GraphQLObjectType({
         description: { type: GraphQLString }
       },
       async resolve(_, args: { shelterId: string; readerId: string; amount: number; currency?: string; description?: string }) {
+        // Validate required fields
+        if (!args.shelterId || !args.readerId) {
+          throw new Error('Shelter ID and Reader ID are required');
+        }
+
+        // Validate amount
+        if (!args.amount || args.amount < 50) {
+          throw new Error('Amount must be at least 50 cents');
+        }
+        if (args.amount > 99999999) {
+          throw new Error('Amount exceeds maximum allowed');
+        }
+
         const paymentIntent = await stripeTerminal.createPaymentIntent({
           readerId: args.readerId,
           amount: args.amount,
