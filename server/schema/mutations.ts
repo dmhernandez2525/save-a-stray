@@ -33,6 +33,7 @@ import TerminalReaderType from './types/terminal_reader_type';
 import MessageType from './types/message_type';
 import VolunteerType from './types/volunteer_type';
 import PaymentIntentType from './types/payment_intent_type';
+import BehaviorNoteType from './types/behavior_note_type';
 import * as stripeTerminal from '../services/stripeTerminal';
 import { EventDocument } from '../models/Event';
 import { DonationDocument } from '../models/Donation';
@@ -45,6 +46,7 @@ import { MessageDocument } from '../models/Message';
 import { VolunteerDocument } from '../models/Volunteer';
 import { ReviewDocument } from '../models/Review';
 import { NotificationDocument } from '../models/Notification';
+import { BehaviorNoteDocument } from '../models/BehaviorNote';
 
 const User = mongoose.model<UserDocument>('user');
 const Animal = mongoose.model<AnimalDocument>('animal');
@@ -62,6 +64,7 @@ const ActivityLogModel = mongoose.model<ActivityLogDocument>('activityLog');
 const TerminalReaderModel = mongoose.model<TerminalReaderDocument>('terminalReader');
 const MessageModel = mongoose.model<MessageDocument>('message');
 const VolunteerModel = mongoose.model<VolunteerDocument>('volunteer');
+const BehaviorNoteModel = mongoose.model<BehaviorNoteDocument>('behaviorNote');
 
 interface RegisterArgs {
   name: string;
@@ -1102,6 +1105,62 @@ const mutation = new GraphQLObjectType({
         volunteer.totalHours += args.hours;
         await volunteer.save();
         return volunteer;
+      }
+    },
+    addBehaviorNote: {
+      type: BehaviorNoteType,
+      args: {
+        animalId: { type: GraphQLID },
+        shelterId: { type: GraphQLID },
+        noteType: { type: GraphQLString },
+        severity: { type: GraphQLString },
+        content: { type: GraphQLString },
+        author: { type: GraphQLString }
+      },
+      async resolve(_, args: {
+        animalId: string;
+        shelterId: string;
+        noteType: string;
+        severity: string;
+        content: string;
+        author?: string;
+      }) {
+        // Validate required fields
+        if (!args.animalId || !args.shelterId) {
+          throw new Error('Animal ID and Shelter ID are required');
+        }
+        if (!args.content || args.content.length > 2000) {
+          throw new Error('Content is required and must be less than 2000 characters');
+        }
+
+        const note = new BehaviorNoteModel({
+          animalId: args.animalId,
+          shelterId: args.shelterId,
+          noteType: args.noteType || 'general',
+          severity: args.severity || 'info',
+          content: args.content,
+          author: args.author || '',
+          resolved: false,
+          createdAt: new Date()
+        });
+        await note.save();
+        return note;
+      }
+    },
+    resolveBehaviorNote: {
+      type: BehaviorNoteType,
+      args: {
+        _id: { type: GraphQLID }
+      },
+      async resolve(_, args: { _id: string }) {
+        const note = await BehaviorNoteModel.findById(args._id);
+        if (!note) {
+          throw new Error('Behavior note not found');
+        }
+        note.resolved = true;
+        note.resolvedAt = new Date();
+        await note.save();
+        return note;
       }
     }
   })

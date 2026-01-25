@@ -28,6 +28,7 @@ import ActivityLogType from './activity_log_type';
 import TerminalReaderType from './terminal_reader_type';
 import MessageType from './message_type';
 import VolunteerType from './volunteer_type';
+import BehaviorNoteType from './behavior_note_type';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
 import { FosterDocument } from '../../models/Foster';
@@ -37,6 +38,7 @@ import { ActivityLogDocument } from '../../models/ActivityLog';
 import { TerminalReaderDocument } from '../../models/TerminalReader';
 import { MessageDocument } from '../../models/Message';
 import { VolunteerDocument } from '../../models/Volunteer';
+import { BehaviorNoteDocument } from '../../models/BehaviorNote';
 import { ApplicationDocument } from '../../models/Application';
 import { AnimalDocument } from '../../models/Animal';
 import { UserDocument } from '../../models/User';
@@ -60,6 +62,7 @@ const ActivityLogModel = mongoose.model<ActivityLogDocument>('activityLog');
 const TerminalReaderModel = mongoose.model<TerminalReaderDocument>('terminalReader');
 const MessageModel = mongoose.model<MessageDocument>('message');
 const VolunteerModel = mongoose.model<VolunteerDocument>('volunteer');
+const BehaviorNoteModel = mongoose.model<BehaviorNoteDocument>('behaviorNote');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -420,6 +423,13 @@ const RootQueryType = new GraphQLObjectType({
           rejectedApplications,
           recentApplications
         };
+      }
+    },
+    shelterBehaviorNotes: {
+      type: new GraphQLList(BehaviorNoteType),
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { shelterId: string }) {
+        return BehaviorNoteModel.find({ shelterId: args.shelterId }).sort({ createdAt: -1 });
       }
     }
   })

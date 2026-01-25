@@ -518,3 +518,24 @@ export interface Volunteer {
 export interface ShelterVolunteersResponse {
   shelterVolunteers: Volunteer[];
 }
+
+// Behavior Note Types
+export type BehaviorNoteType = 'behavior' | 'training' | 'health' | 'general';
+export type BehaviorNoteSeverity = 'info' | 'warning' | 'critical';
+
+export interface BehaviorNote {
+  _id: string;
+  animalId: string;
+  shelterId: string;
+  noteType: BehaviorNoteType;
+  severity: BehaviorNoteSeverity;
+  content: string;
+  author: string;
+  resolved: boolean;
+  resolvedAt?: string;
+  createdAt: string;
+}
+
+export interface ShelterBehaviorNotesResponse {
+  shelterBehaviorNotes: BehaviorNote[];
+}

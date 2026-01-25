@@ -21,6 +21,7 @@ import ActivityFeed from "./ActivityFeed";
 import TerminalReaderManager from "./TerminalReaderManager";
 import MessagingPanel from "./MessagingPanel";
 import VolunteerManager from "./VolunteerManager";
+import BehaviorNoteManager from "./BehaviorNoteManager";
 import { exportAnimalsCsv } from "../util/exportCsv";
 
 const { FETCH_SHELTER } = Queries;
@@ -374,6 +375,13 @@ class ShelterLanding extends Component<ShelterLandingProps, ShelterLandingState>
 
                   <div className="mt-6">
                     <VolunteerManager shelterId={shelterId} />
+                  </div>
+
+                  <div className="mt-6">
+                    <BehaviorNoteManager
+                      shelterId={shelterId}
+                      animals={animals.map((a) => ({ _id: a._id, name: a.name }))}
+                    />
                   </div>
                 </>
               );

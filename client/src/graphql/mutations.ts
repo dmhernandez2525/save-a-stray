@@ -36,6 +36,8 @@ interface Mutations {
   CREATE_TERMINAL_PAYMENT_INTENT: DocumentNode;
   SEND_MESSAGE: DocumentNode;
   MARK_MESSAGES_READ: DocumentNode;
+  ADD_BEHAVIOR_NOTE: DocumentNode;
+  RESOLVE_BEHAVIOR_NOTE: DocumentNode;
 }
 
 const mutations: Mutations = {
@@ -671,6 +673,44 @@ const mutations: Mutations = {
       logVolunteerHours(_id: $_id, hours: $hours) {
         _id
         totalHours
+      }
+    }
+  `,
+  ADD_BEHAVIOR_NOTE: gql`
+    mutation AddBehaviorNote(
+      $animalId: ID!
+      $shelterId: ID!
+      $noteType: String!
+      $severity: String!
+      $content: String!
+      $author: String
+    ) {
+      addBehaviorNote(
+        animalId: $animalId
+        shelterId: $shelterId
+        noteType: $noteType
+        severity: $severity
+        content: $content
+        author: $author
+      ) {
+        _id
+        animalId
+        shelterId
+        noteType
+        severity
+        content
+        author
+        resolved
+        createdAt
+      }
+    }
+  `,
+  RESOLVE_BEHAVIOR_NOTE: gql`
+    mutation ResolveBehaviorNote($_id: ID!) {
+      resolveBehaviorNote(_id: $_id) {
+        _id
+        resolved
+        resolvedAt
       }
     }
   `

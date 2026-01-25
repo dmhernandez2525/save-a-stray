@@ -28,6 +28,7 @@ interface Queries {
   USER_FAVORITES: DocumentNode;
   USER_FAVORITE_IDS: DocumentNode;
   SUCCESS_STORIES: DocumentNode;
+  SHELTER_BEHAVIOR_NOTES: DocumentNode;
 }
 
 const queries: Queries = {
@@ -437,6 +438,22 @@ const queries: Queries = {
         title
         story
         image
+        createdAt
+      }
+    }
+  `,
+  SHELTER_BEHAVIOR_NOTES: gql`
+    query ShelterBehaviorNotes($shelterId: ID!) {
+      shelterBehaviorNotes(shelterId: $shelterId) {
+        _id
+        animalId
+        shelterId
+        noteType
+        severity
+        content
+        author
+        resolved
+        resolvedAt
         createdAt
       }
     }
