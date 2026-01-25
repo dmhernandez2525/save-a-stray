@@ -24,7 +24,8 @@ const MessageSchema = new Schema<MessageDocument>({
   },
   content: {
     type: String,
-    required: true
+    required: true,
+    maxlength: 5000
   },
   read: {
     type: Boolean,

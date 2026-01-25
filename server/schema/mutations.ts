@@ -968,11 +968,29 @@ const mutation = new GraphQLObjectType({
         content: { type: GraphQLString }
       },
       async resolve(_, args: { senderId: string; recipientId: string; shelterId: string; content: string }) {
+        // Validate required fields
+        if (!args.senderId || !args.recipientId || !args.shelterId) {
+          throw new Error('Sender ID, recipient ID, and shelter ID are required');
+        }
+
+        // Validate content
+        if (!args.content || !args.content.trim()) {
+          throw new Error('Message content is required');
+        }
+        if (args.content.length > 5000) {
+          throw new Error('Message cannot exceed 5000 characters');
+        }
+
+        // Prevent self-messaging
+        if (args.senderId === args.recipientId) {
+          throw new Error('Cannot send message to yourself');
+        }
+
         const message = new MessageModel({
           senderId: args.senderId,
           recipientId: args.recipientId,
           shelterId: args.shelterId,
-          content: args.content,
+          content: args.content.trim(),
           read: false,
           createdAt: new Date()
         });
