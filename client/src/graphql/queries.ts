@@ -30,6 +30,13 @@ interface Queries {
   SUCCESS_STORIES: DocumentNode;
   SHELTER_BEHAVIOR_NOTES: DocumentNode;
   SHELTER_ANNOUNCEMENTS: DocumentNode;
+  SHELTER_MICROCHIPS: DocumentNode;
+  ANIMAL_WEIGHT_RECORDS: DocumentNode;
+  ANIMAL_VACCINATIONS: DocumentNode;
+  SHELTER_ADOPTION_FEES: DocumentNode;
+  ANIMAL_SPAY_NEUTER: DocumentNode;
+  ANIMAL_INTAKE_LOGS: DocumentNode;
+  ANIMAL_OUTCOME_LOGS: DocumentNode;
 }
 
 const queries: Queries = {
@@ -470,6 +477,106 @@ const queries: Queries = {
         author
         pinned
         active
+        createdAt
+      }
+    }
+  `,
+  SHELTER_MICROCHIPS: gql`
+    query ShelterMicrochips($shelterId: ID!) {
+      shelterMicrochips(shelterId: $shelterId) {
+        _id
+        animalId
+        shelterId
+        chipNumber
+        manufacturer
+        registrationDate
+        status
+        createdAt
+      }
+    }
+  `,
+  ANIMAL_WEIGHT_RECORDS: gql`
+    query AnimalWeightRecords($animalId: ID!) {
+      animalWeightRecords(animalId: $animalId) {
+        _id
+        animalId
+        weight
+        unit
+        notes
+        recordedAt
+        createdAt
+      }
+    }
+  `,
+  ANIMAL_VACCINATIONS: gql`
+    query AnimalVaccinations($animalId: ID!) {
+      animalVaccinations(animalId: $animalId) {
+        _id
+        animalId
+        vaccineName
+        dateAdministered
+        nextDueDate
+        veterinarian
+        status
+        notes
+        createdAt
+      }
+    }
+  `,
+  SHELTER_ADOPTION_FEES: gql`
+    query ShelterAdoptionFees($shelterId: ID!) {
+      shelterAdoptionFees(shelterId: $shelterId) {
+        _id
+        shelterId
+        animalType
+        baseFee
+        seniorDiscount
+        specialNeedsDiscount
+        description
+        active
+        createdAt
+      }
+    }
+  `,
+  ANIMAL_SPAY_NEUTER: gql`
+    query AnimalSpayNeuter($animalId: ID!) {
+      animalSpayNeuter(animalId: $animalId) {
+        _id
+        animalId
+        status
+        scheduledDate
+        completedDate
+        veterinarian
+        notes
+        createdAt
+      }
+    }
+  `,
+  ANIMAL_INTAKE_LOGS: gql`
+    query AnimalIntakeLogs($shelterId: ID!) {
+      animalIntakeLogs(shelterId: $shelterId) {
+        _id
+        animalId
+        intakeType
+        intakeDate
+        source
+        condition
+        notes
+        createdBy
+        createdAt
+      }
+    }
+  `,
+  ANIMAL_OUTCOME_LOGS: gql`
+    query AnimalOutcomeLogs($shelterId: ID!) {
+      animalOutcomeLogs(shelterId: $shelterId) {
+        _id
+        animalId
+        outcomeType
+        outcomeDate
+        destination
+        notes
+        createdBy
         createdAt
       }
     }

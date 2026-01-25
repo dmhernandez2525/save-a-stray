@@ -558,3 +558,134 @@ export interface Announcement {
 export interface ShelterAnnouncementsResponse {
   shelterAnnouncements: Announcement[];
 }
+
+// Microchip Types
+export type MicrochipStatus = 'registered' | 'unregistered' | 'transferred';
+
+export interface Microchip {
+  _id: string;
+  animalId: string;
+  shelterId: string;
+  chipNumber: string;
+  manufacturer: string;
+  registrationDate: string;
+  status: MicrochipStatus;
+  createdAt: string;
+}
+
+export interface ShelterMicrochipsResponse {
+  shelterMicrochips: Microchip[];
+}
+
+// Weight Record Types
+export type WeightUnit = 'lbs' | 'kg';
+
+export interface WeightRecord {
+  _id: string;
+  animalId: string;
+  shelterId: string;
+  weight: number;
+  unit: WeightUnit;
+  notes: string;
+  recordedAt: string;
+  createdAt: string;
+}
+
+export interface AnimalWeightRecordsResponse {
+  animalWeightRecords: WeightRecord[];
+}
+
+// Vaccination Types
+export type VaccinationStatus = 'completed' | 'scheduled' | 'overdue';
+
+export interface Vaccination {
+  _id: string;
+  animalId: string;
+  shelterId: string;
+  vaccineName: string;
+  dateAdministered: string;
+  nextDueDate: string;
+  veterinarian: string;
+  status: VaccinationStatus;
+  notes: string;
+  createdAt: string;
+}
+
+export interface AnimalVaccinationsResponse {
+  animalVaccinations: Vaccination[];
+}
+
+// Adoption Fee Types
+export interface AdoptionFee {
+  _id: string;
+  shelterId: string;
+  animalType: string;
+  baseFee: number;
+  seniorDiscount: number;
+  specialNeedsDiscount: number;
+  description: string;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface ShelterAdoptionFeesResponse {
+  shelterAdoptionFees: AdoptionFee[];
+}
+
+// Spay/Neuter Types
+export type SpayNeuterStatus = 'completed' | 'scheduled' | 'not_scheduled';
+
+export interface SpayNeuter {
+  _id: string;
+  animalId: string;
+  shelterId: string;
+  status: SpayNeuterStatus;
+  scheduledDate: string;
+  completedDate: string;
+  veterinarian: string;
+  notes: string;
+  createdAt: string;
+}
+
+export interface AnimalSpayNeuterResponse {
+  animalSpayNeuter: SpayNeuter;
+}
+
+// Intake Log Types
+export type IntakeType = 'stray' | 'owner_surrender' | 'transfer' | 'return' | 'born_in_shelter';
+
+export interface IntakeLog {
+  _id: string;
+  animalId: string;
+  shelterId: string;
+  intakeType: IntakeType;
+  intakeDate: string;
+  source: string;
+  condition: string;
+  notes: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface AnimalIntakeLogsResponse {
+  animalIntakeLogs: IntakeLog[];
+}
+
+// Outcome Log Types
+export type OutcomeType = 'adoption' | 'transfer' | 'return_to_owner' | 'euthanasia' | 'died' | 'escaped';
+
+export interface OutcomeLog {
+  _id: string;
+  animalId: string;
+  shelterId: string;
+  outcomeType: OutcomeType;
+  outcomeDate: string;
+  destination: string;
+  notes: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface AnimalOutcomeLogsResponse {
+  animalOutcomeLogs: OutcomeLog[];
+}

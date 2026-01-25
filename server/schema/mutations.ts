@@ -35,6 +35,13 @@ import VolunteerType from './types/volunteer_type';
 import PaymentIntentType from './types/payment_intent_type';
 import BehaviorNoteType from './types/behavior_note_type';
 import AnnouncementType from './types/announcement_type';
+import MicrochipType from './types/microchip_type';
+import WeightRecordType from './types/weight_record_type';
+import VaccinationType from './types/vaccination_type';
+import AdoptionFeeType from './types/adoption_fee_type';
+import SpayNeuterType from './types/spay_neuter_type';
+import IntakeLogType from './types/intake_log_type';
+import OutcomeLogType from './types/outcome_log_type';
 import * as stripeTerminal from '../services/stripeTerminal';
 import { EventDocument } from '../models/Event';
 import { DonationDocument } from '../models/Donation';
@@ -49,6 +56,13 @@ import { ReviewDocument } from '../models/Review';
 import { NotificationDocument } from '../models/Notification';
 import { BehaviorNoteDocument } from '../models/BehaviorNote';
 import { AnnouncementDocument } from '../models/Announcement';
+import { MicrochipDocument } from '../models/Microchip';
+import { WeightRecordDocument } from '../models/WeightRecord';
+import { VaccinationDocument } from '../models/Vaccination';
+import { AdoptionFeeDocument } from '../models/AdoptionFee';
+import { SpayNeuterDocument } from '../models/SpayNeuter';
+import { IntakeLogDocument } from '../models/IntakeLog';
+import { OutcomeLogDocument } from '../models/OutcomeLog';
 
 const User = mongoose.model<UserDocument>('user');
 const Animal = mongoose.model<AnimalDocument>('animal');
@@ -68,6 +82,13 @@ const MessageModel = mongoose.model<MessageDocument>('message');
 const VolunteerModel = mongoose.model<VolunteerDocument>('volunteer');
 const BehaviorNoteModel = mongoose.model<BehaviorNoteDocument>('behaviorNote');
 const AnnouncementModel = mongoose.model<AnnouncementDocument>('announcement');
+const MicrochipModel = mongoose.model<MicrochipDocument>('microchip');
+const WeightRecordModel = mongoose.model<WeightRecordDocument>('weightRecord');
+const VaccinationModel = mongoose.model<VaccinationDocument>('vaccination');
+const AdoptionFeeModel = mongoose.model<AdoptionFeeDocument>('adoptionFee');
+const SpayNeuterModel = mongoose.model<SpayNeuterDocument>('spayNeuter');
+const IntakeLogModel = mongoose.model<IntakeLogDocument>('intakeLog');
+const OutcomeLogModel = mongoose.model<OutcomeLogDocument>('outcomeLog');
 
 interface RegisterArgs {
   name: string;
@@ -1229,6 +1250,254 @@ const mutation = new GraphQLObjectType({
       async resolve(_, args: { _id: string }) {
         const announcement = await AnnouncementModel.findByIdAndDelete(args._id);
         return announcement;
+      }
+    },
+    registerMicrochip: {
+      type: MicrochipType,
+      args: {
+        animalId: { type: GraphQLID },
+        shelterId: { type: GraphQLID },
+        chipNumber: { type: GraphQLString },
+        manufacturer: { type: GraphQLString }
+      },
+      async resolve(_, args: { animalId: string; shelterId: string; chipNumber: string; manufacturer?: string }) {
+        if (!args.chipNumber || args.chipNumber.length < 9 || args.chipNumber.length > 15) {
+          throw new Error('Chip number must be between 9 and 15 characters');
+        }
+        const existing = await MicrochipModel.findOne({ chipNumber: args.chipNumber });
+        if (existing) {
+          throw new Error('This microchip number is already registered');
+        }
+        const microchip = new MicrochipModel({
+          animalId: args.animalId,
+          shelterId: args.shelterId,
+          chipNumber: args.chipNumber,
+          manufacturer: args.manufacturer || '',
+          status: 'registered',
+          registrationDate: new Date(),
+          createdAt: new Date()
+        });
+        await microchip.save();
+        return microchip;
+      }
+    },
+    updateMicrochipStatus: {
+      type: MicrochipType,
+      args: {
+        _id: { type: GraphQLID },
+        status: { type: GraphQLString }
+      },
+      async resolve(_, args: { _id: string; status: string }) {
+        const microchip = await MicrochipModel.findById(args._id);
+        if (!microchip) throw new Error('Microchip not found');
+        microchip.status = args.status as typeof microchip.status;
+        await microchip.save();
+        return microchip;
+      }
+    },
+    addWeightRecord: {
+      type: WeightRecordType,
+      args: {
+        animalId: { type: GraphQLID },
+        shelterId: { type: GraphQLID },
+        weight: { type: GraphQLFloat },
+        unit: { type: GraphQLString },
+        notes: { type: GraphQLString }
+      },
+      async resolve(_, args: { animalId: string; shelterId: string; weight: number; unit: string; notes?: string }) {
+        if (!args.weight || args.weight <= 0) {
+          throw new Error('Weight must be a positive number');
+        }
+        if (args.weight > 5000) {
+          throw new Error('Weight value seems unrealistic');
+        }
+        const record = new WeightRecordModel({
+          animalId: args.animalId,
+          shelterId: args.shelterId,
+          weight: args.weight,
+          unit: args.unit || 'lbs',
+          notes: args.notes || '',
+          recordedAt: new Date(),
+          createdAt: new Date()
+        });
+        await record.save();
+        return record;
+      }
+    },
+    addVaccination: {
+      type: VaccinationType,
+      args: {
+        animalId: { type: GraphQLID },
+        shelterId: { type: GraphQLID },
+        vaccineName: { type: GraphQLString },
+        dateAdministered: { type: GraphQLString },
+        nextDueDate: { type: GraphQLString },
+        veterinarian: { type: GraphQLString },
+        notes: { type: GraphQLString }
+      },
+      async resolve(_, args: { animalId: string; shelterId: string; vaccineName: string; dateAdministered: string; nextDueDate?: string; veterinarian?: string; notes?: string }) {
+        if (!args.vaccineName) {
+          throw new Error('Vaccine name is required');
+        }
+        const vaccination = new VaccinationModel({
+          animalId: args.animalId,
+          shelterId: args.shelterId,
+          vaccineName: args.vaccineName,
+          dateAdministered: args.dateAdministered,
+          nextDueDate: args.nextDueDate,
+          veterinarian: args.veterinarian || '',
+          status: 'completed',
+          notes: args.notes || '',
+          createdAt: new Date()
+        });
+        await vaccination.save();
+        return vaccination;
+      }
+    },
+    updateVaccinationStatus: {
+      type: VaccinationType,
+      args: {
+        _id: { type: GraphQLID },
+        status: { type: GraphQLString }
+      },
+      async resolve(_, args: { _id: string; status: string }) {
+        const vaccination = await VaccinationModel.findById(args._id);
+        if (!vaccination) throw new Error('Vaccination not found');
+        vaccination.status = args.status as typeof vaccination.status;
+        await vaccination.save();
+        return vaccination;
+      }
+    },
+    createAdoptionFee: {
+      type: AdoptionFeeType,
+      args: {
+        shelterId: { type: GraphQLID },
+        animalType: { type: GraphQLString },
+        baseFee: { type: GraphQLFloat },
+        seniorDiscount: { type: GraphQLFloat },
+        specialNeedsDiscount: { type: GraphQLFloat },
+        description: { type: GraphQLString }
+      },
+      async resolve(_, args: { shelterId: string; animalType: string; baseFee: number; seniorDiscount?: number; specialNeedsDiscount?: number; description?: string }) {
+        if (!args.baseFee || args.baseFee < 0) {
+          throw new Error('Base fee must be a non-negative number');
+        }
+        const fee = new AdoptionFeeModel({
+          shelterId: args.shelterId,
+          animalType: args.animalType,
+          baseFee: args.baseFee,
+          seniorDiscount: args.seniorDiscount || 0,
+          specialNeedsDiscount: args.specialNeedsDiscount || 0,
+          description: args.description || '',
+          active: true,
+          createdAt: new Date()
+        });
+        await fee.save();
+        return fee;
+      }
+    },
+    updateAdoptionFee: {
+      type: AdoptionFeeType,
+      args: {
+        _id: { type: GraphQLID },
+        baseFee: { type: GraphQLFloat },
+        seniorDiscount: { type: GraphQLFloat },
+        specialNeedsDiscount: { type: GraphQLFloat },
+        active: { type: GraphQLBoolean }
+      },
+      async resolve(_, args: { _id: string; baseFee?: number; seniorDiscount?: number; specialNeedsDiscount?: number; active?: boolean }) {
+        const fee = await AdoptionFeeModel.findById(args._id);
+        if (!fee) throw new Error('Adoption fee not found');
+        if (args.baseFee !== undefined) fee.baseFee = args.baseFee;
+        if (args.seniorDiscount !== undefined) fee.seniorDiscount = args.seniorDiscount;
+        if (args.specialNeedsDiscount !== undefined) fee.specialNeedsDiscount = args.specialNeedsDiscount;
+        if (args.active !== undefined) fee.active = args.active;
+        await fee.save();
+        return fee;
+      }
+    },
+    updateSpayNeuter: {
+      type: SpayNeuterType,
+      args: {
+        animalId: { type: GraphQLID },
+        shelterId: { type: GraphQLID },
+        status: { type: GraphQLString },
+        scheduledDate: { type: GraphQLString },
+        completedDate: { type: GraphQLString },
+        veterinarian: { type: GraphQLString },
+        notes: { type: GraphQLString }
+      },
+      async resolve(_, args: { animalId: string; shelterId: string; status: string; scheduledDate?: string; completedDate?: string; veterinarian?: string; notes?: string }) {
+        let record = await SpayNeuterModel.findOne({ animalId: args.animalId });
+        if (!record) {
+          record = new SpayNeuterModel({
+            animalId: args.animalId,
+            shelterId: args.shelterId,
+            status: args.status,
+            createdAt: new Date()
+          });
+        }
+        record.status = args.status as typeof record.status;
+        if (args.scheduledDate) record.scheduledDate = new Date(args.scheduledDate);
+        if (args.completedDate) record.completedDate = new Date(args.completedDate);
+        if (args.veterinarian) record.veterinarian = args.veterinarian;
+        if (args.notes) record.notes = args.notes;
+        await record.save();
+        return record;
+      }
+    },
+    createIntakeLog: {
+      type: IntakeLogType,
+      args: {
+        animalId: { type: GraphQLID },
+        shelterId: { type: GraphQLID },
+        intakeType: { type: GraphQLString },
+        intakeDate: { type: GraphQLString },
+        source: { type: GraphQLString },
+        condition: { type: GraphQLString },
+        notes: { type: GraphQLString },
+        createdBy: { type: GraphQLString }
+      },
+      async resolve(_, args: { animalId: string; shelterId: string; intakeType: string; intakeDate: string; source?: string; condition?: string; notes?: string; createdBy?: string }) {
+        const log = new IntakeLogModel({
+          animalId: args.animalId,
+          shelterId: args.shelterId,
+          intakeType: args.intakeType,
+          intakeDate: args.intakeDate,
+          source: args.source || '',
+          condition: args.condition || '',
+          notes: args.notes || '',
+          createdBy: args.createdBy || '',
+          createdAt: new Date()
+        });
+        await log.save();
+        return log;
+      }
+    },
+    createOutcomeLog: {
+      type: OutcomeLogType,
+      args: {
+        animalId: { type: GraphQLID },
+        shelterId: { type: GraphQLID },
+        outcomeType: { type: GraphQLString },
+        outcomeDate: { type: GraphQLString },
+        destination: { type: GraphQLString },
+        notes: { type: GraphQLString },
+        createdBy: { type: GraphQLString }
+      },
+      async resolve(_, args: { animalId: string; shelterId: string; outcomeType: string; outcomeDate: string; destination?: string; notes?: string; createdBy?: string }) {
+        const log = new OutcomeLogModel({
+          animalId: args.animalId,
+          shelterId: args.shelterId,
+          outcomeType: args.outcomeType,
+          outcomeDate: args.outcomeDate,
+          destination: args.destination || '',
+          notes: args.notes || '',
+          createdBy: args.createdBy || '',
+          createdAt: new Date()
+        });
+        await log.save();
+        return log;
       }
     }
   })

@@ -41,6 +41,16 @@ interface Mutations {
   CREATE_ANNOUNCEMENT: DocumentNode;
   TOGGLE_ANNOUNCEMENT_PIN: DocumentNode;
   DELETE_ANNOUNCEMENT: DocumentNode;
+  REGISTER_MICROCHIP: DocumentNode;
+  UPDATE_MICROCHIP_STATUS: DocumentNode;
+  ADD_WEIGHT_RECORD: DocumentNode;
+  ADD_VACCINATION: DocumentNode;
+  UPDATE_VACCINATION_STATUS: DocumentNode;
+  CREATE_ADOPTION_FEE: DocumentNode;
+  UPDATE_ADOPTION_FEE: DocumentNode;
+  UPDATE_SPAY_NEUTER: DocumentNode;
+  CREATE_INTAKE_LOG: DocumentNode;
+  CREATE_OUTCOME_LOG: DocumentNode;
 }
 
 const mutations: Mutations = {
@@ -756,6 +766,107 @@ const mutations: Mutations = {
     mutation DeleteAnnouncement($_id: ID!) {
       deleteAnnouncement(_id: $_id) {
         _id
+      }
+    }
+  `,
+  REGISTER_MICROCHIP: gql`
+    mutation RegisterMicrochip($animalId: ID!, $shelterId: ID!, $chipNumber: String!, $manufacturer: String) {
+      registerMicrochip(animalId: $animalId, shelterId: $shelterId, chipNumber: $chipNumber, manufacturer: $manufacturer) {
+        _id
+        animalId
+        chipNumber
+        manufacturer
+        status
+        createdAt
+      }
+    }
+  `,
+  UPDATE_MICROCHIP_STATUS: gql`
+    mutation UpdateMicrochipStatus($_id: ID!, $status: String!) {
+      updateMicrochipStatus(_id: $_id, status: $status) {
+        _id
+        status
+      }
+    }
+  `,
+  ADD_WEIGHT_RECORD: gql`
+    mutation AddWeightRecord($animalId: ID!, $shelterId: ID!, $weight: Float!, $unit: String!, $notes: String) {
+      addWeightRecord(animalId: $animalId, shelterId: $shelterId, weight: $weight, unit: $unit, notes: $notes) {
+        _id
+        animalId
+        weight
+        unit
+        notes
+        recordedAt
+      }
+    }
+  `,
+  ADD_VACCINATION: gql`
+    mutation AddVaccination($animalId: ID!, $shelterId: ID!, $vaccineName: String!, $dateAdministered: String!, $nextDueDate: String, $veterinarian: String, $notes: String) {
+      addVaccination(animalId: $animalId, shelterId: $shelterId, vaccineName: $vaccineName, dateAdministered: $dateAdministered, nextDueDate: $nextDueDate, veterinarian: $veterinarian, notes: $notes) {
+        _id
+        animalId
+        vaccineName
+        dateAdministered
+        status
+      }
+    }
+  `,
+  UPDATE_VACCINATION_STATUS: gql`
+    mutation UpdateVaccinationStatus($_id: ID!, $status: String!) {
+      updateVaccinationStatus(_id: $_id, status: $status) {
+        _id
+        status
+      }
+    }
+  `,
+  CREATE_ADOPTION_FEE: gql`
+    mutation CreateAdoptionFee($shelterId: ID!, $animalType: String!, $baseFee: Float!, $seniorDiscount: Float, $specialNeedsDiscount: Float, $description: String) {
+      createAdoptionFee(shelterId: $shelterId, animalType: $animalType, baseFee: $baseFee, seniorDiscount: $seniorDiscount, specialNeedsDiscount: $specialNeedsDiscount, description: $description) {
+        _id
+        animalType
+        baseFee
+        active
+      }
+    }
+  `,
+  UPDATE_ADOPTION_FEE: gql`
+    mutation UpdateAdoptionFee($_id: ID!, $baseFee: Float, $seniorDiscount: Float, $specialNeedsDiscount: Float, $active: Boolean) {
+      updateAdoptionFee(_id: $_id, baseFee: $baseFee, seniorDiscount: $seniorDiscount, specialNeedsDiscount: $specialNeedsDiscount, active: $active) {
+        _id
+        baseFee
+        active
+      }
+    }
+  `,
+  UPDATE_SPAY_NEUTER: gql`
+    mutation UpdateSpayNeuter($animalId: ID!, $shelterId: ID!, $status: String!, $scheduledDate: String, $completedDate: String, $veterinarian: String, $notes: String) {
+      updateSpayNeuter(animalId: $animalId, shelterId: $shelterId, status: $status, scheduledDate: $scheduledDate, completedDate: $completedDate, veterinarian: $veterinarian, notes: $notes) {
+        _id
+        animalId
+        status
+        scheduledDate
+        completedDate
+      }
+    }
+  `,
+  CREATE_INTAKE_LOG: gql`
+    mutation CreateIntakeLog($animalId: ID!, $shelterId: ID!, $intakeType: String!, $intakeDate: String!, $source: String, $condition: String, $notes: String, $createdBy: String) {
+      createIntakeLog(animalId: $animalId, shelterId: $shelterId, intakeType: $intakeType, intakeDate: $intakeDate, source: $source, condition: $condition, notes: $notes, createdBy: $createdBy) {
+        _id
+        animalId
+        intakeType
+        intakeDate
+      }
+    }
+  `,
+  CREATE_OUTCOME_LOG: gql`
+    mutation CreateOutcomeLog($animalId: ID!, $shelterId: ID!, $outcomeType: String!, $outcomeDate: String!, $destination: String, $notes: String, $createdBy: String) {
+      createOutcomeLog(animalId: $animalId, shelterId: $shelterId, outcomeType: $outcomeType, outcomeDate: $outcomeDate, destination: $destination, notes: $notes, createdBy: $createdBy) {
+        _id
+        animalId
+        outcomeType
+        outcomeDate
       }
     }
   `

@@ -30,6 +30,13 @@ import MessageType from './message_type';
 import VolunteerType from './volunteer_type';
 import BehaviorNoteType from './behavior_note_type';
 import AnnouncementType from './announcement_type';
+import MicrochipType from './microchip_type';
+import WeightRecordType from './weight_record_type';
+import VaccinationType from './vaccination_type';
+import AdoptionFeeType from './adoption_fee_type';
+import SpayNeuterType from './spay_neuter_type';
+import IntakeLogType from './intake_log_type';
+import OutcomeLogType from './outcome_log_type';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
 import { FosterDocument } from '../../models/Foster';
@@ -41,6 +48,13 @@ import { MessageDocument } from '../../models/Message';
 import { VolunteerDocument } from '../../models/Volunteer';
 import { BehaviorNoteDocument } from '../../models/BehaviorNote';
 import { AnnouncementDocument } from '../../models/Announcement';
+import { MicrochipDocument } from '../../models/Microchip';
+import { WeightRecordDocument } from '../../models/WeightRecord';
+import { VaccinationDocument } from '../../models/Vaccination';
+import { AdoptionFeeDocument } from '../../models/AdoptionFee';
+import { SpayNeuterDocument } from '../../models/SpayNeuter';
+import { IntakeLogDocument } from '../../models/IntakeLog';
+import { OutcomeLogDocument } from '../../models/OutcomeLog';
 import { ApplicationDocument } from '../../models/Application';
 import { AnimalDocument } from '../../models/Animal';
 import { UserDocument } from '../../models/User';
@@ -66,6 +80,13 @@ const MessageModel = mongoose.model<MessageDocument>('message');
 const VolunteerModel = mongoose.model<VolunteerDocument>('volunteer');
 const BehaviorNoteModel = mongoose.model<BehaviorNoteDocument>('behaviorNote');
 const AnnouncementModel = mongoose.model<AnnouncementDocument>('announcement');
+const MicrochipModel = mongoose.model<MicrochipDocument>('microchip');
+const WeightRecordModel = mongoose.model<WeightRecordDocument>('weightRecord');
+const VaccinationModel = mongoose.model<VaccinationDocument>('vaccination');
+const AdoptionFeeModel = mongoose.model<AdoptionFeeDocument>('adoptionFee');
+const SpayNeuterModel = mongoose.model<SpayNeuterDocument>('spayNeuter');
+const IntakeLogModel = mongoose.model<IntakeLogDocument>('intakeLog');
+const OutcomeLogModel = mongoose.model<OutcomeLogDocument>('outcomeLog');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -440,6 +461,55 @@ const RootQueryType = new GraphQLObjectType({
       args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
       resolve(_, args: { shelterId: string }) {
         return AnnouncementModel.find({ shelterId: args.shelterId, active: true }).sort({ pinned: -1, createdAt: -1 });
+      }
+    },
+    shelterMicrochips: {
+      type: new GraphQLList(MicrochipType),
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { shelterId: string }) {
+        return MicrochipModel.find({ shelterId: args.shelterId }).sort({ createdAt: -1 });
+      }
+    },
+    animalWeightRecords: {
+      type: new GraphQLList(WeightRecordType),
+      args: { animalId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { animalId: string }) {
+        return WeightRecordModel.find({ animalId: args.animalId }).sort({ recordedAt: -1 });
+      }
+    },
+    animalVaccinations: {
+      type: new GraphQLList(VaccinationType),
+      args: { animalId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { animalId: string }) {
+        return VaccinationModel.find({ animalId: args.animalId }).sort({ dateAdministered: -1 });
+      }
+    },
+    shelterAdoptionFees: {
+      type: new GraphQLList(AdoptionFeeType),
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { shelterId: string }) {
+        return AdoptionFeeModel.find({ shelterId: args.shelterId, active: true });
+      }
+    },
+    animalSpayNeuter: {
+      type: SpayNeuterType,
+      args: { animalId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { animalId: string }) {
+        return SpayNeuterModel.findOne({ animalId: args.animalId });
+      }
+    },
+    animalIntakeLogs: {
+      type: new GraphQLList(IntakeLogType),
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { shelterId: string }) {
+        return IntakeLogModel.find({ shelterId: args.shelterId }).sort({ intakeDate: -1 });
+      }
+    },
+    animalOutcomeLogs: {
+      type: new GraphQLList(OutcomeLogType),
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { shelterId: string }) {
+        return OutcomeLogModel.find({ shelterId: args.shelterId }).sort({ outcomeDate: -1 });
       }
     }
   })

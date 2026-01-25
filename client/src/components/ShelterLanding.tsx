@@ -23,6 +23,13 @@ import MessagingPanel from "./MessagingPanel";
 import VolunteerManager from "./VolunteerManager";
 import BehaviorNoteManager from "./BehaviorNoteManager";
 import AnnouncementManager from "./AnnouncementManager";
+import MicrochipManager from "./MicrochipManager";
+import WeightTracker from "./WeightTracker";
+import VaccinationManager from "./VaccinationManager";
+import AdoptionFeeManager from "./AdoptionFeeManager";
+import SpayNeuterManager from "./SpayNeuterManager";
+import IntakeLogManager from "./IntakeLogManager";
+import OutcomeLogManager from "./OutcomeLogManager";
 import { exportAnimalsCsv } from "../util/exportCsv";
 
 const { FETCH_SHELTER } = Queries;
@@ -387,6 +394,52 @@ class ShelterLanding extends Component<ShelterLandingProps, ShelterLandingState>
 
                   <div className="mt-6">
                     <AnnouncementManager shelterId={shelterId} />
+                  </div>
+
+                  <div className="mt-6">
+                    <MicrochipManager
+                      shelterId={shelterId}
+                      animals={animals.map((a) => ({ _id: a._id, name: a.name }))}
+                    />
+                  </div>
+
+                  <div className="mt-6">
+                    <WeightTracker
+                      shelterId={shelterId}
+                      animals={animals.map((a) => ({ _id: a._id, name: a.name }))}
+                    />
+                  </div>
+
+                  <div className="mt-6">
+                    <VaccinationManager
+                      shelterId={shelterId}
+                      animals={animals.map((a) => ({ _id: a._id, name: a.name }))}
+                    />
+                  </div>
+
+                  <div className="mt-6">
+                    <AdoptionFeeManager shelterId={shelterId} />
+                  </div>
+
+                  <div className="mt-6">
+                    <SpayNeuterManager
+                      shelterId={shelterId}
+                      animals={animals.map((a) => ({ _id: a._id, name: a.name }))}
+                    />
+                  </div>
+
+                  <div className="mt-6">
+                    <IntakeLogManager
+                      shelterId={shelterId}
+                      animals={animals.map((a) => ({ _id: a._id, name: a.name }))}
+                    />
+                  </div>
+
+                  <div className="mt-6">
+                    <OutcomeLogManager
+                      shelterId={shelterId}
+                      animals={animals.map((a) => ({ _id: a._id, name: a.name }))}
+                    />
                   </div>
                 </>
               );
