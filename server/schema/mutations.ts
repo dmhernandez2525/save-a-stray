@@ -592,12 +592,30 @@ const mutation = new GraphQLObjectType({
         message: { type: GraphQLString }
       },
       async resolve(_, args: { shelterId: string; userId?: string; donorName: string; amount: number; message?: string }) {
+        // Validate required fields
+        if (!args.shelterId || !args.donorName) {
+          throw new Error('Shelter ID and donor name are required');
+        }
+
+        // Validate amount
+        if (!args.amount || args.amount < 1) {
+          throw new Error('Donation amount must be at least $1');
+        }
+        if (args.amount > 1000000) {
+          throw new Error('Donation amount exceeds maximum allowed');
+        }
+
+        // Validate message length
+        if (args.message && args.message.length > 500) {
+          throw new Error('Message cannot exceed 500 characters');
+        }
+
         const donation = new DonationModel({
           shelterId: args.shelterId,
           userId: args.userId || '',
-          donorName: args.donorName,
+          donorName: args.donorName.trim(),
           amount: args.amount,
-          message: args.message || ''
+          message: args.message?.trim() || ''
         });
         await donation.save();
         return donation;

@@ -25,11 +25,13 @@ const DonationSchema = new Schema<DonationDocument>({
   amount: {
     type: Number,
     required: true,
-    min: 1
+    min: [1, 'Donation amount must be at least $1'],
+    max: [1000000, 'Donation amount exceeds maximum']
   },
   message: {
     type: String,
-    default: ''
+    default: '',
+    maxlength: [500, 'Message cannot exceed 500 characters']
   },
   createdAt: {
     type: Date,
