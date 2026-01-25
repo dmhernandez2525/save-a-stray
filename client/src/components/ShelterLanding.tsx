@@ -17,6 +17,7 @@ import DonationTracker from "./DonationTracker";
 import FosterManagement from "./FosterManagement";
 import ApplicationTemplateManager from "./ApplicationTemplateManager";
 import VerificationBadge from "./VerificationBadge";
+import ActivityFeed from "./ActivityFeed";
 import { exportAnimalsCsv } from "../util/exportCsv";
 
 const { FETCH_SHELTER } = Queries;
@@ -354,6 +355,10 @@ class ShelterLanding extends Component<ShelterLandingProps, ShelterLandingState>
 
                   <div className="mt-6">
                     <ApplicationTemplateManager shelterId={shelterId} />
+                  </div>
+
+                  <div className="mt-6">
+                    <ActivityFeed shelterId={shelterId} />
                   </div>
                 </>
               );

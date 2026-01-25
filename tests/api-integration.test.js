@@ -885,4 +885,37 @@ describe('GraphQL Schema Tests', () => {
     const fields = mutation.getFields();
     expect(fields.verifyShelter.type).toBe(ShelterType);
   });
+
+  it('should have ActivityLogType with correct fields', () => {
+    const ActivityLogType = require('../server/schema/types/activity_log_type').default;
+    const fields = ActivityLogType.getFields();
+    expect(fields._id).toBeDefined();
+    expect(fields.shelterId).toBeDefined();
+    expect(fields.action).toBeDefined();
+    expect(fields.entityType).toBeDefined();
+    expect(fields.entityId).toBeDefined();
+    expect(fields.description).toBeDefined();
+    expect(fields.createdAt).toBeDefined();
+  });
+
+  it('should have shelterActivityLog query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+    expect(fields.shelterActivityLog).toBeDefined();
+  });
+
+  it('should have logActivity mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const fields = mutation.getFields();
+    expect(fields.logActivity).toBeDefined();
+    expect(fields.logActivity.args).toBeDefined();
+  });
+
+  it('should return ActivityLogType from logActivity mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const ActivityLogType = require('../server/schema/types/activity_log_type').default;
+    const fields = mutation.getFields();
+    expect(fields.logActivity.type).toBe(ActivityLogType);
+  });
+
 });
