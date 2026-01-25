@@ -366,6 +366,228 @@ describe('UserLanding Component', () => {
   });
 });
 
+describe('Debounced Search Behavior', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('should debounce text input changes', async () => {
+    const queryFn = vi.fn();
+    let filters = {};
+    let queryFilters = {};
+    const DEBOUNCE_MS = 300;
+
+    const TEXT_FILTER_KEYS = ['name', 'breed', 'color'];
+    const NUMERIC_FILTER_KEYS = ['minAge', 'maxAge'];
+    const DEBOUNCED_KEYS = new Set([...TEXT_FILTER_KEYS, ...NUMERIC_FILTER_KEYS]);
+
+    // Simulate the handleFiltersChange logic
+    let debounceTimer = null;
+    const handleFiltersChange = (newFilters) => {
+      const prevFilters = filters;
+      const changedKey = Object.keys(newFilters).find(
+        (key) => newFilters[key] !== prevFilters[key]
+      );
+      const shouldDebounce = changedKey && DEBOUNCED_KEYS.has(changedKey);
+
+      filters = newFilters;
+
+      if (shouldDebounce) {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          queryFilters = newFilters;
+          queryFn(newFilters);
+          debounceTimer = null;
+        }, DEBOUNCE_MS);
+      } else {
+        if (debounceTimer) {
+          clearTimeout(debounceTimer);
+          debounceTimer = null;
+        }
+        queryFilters = newFilters;
+        queryFn(newFilters);
+      }
+    };
+
+    // Simulate typing "Buddy" character by character
+    handleFiltersChange({ name: 'B' });
+    handleFiltersChange({ name: 'Bu' });
+    handleFiltersChange({ name: 'Bud' });
+    handleFiltersChange({ name: 'Budd' });
+    handleFiltersChange({ name: 'Buddy' });
+
+    // Should not have called query yet
+    expect(queryFn).not.toHaveBeenCalled();
+
+    // Advance timer past debounce delay
+    vi.advanceTimersByTime(300);
+
+    // Should have called query exactly once with final value
+    expect(queryFn).toHaveBeenCalledTimes(1);
+    expect(queryFn).toHaveBeenCalledWith({ name: 'Buddy' });
+  });
+
+  it('should immediately fire for type button changes', () => {
+    const queryFn = vi.fn();
+    let filters = {};
+    const DEBOUNCE_MS = 300;
+    const DEBOUNCED_KEYS = new Set(['name', 'breed', 'color', 'minAge', 'maxAge']);
+    let debounceTimer = null;
+
+    const handleFiltersChange = (newFilters) => {
+      const prevFilters = filters;
+      const changedKey = Object.keys(newFilters).find(
+        (key) => newFilters[key] !== prevFilters[key]
+      );
+      const shouldDebounce = changedKey && DEBOUNCED_KEYS.has(changedKey);
+
+      filters = newFilters;
+
+      if (shouldDebounce) {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          queryFn(newFilters);
+          debounceTimer = null;
+        }, DEBOUNCE_MS);
+      } else {
+        if (debounceTimer) {
+          clearTimeout(debounceTimer);
+          debounceTimer = null;
+        }
+        queryFn(newFilters);
+      }
+    };
+
+    // Click type button - should fire immediately
+    handleFiltersChange({ type: 'Dogs' });
+    expect(queryFn).toHaveBeenCalledTimes(1);
+    expect(queryFn).toHaveBeenCalledWith({ type: 'Dogs' });
+  });
+
+  it('should immediately fire for sex select changes', () => {
+    const queryFn = vi.fn();
+    let filters = {};
+    const DEBOUNCE_MS = 300;
+    const DEBOUNCED_KEYS = new Set(['name', 'breed', 'color', 'minAge', 'maxAge']);
+    let debounceTimer = null;
+
+    const handleFiltersChange = (newFilters) => {
+      const prevFilters = filters;
+      const changedKey = Object.keys(newFilters).find(
+        (key) => newFilters[key] !== prevFilters[key]
+      );
+      const shouldDebounce = changedKey && DEBOUNCED_KEYS.has(changedKey);
+      filters = newFilters;
+
+      if (shouldDebounce) {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          queryFn(newFilters);
+          debounceTimer = null;
+        }, DEBOUNCE_MS);
+      } else {
+        if (debounceTimer) {
+          clearTimeout(debounceTimer);
+          debounceTimer = null;
+        }
+        queryFn(newFilters);
+      }
+    };
+
+    handleFiltersChange({ sex: 'Male' });
+    expect(queryFn).toHaveBeenCalledTimes(1);
+    expect(queryFn).toHaveBeenCalledWith({ sex: 'Male' });
+  });
+
+  it('should cancel pending debounce when immediate filter changes', () => {
+    const queryFn = vi.fn();
+    let filters = {};
+    const DEBOUNCE_MS = 300;
+    const DEBOUNCED_KEYS = new Set(['name', 'breed', 'color', 'minAge', 'maxAge']);
+    let debounceTimer = null;
+
+    const handleFiltersChange = (newFilters) => {
+      const prevFilters = filters;
+      const changedKey = Object.keys(newFilters).find(
+        (key) => newFilters[key] !== prevFilters[key]
+      );
+      const shouldDebounce = changedKey && DEBOUNCED_KEYS.has(changedKey);
+      filters = newFilters;
+
+      if (shouldDebounce) {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          queryFn(newFilters);
+          debounceTimer = null;
+        }, DEBOUNCE_MS);
+      } else {
+        if (debounceTimer) {
+          clearTimeout(debounceTimer);
+          debounceTimer = null;
+        }
+        queryFn(newFilters);
+      }
+    };
+
+    // Start typing (debounced)
+    handleFiltersChange({ name: 'Bud' });
+    expect(queryFn).not.toHaveBeenCalled();
+
+    // Then click a type button (immediate) - should cancel the pending debounce
+    handleFiltersChange({ name: 'Bud', type: 'Dogs' });
+    expect(queryFn).toHaveBeenCalledTimes(1);
+    expect(queryFn).toHaveBeenCalledWith({ name: 'Bud', type: 'Dogs' });
+
+    // Advance timer - the old debounce should not fire
+    vi.advanceTimersByTime(300);
+    expect(queryFn).toHaveBeenCalledTimes(1);
+  });
+
+  it('should debounce numeric age filter changes', () => {
+    const queryFn = vi.fn();
+    let filters = {};
+    const DEBOUNCE_MS = 300;
+    const DEBOUNCED_KEYS = new Set(['name', 'breed', 'color', 'minAge', 'maxAge']);
+    let debounceTimer = null;
+
+    const handleFiltersChange = (newFilters) => {
+      const prevFilters = filters;
+      const changedKey = Object.keys(newFilters).find(
+        (key) => newFilters[key] !== prevFilters[key]
+      );
+      const shouldDebounce = changedKey && DEBOUNCED_KEYS.has(changedKey);
+      filters = newFilters;
+
+      if (shouldDebounce) {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          queryFn(newFilters);
+          debounceTimer = null;
+        }, DEBOUNCE_MS);
+      } else {
+        if (debounceTimer) {
+          clearTimeout(debounceTimer);
+          debounceTimer = null;
+        }
+        queryFn(newFilters);
+      }
+    };
+
+    handleFiltersChange({ minAge: 1 });
+    handleFiltersChange({ minAge: 12 });
+    expect(queryFn).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(300);
+    expect(queryFn).toHaveBeenCalledTimes(1);
+    expect(queryFn).toHaveBeenCalledWith({ minAge: 12 });
+  });
+});
+
 describe('AnimalFeedItem Component', () => {
   const mockAnimal = {
     _id: 'test-animal-1',
