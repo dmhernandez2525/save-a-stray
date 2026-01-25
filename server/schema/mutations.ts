@@ -29,12 +29,16 @@ import FosterType from './types/foster_type';
 import SavedSearchType from './types/saved_search_type';
 import ApplicationTemplateType from './types/application_template_type';
 import ActivityLogType from './types/activity_log_type';
+import TerminalReaderType from './types/terminal_reader_type';
+import PaymentIntentType from './types/payment_intent_type';
+import * as stripeTerminal from '../services/stripeTerminal';
 import { EventDocument } from '../models/Event';
 import { DonationDocument } from '../models/Donation';
 import { FosterDocument } from '../models/Foster';
 import { SavedSearchDocument } from '../models/SavedSearch';
 import { ApplicationTemplateDocument } from '../models/ApplicationTemplate';
 import { ActivityLogDocument } from '../models/ActivityLog';
+import { TerminalReaderDocument } from '../models/TerminalReader';
 import { ReviewDocument } from '../models/Review';
 import { NotificationDocument } from '../models/Notification';
 
@@ -51,6 +55,7 @@ const FosterModel = mongoose.model<FosterDocument>('foster');
 const SavedSearchModel = mongoose.model<SavedSearchDocument>('savedSearch');
 const ApplicationTemplateModel = mongoose.model<ApplicationTemplateDocument>('applicationTemplate');
 const ActivityLogModel = mongoose.model<ActivityLogDocument>('activityLog');
+const TerminalReaderModel = mongoose.model<TerminalReaderDocument>('terminalReader');
 
 interface RegisterArgs {
   name: string;
@@ -856,6 +861,99 @@ const mutation = new GraphQLObjectType({
         });
         await successStory.save();
         return successStory;
+      }
+    },
+    registerTerminalReader: {
+      type: TerminalReaderType,
+      args: {
+        shelterId: { type: GraphQLID },
+        registrationCode: { type: GraphQLString },
+        label: { type: GraphQLString },
+        location: { type: GraphQLString }
+      },
+      async resolve(_, args: { shelterId: string; registrationCode: string; label: string; location?: string }) {
+        // Validate required fields
+        if (!args.shelterId || !args.registrationCode || !args.label) {
+          throw new Error('Shelter ID, registration code, and label are required');
+        }
+
+        // Validate label length
+        if (args.label.length > 100) {
+          throw new Error('Label cannot exceed 100 characters');
+        }
+
+        const reader = await stripeTerminal.registerReader({
+          registrationCode: args.registrationCode,
+          label: args.label,
+          location: args.location
+        });
+
+        const terminalReader = new TerminalReaderModel({
+          shelterId: args.shelterId,
+          stripeReaderId: reader.id,
+          label: args.label,
+          deviceType: reader.device_type || 'simulated',
+          serialNumber: reader.serial_number || '',
+          location: args.location || '',
+          status: 'online',
+          registeredAt: new Date()
+        });
+        await terminalReader.save();
+        return terminalReader;
+      }
+    },
+    deleteTerminalReader: {
+      type: TerminalReaderType,
+      args: {
+        _id: { type: GraphQLID }
+      },
+      async resolve(_, args: { _id: string }) {
+        const reader = await TerminalReaderModel.findById(args._id);
+        if (!reader) return null;
+
+        await stripeTerminal.deleteReader(reader.stripeReaderId);
+        await TerminalReaderModel.deleteOne({ _id: args._id });
+        return reader;
+      }
+    },
+    createTerminalPaymentIntent: {
+      type: PaymentIntentType,
+      args: {
+        shelterId: { type: GraphQLID },
+        readerId: { type: GraphQLString },
+        amount: { type: GraphQLInt },
+        currency: { type: GraphQLString },
+        description: { type: GraphQLString }
+      },
+      async resolve(_, args: { shelterId: string; readerId: string; amount: number; currency?: string; description?: string }) {
+        // Validate required fields
+        if (!args.shelterId || !args.readerId) {
+          throw new Error('Shelter ID and Reader ID are required');
+        }
+
+        // Validate amount
+        if (!args.amount || args.amount < 50) {
+          throw new Error('Amount must be at least 50 cents');
+        }
+        if (args.amount > 99999999) {
+          throw new Error('Amount exceeds maximum allowed');
+        }
+
+        const paymentIntent = await stripeTerminal.createPaymentIntent({
+          readerId: args.readerId,
+          amount: args.amount,
+          currency: args.currency,
+          description: args.description
+        });
+
+        return {
+          id: paymentIntent.id,
+          amount: paymentIntent.amount,
+          currency: paymentIntent.currency,
+          status: paymentIntent.status,
+          description: paymentIntent.description || '',
+          clientSecret: paymentIntent.client_secret || ''
+        };
       }
     }
   })

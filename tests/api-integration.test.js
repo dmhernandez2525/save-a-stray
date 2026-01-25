@@ -918,4 +918,68 @@ describe('GraphQL Schema Tests', () => {
     expect(fields.logActivity.type).toBe(ActivityLogType);
   });
 
+  it('should have TerminalReaderType with correct fields', () => {
+    const TerminalReaderType = require('../server/schema/types/terminal_reader_type').default;
+    const fields = TerminalReaderType.getFields();
+    expect(fields._id).toBeDefined();
+    expect(fields.shelterId).toBeDefined();
+    expect(fields.stripeReaderId).toBeDefined();
+    expect(fields.label).toBeDefined();
+    expect(fields.deviceType).toBeDefined();
+    expect(fields.serialNumber).toBeDefined();
+    expect(fields.location).toBeDefined();
+    expect(fields.status).toBeDefined();
+    expect(fields.registeredAt).toBeDefined();
+  });
+
+  it('should have PaymentIntentType with correct fields', () => {
+    const PaymentIntentType = require('../server/schema/types/payment_intent_type').default;
+    const fields = PaymentIntentType.getFields();
+    expect(fields.id).toBeDefined();
+    expect(fields.amount).toBeDefined();
+    expect(fields.currency).toBeDefined();
+    expect(fields.status).toBeDefined();
+    expect(fields.description).toBeDefined();
+    expect(fields.clientSecret).toBeDefined();
+  });
+
+  it('should have shelterTerminalReaders query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+    expect(fields.shelterTerminalReaders).toBeDefined();
+  });
+
+  it('should have registerTerminalReader mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const fields = mutation.getFields();
+    expect(fields.registerTerminalReader).toBeDefined();
+    expect(fields.registerTerminalReader.args).toBeDefined();
+  });
+
+  it('should have deleteTerminalReader mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const fields = mutation.getFields();
+    expect(fields.deleteTerminalReader).toBeDefined();
+  });
+
+  it('should have createTerminalPaymentIntent mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const fields = mutation.getFields();
+    expect(fields.createTerminalPaymentIntent).toBeDefined();
+    expect(fields.createTerminalPaymentIntent.args).toBeDefined();
+  });
+
+  it('should return TerminalReaderType from registerTerminalReader mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const TerminalReaderType = require('../server/schema/types/terminal_reader_type').default;
+    const fields = mutation.getFields();
+    expect(fields.registerTerminalReader.type).toBe(TerminalReaderType);
+  });
+
+  it('should return PaymentIntentType from createTerminalPaymentIntent mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const PaymentIntentType = require('../server/schema/types/payment_intent_type').default;
+    const fields = mutation.getFields();
+    expect(fields.createTerminalPaymentIntent.type).toBe(PaymentIntentType);
+  });
 });

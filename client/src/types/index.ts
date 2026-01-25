@@ -444,3 +444,31 @@ export interface ShelterFormState {
   paymentEmail: string;
   animals: string;
 }
+
+// Terminal Reader Types
+export type TerminalReaderStatus = 'online' | 'offline';
+
+export interface TerminalReader {
+  _id: string;
+  shelterId: string;
+  stripeReaderId: string;
+  label: string;
+  deviceType: string;
+  serialNumber: string;
+  location: string;
+  status: TerminalReaderStatus;
+  registeredAt: string;
+}
+
+export interface ShelterTerminalReadersResponse {
+  shelterTerminalReaders: TerminalReader[];
+}
+
+export interface PaymentIntent {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  description: string;
+  clientSecret: string;
+}

@@ -14,6 +14,7 @@ interface Queries {
   USER_SAVED_SEARCHES: DocumentNode;
   SHELTER_APPLICATION_TEMPLATES: DocumentNode;
   SHELTER_ACTIVITY_LOG: DocumentNode;
+  SHELTER_TERMINAL_READERS: DocumentNode;
   PLATFORM_STATS: DocumentNode;
   USER_APPLICATIONS: DocumentNode;
   FIND_ANIMALS: DocumentNode;
@@ -317,6 +318,21 @@ const queries: Queries = {
         entityId
         description
         createdAt
+      }
+    }
+  `,
+  SHELTER_TERMINAL_READERS: gql`
+    query ShelterTerminalReaders($shelterId: ID!) {
+      shelterTerminalReaders(shelterId: $shelterId) {
+        _id
+        shelterId
+        stripeReaderId
+        label
+        deviceType
+        serialNumber
+        location
+        status
+        registeredAt
       }
     }
   `,
