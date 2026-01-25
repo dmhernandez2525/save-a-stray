@@ -374,6 +374,26 @@ const mutation = new GraphQLObjectType({
         notes: { type: GraphQLString }
       },
       async resolve(_, args: { animalId: string; shelterId: string; userId?: string; userName: string; userEmail: string; userPhone?: string; notes?: string }) {
+        // Validate required fields
+        if (!args.animalId || !args.shelterId || !args.userName || !args.userEmail) {
+          throw new Error('Animal ID, shelter ID, user name, and email are required');
+        }
+
+        // Validate email format
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(args.userEmail)) {
+          throw new Error('Invalid email format');
+        }
+
+        // Check if user is already on waitlist for this animal
+        const existingEntry = await WaitlistModel.findOne({
+          animalId: args.animalId,
+          userEmail: args.userEmail,
+          status: 'waiting'
+        });
+        if (existingEntry) {
+          throw new Error('Already on waitlist for this animal');
+        }
+
         const currentMax = await WaitlistModel.findOne({ animalId: args.animalId, status: 'waiting' }).sort({ position: -1 });
         const position = currentMax ? currentMax.position + 1 : 1;
         const entry = new WaitlistModel({
