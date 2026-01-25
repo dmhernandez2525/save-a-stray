@@ -2,6 +2,11 @@ import User from './User';
 import Animal from './Animal';
 import Application from './Application';
 import Shelter from './Shelter';
+import SuccessStory from './SuccessStory';
+import Review from './Review';
+import Notification from './Notification';
+import Event from './Event';
+import Donation from './Donation';
 import Foster from './Foster';
 import SavedSearch from './SavedSearch';
 import ApplicationTemplate from './ApplicationTemplate';
@@ -19,13 +24,18 @@ import SpayNeuter from './SpayNeuter';
 import IntakeLog from './IntakeLog';
 import OutcomeLog from './OutcomeLog';
 
-export { User, Animal, Application, Shelter, Foster, SavedSearch, ApplicationTemplate, ActivityLog, TerminalReader, Message, Volunteer, BehaviorNote, Announcement, Microchip, WeightRecord, Vaccination, AdoptionFee, SpayNeuter, IntakeLog, OutcomeLog };
+export { User, Animal, Application, Shelter, SuccessStory, Review, Notification, Event, Donation, Foster, SavedSearch, ApplicationTemplate, ActivityLog, TerminalReader, Message, Volunteer, BehaviorNote, Announcement, Microchip, WeightRecord, Vaccination, AdoptionFee, SpayNeuter, IntakeLog, OutcomeLog };
 
 // Also import models to ensure they are registered with Mongoose
 import './User';
 import './Animal';
 import './Application';
 import './Shelter';
+import './SuccessStory';
+import './Review';
+import './Notification';
+import './Event';
+import './Donation';
 import './Foster';
 import './SavedSearch';
 import './ApplicationTemplate';
