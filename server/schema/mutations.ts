@@ -24,8 +24,10 @@ import ReviewType from './types/review_type';
 import NotificationType from './types/notification_type';
 import EventType from './types/event_type';
 import DonationType from './types/donation_type';
+import FosterType from './types/foster_type';
 import { EventDocument } from '../models/Event';
 import { DonationDocument } from '../models/Donation';
+import { FosterDocument } from '../models/Foster';
 import { ReviewDocument } from '../models/Review';
 import { NotificationDocument } from '../models/Notification';
 
@@ -38,6 +40,7 @@ const ReviewModel = mongoose.model<ReviewDocument>('review');
 const NotificationModel = mongoose.model<NotificationDocument>('notification');
 const EventModel = mongoose.model<EventDocument>('event');
 const DonationModel = mongoose.model<DonationDocument>('donation');
+const FosterModel = mongoose.model<FosterDocument>('foster');
 
 interface RegisterArgs {
   name: string;
@@ -619,6 +622,54 @@ const mutation = new GraphQLObjectType({
         });
         await donation.save();
         return donation;
+      }
+    },
+    createFoster: {
+      type: FosterType,
+      args: {
+        shelterId: { type: GraphQLID },
+        animalId: { type: GraphQLID },
+        userId: { type: GraphQLString },
+        fosterName: { type: GraphQLString },
+        fosterEmail: { type: GraphQLString },
+        startDate: { type: GraphQLString },
+        endDate: { type: GraphQLString },
+        notes: { type: GraphQLString }
+      },
+      async resolve(_, args: { shelterId: string; animalId: string; userId?: string; fosterName: string; fosterEmail?: string; startDate: string; endDate?: string; notes?: string }) {
+        const foster = new FosterModel({
+          shelterId: args.shelterId,
+          animalId: args.animalId,
+          userId: args.userId || '',
+          fosterName: args.fosterName,
+          fosterEmail: args.fosterEmail || '',
+          startDate: new Date(args.startDate),
+          endDate: args.endDate ? new Date(args.endDate) : undefined,
+          status: 'active',
+          notes: args.notes || ''
+        });
+        await foster.save();
+        return foster;
+      }
+    },
+    updateFosterStatus: {
+      type: FosterType,
+      args: {
+        _id: { type: GraphQLID },
+        status: { type: GraphQLString },
+        endDate: { type: GraphQLString },
+        notes: { type: GraphQLString }
+      },
+      async resolve(_, args: { _id: string; status?: string; endDate?: string; notes?: string }) {
+        const foster = await FosterModel.findById(args._id);
+        if (foster) {
+          if (args.status) foster.status = args.status as typeof foster.status;
+          if (args.endDate) foster.endDate = new Date(args.endDate);
+          if (args.notes !== undefined) foster.notes = args.notes;
+          await foster.save();
+          return foster;
+        }
+        return null;
       }
     },
     bulkCreateAnimals: {
