@@ -18,11 +18,13 @@ const SuccessStorySchema = new Schema<SuccessStoryDocument>({
   },
   title: {
     type: String,
-    required: true
+    required: true,
+    maxlength: [200, 'Title cannot exceed 200 characters']
   },
   story: {
     type: String,
-    required: true
+    required: true,
+    maxlength: [5000, 'Story cannot exceed 5000 characters']
   },
   image: {
     type: String,
