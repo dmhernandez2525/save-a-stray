@@ -15,6 +15,9 @@ interface Queries {
   SHELTER_APPLICATION_TEMPLATES: DocumentNode;
   SHELTER_ACTIVITY_LOG: DocumentNode;
   SHELTER_TERMINAL_READERS: DocumentNode;
+  CONVERSATION_MESSAGES: DocumentNode;
+  SHELTER_CONVERSATIONS: DocumentNode;
+  USER_CONVERSATIONS: DocumentNode;
   PLATFORM_STATS: DocumentNode;
   USER_APPLICATIONS: DocumentNode;
   FIND_ANIMALS: DocumentNode;
@@ -333,6 +336,45 @@ const queries: Queries = {
         location
         status
         registeredAt
+      }
+    }
+  `,
+  CONVERSATION_MESSAGES: gql`
+    query ConversationMessages($userId: ID!, $shelterId: ID!) {
+      conversationMessages(userId: $userId, shelterId: $shelterId) {
+        _id
+        senderId
+        recipientId
+        shelterId
+        content
+        read
+        createdAt
+      }
+    }
+  `,
+  SHELTER_CONVERSATIONS: gql`
+    query ShelterConversations($shelterId: ID!) {
+      shelterConversations(shelterId: $shelterId) {
+        _id
+        senderId
+        recipientId
+        shelterId
+        content
+        read
+        createdAt
+      }
+    }
+  `,
+  USER_CONVERSATIONS: gql`
+    query UserConversations($userId: ID!) {
+      userConversations(userId: $userId) {
+        _id
+        senderId
+        recipientId
+        shelterId
+        content
+        read
+        createdAt
       }
     }
   `,

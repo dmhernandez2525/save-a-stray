@@ -472,3 +472,26 @@ export interface PaymentIntent {
   description: string;
   clientSecret: string;
 }
+
+// Message Types
+export interface Message {
+  _id: string;
+  senderId: string;
+  recipientId: string;
+  shelterId: string;
+  content: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface ConversationMessagesResponse {
+  conversationMessages: Message[];
+}
+
+export interface ShelterConversationsResponse {
+  shelterConversations: Message[];
+}
+
+export interface UserConversationsResponse {
+  userConversations: Message[];
+}

@@ -26,6 +26,7 @@ import SavedSearchType from './saved_search_type';
 import ApplicationTemplateType from './application_template_type';
 import ActivityLogType from './activity_log_type';
 import TerminalReaderType from './terminal_reader_type';
+import MessageType from './message_type';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
 import { FosterDocument } from '../../models/Foster';
@@ -33,6 +34,7 @@ import { SavedSearchDocument } from '../../models/SavedSearch';
 import { ApplicationTemplateDocument } from '../../models/ApplicationTemplate';
 import { ActivityLogDocument } from '../../models/ActivityLog';
 import { TerminalReaderDocument } from '../../models/TerminalReader';
+import { MessageDocument } from '../../models/Message';
 import { ApplicationDocument } from '../../models/Application';
 import { AnimalDocument } from '../../models/Animal';
 import { UserDocument } from '../../models/User';
@@ -54,6 +56,7 @@ const SavedSearchModel = mongoose.model<SavedSearchDocument>('savedSearch');
 const ApplicationTemplateModel = mongoose.model<ApplicationTemplateDocument>('applicationTemplate');
 const ActivityLogModel = mongoose.model<ActivityLogDocument>('activityLog');
 const TerminalReaderModel = mongoose.model<TerminalReaderDocument>('terminalReader');
+const MessageModel = mongoose.model<MessageDocument>('message');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -224,6 +227,64 @@ const RootQueryType = new GraphQLObjectType({
       },
       resolve(_, args: { shelterId: string }) {
         return TerminalReaderModel.find({ shelterId: args.shelterId }).sort({ registeredAt: -1 });
+      }
+    },
+    conversationMessages: {
+      type: new GraphQLList(MessageType),
+      args: {
+        userId: { type: new GraphQLNonNull(GraphQLID) },
+        shelterId: { type: new GraphQLNonNull(GraphQLID) }
+      },
+      resolve(_, args: { userId: string; shelterId: string }) {
+        return MessageModel.find({
+          shelterId: args.shelterId,
+          $or: [
+            { senderId: args.userId },
+            { recipientId: args.userId }
+          ]
+        }).sort({ createdAt: 1 });
+      }
+    },
+    shelterConversations: {
+      type: new GraphQLList(MessageType),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) }
+      },
+      async resolve(_, args: { shelterId: string }) {
+        const messages = await MessageModel.find({ shelterId: args.shelterId }).sort({ createdAt: -1 });
+        const seen = new Set<string>();
+        const latest: MessageDocument[] = [];
+        for (const msg of messages) {
+          const otherId = msg.senderId === args.shelterId ? msg.recipientId : msg.senderId;
+          if (!seen.has(otherId)) {
+            seen.add(otherId);
+            latest.push(msg);
+          }
+        }
+        return latest;
+      }
+    },
+    userConversations: {
+      type: new GraphQLList(MessageType),
+      args: {
+        userId: { type: new GraphQLNonNull(GraphQLID) }
+      },
+      async resolve(_, args: { userId: string }) {
+        const messages = await MessageModel.find({
+          $or: [
+            { senderId: args.userId },
+            { recipientId: args.userId }
+          ]
+        }).sort({ createdAt: -1 });
+        const seen = new Set<string>();
+        const latest: MessageDocument[] = [];
+        for (const msg of messages) {
+          if (!seen.has(msg.shelterId)) {
+            seen.add(msg.shelterId);
+            latest.push(msg);
+          }
+        }
+        return latest;
       }
     },
     platformStats: {

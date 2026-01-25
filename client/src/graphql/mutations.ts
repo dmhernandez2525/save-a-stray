@@ -34,6 +34,8 @@ interface Mutations {
   REGISTER_TERMINAL_READER: DocumentNode;
   DELETE_TERMINAL_READER: DocumentNode;
   CREATE_TERMINAL_PAYMENT_INTENT: DocumentNode;
+  SEND_MESSAGE: DocumentNode;
+  MARK_MESSAGES_READ: DocumentNode;
 }
 
 const mutations: Mutations = {
@@ -593,6 +595,34 @@ const mutations: Mutations = {
         description
         clientSecret
       }
+    }
+  `,
+  SEND_MESSAGE: gql`
+    mutation SendMessage(
+      $senderId: String!
+      $recipientId: String!
+      $shelterId: String!
+      $content: String!
+    ) {
+      sendMessage(
+        senderId: $senderId
+        recipientId: $recipientId
+        shelterId: $shelterId
+        content: $content
+      ) {
+        _id
+        senderId
+        recipientId
+        shelterId
+        content
+        read
+        createdAt
+      }
+    }
+  `,
+  MARK_MESSAGES_READ: gql`
+    mutation MarkMessagesRead($shelterId: String!, $userId: String!, $readerId: String!) {
+      markMessagesRead(shelterId: $shelterId, userId: $userId, readerId: $readerId)
     }
   `
 };

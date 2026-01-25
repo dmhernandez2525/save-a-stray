@@ -982,4 +982,54 @@ describe('GraphQL Schema Tests', () => {
     const fields = mutation.getFields();
     expect(fields.createTerminalPaymentIntent.type).toBe(PaymentIntentType);
   });
+
+  it('should have MessageType with correct fields', () => {
+    const MessageType = require('../server/schema/types/message_type').default;
+    const fields = MessageType.getFields();
+    expect(fields._id).toBeDefined();
+    expect(fields.senderId).toBeDefined();
+    expect(fields.recipientId).toBeDefined();
+    expect(fields.shelterId).toBeDefined();
+    expect(fields.content).toBeDefined();
+    expect(fields.read).toBeDefined();
+    expect(fields.createdAt).toBeDefined();
+  });
+
+  it('should have conversationMessages query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+    expect(fields.conversationMessages).toBeDefined();
+  });
+
+  it('should have shelterConversations query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+    expect(fields.shelterConversations).toBeDefined();
+  });
+
+  it('should have userConversations query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+    expect(fields.userConversations).toBeDefined();
+  });
+
+  it('should have sendMessage mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const fields = mutation.getFields();
+    expect(fields.sendMessage).toBeDefined();
+    expect(fields.sendMessage.args).toBeDefined();
+  });
+
+  it('should have markMessagesRead mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const fields = mutation.getFields();
+    expect(fields.markMessagesRead).toBeDefined();
+  });
+
+  it('should return MessageType from sendMessage mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const MessageType = require('../server/schema/types/message_type').default;
+    const fields = mutation.getFields();
+    expect(fields.sendMessage.type).toBe(MessageType);
+  });
 });
