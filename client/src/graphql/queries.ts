@@ -11,6 +11,7 @@ interface Queries {
   SHELTER_EVENTS: DocumentNode;
   SHELTER_DONATIONS: DocumentNode;
   SHELTER_FOSTERS: DocumentNode;
+  USER_SAVED_SEARCHES: DocumentNode;
   PLATFORM_STATS: DocumentNode;
   USER_APPLICATIONS: DocumentNode;
   FIND_ANIMALS: DocumentNode;
@@ -246,6 +247,25 @@ const queries: Queries = {
         donorName
         amount
         message
+        createdAt
+      }
+    }
+  `,
+  USER_SAVED_SEARCHES: gql`
+    query UserSavedSearches($userId: ID!) {
+      userSavedSearches(userId: $userId) {
+        _id
+        userId
+        name
+        filters {
+          type
+          breed
+          sex
+          color
+          status
+          minAge
+          maxAge
+        }
         createdAt
       }
     }

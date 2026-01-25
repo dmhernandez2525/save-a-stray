@@ -25,6 +25,8 @@ interface Mutations {
   CREATE_DONATION: DocumentNode;
   CREATE_FOSTER: DocumentNode;
   UPDATE_FOSTER_STATUS: DocumentNode;
+  CREATE_SAVED_SEARCH: DocumentNode;
+  DELETE_SAVED_SEARCH: DocumentNode;
 }
 
 const mutations: Mutations = {
@@ -420,6 +422,51 @@ const mutations: Mutations = {
         status
         endDate
         notes
+      }
+    }
+  `,
+  CREATE_SAVED_SEARCH: gql`
+    mutation CreateSavedSearch(
+      $userId: ID!
+      $name: String!
+      $type: String
+      $breed: String
+      $sex: String
+      $color: String
+      $status: String
+      $minAge: Int
+      $maxAge: Int
+    ) {
+      createSavedSearch(
+        userId: $userId
+        name: $name
+        type: $type
+        breed: $breed
+        sex: $sex
+        color: $color
+        status: $status
+        minAge: $minAge
+        maxAge: $maxAge
+      ) {
+        _id
+        name
+        filters {
+          type
+          breed
+          sex
+          color
+          status
+          minAge
+          maxAge
+        }
+        createdAt
+      }
+    }
+  `,
+  DELETE_SAVED_SEARCH: gql`
+    mutation DeleteSavedSearch($_id: ID!) {
+      deleteSavedSearch(_id: $_id) {
+        _id
       }
     }
   `

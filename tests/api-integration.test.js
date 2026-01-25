@@ -793,4 +793,40 @@ describe('GraphQL Schema Tests', () => {
     const fields = mutation.getFields();
     expect(fields.createFoster.type).toBe(FosterType);
   });
+
+  it('should have SavedSearchType with correct fields', () => {
+    const SavedSearchType = require('../server/schema/types/saved_search_type').default;
+    const fields = SavedSearchType.getFields();
+    expect(fields._id).toBeDefined();
+    expect(fields.userId).toBeDefined();
+    expect(fields.name).toBeDefined();
+    expect(fields.filters).toBeDefined();
+    expect(fields.createdAt).toBeDefined();
+  });
+
+  it('should have userSavedSearches query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+    expect(fields.userSavedSearches).toBeDefined();
+  });
+
+  it('should have createSavedSearch mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const fields = mutation.getFields();
+    expect(fields.createSavedSearch).toBeDefined();
+    expect(fields.createSavedSearch.args).toBeDefined();
+  });
+
+  it('should have deleteSavedSearch mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const fields = mutation.getFields();
+    expect(fields.deleteSavedSearch).toBeDefined();
+  });
+
+  it('should return SavedSearchType from createSavedSearch mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const SavedSearchType = require('../server/schema/types/saved_search_type').default;
+    const fields = mutation.getFields();
+    expect(fields.createSavedSearch.type).toBe(SavedSearchType);
+  });
 });
