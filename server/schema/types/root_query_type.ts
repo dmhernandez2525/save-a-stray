@@ -23,10 +23,12 @@ import DonationType from './donation_type';
 import PlatformStatsType from './platform_stats_type';
 import FosterType from './foster_type';
 import SavedSearchType from './saved_search_type';
+import ApplicationTemplateType from './application_template_type';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
 import { FosterDocument } from '../../models/Foster';
 import { SavedSearchDocument } from '../../models/SavedSearch';
+import { ApplicationTemplateDocument } from '../../models/ApplicationTemplate';
 import { ApplicationDocument } from '../../models/Application';
 import { AnimalDocument } from '../../models/Animal';
 import { UserDocument } from '../../models/User';
@@ -45,6 +47,7 @@ const EventModel = mongoose.model<EventDocument>('event');
 const DonationModel = mongoose.model<DonationDocument>('donation');
 const FosterModel = mongoose.model<FosterDocument>('foster');
 const SavedSearchModel = mongoose.model<SavedSearchDocument>('savedSearch');
+const ApplicationTemplateModel = mongoose.model<ApplicationTemplateDocument>('applicationTemplate');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -188,6 +191,13 @@ const RootQueryType = new GraphQLObjectType({
       args: { userId: { type: new GraphQLNonNull(GraphQLID) } },
       resolve(_, args: { userId: string }) {
         return SavedSearchModel.find({ userId: args.userId }).sort({ createdAt: -1 });
+      }
+    },
+    shelterApplicationTemplates: {
+      type: new GraphQLList(ApplicationTemplateType),
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { shelterId: string }) {
+        return ApplicationTemplateModel.find({ shelterId: args.shelterId }).sort({ createdAt: -1 });
       }
     },
     platformStats: {

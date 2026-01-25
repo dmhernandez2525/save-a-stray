@@ -829,4 +829,39 @@ describe('GraphQL Schema Tests', () => {
     const fields = mutation.getFields();
     expect(fields.createSavedSearch.type).toBe(SavedSearchType);
   });
+
+  it('should have ApplicationTemplateType with correct fields', () => {
+    const ApplicationTemplateType = require('../server/schema/types/application_template_type').default;
+    const fields = ApplicationTemplateType.getFields();
+    expect(fields._id).toBeDefined();
+    expect(fields.shelterId).toBeDefined();
+    expect(fields.name).toBeDefined();
+    expect(fields.fields).toBeDefined();
+    expect(fields.createdAt).toBeDefined();
+  });
+
+  it('should have shelterApplicationTemplates query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+    expect(fields.shelterApplicationTemplates).toBeDefined();
+  });
+
+  it('should have createApplicationTemplate mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const fields = mutation.getFields();
+    expect(fields.createApplicationTemplate).toBeDefined();
+  });
+
+  it('should have deleteApplicationTemplate mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const fields = mutation.getFields();
+    expect(fields.deleteApplicationTemplate).toBeDefined();
+  });
+
+  it('should return ApplicationTemplateType from createApplicationTemplate mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const ApplicationTemplateType = require('../server/schema/types/application_template_type').default;
+    const fields = mutation.getFields();
+    expect(fields.createApplicationTemplate.type).toBe(ApplicationTemplateType);
+  });
 });
