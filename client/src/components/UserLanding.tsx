@@ -139,8 +139,8 @@ class UserLanding extends Component<UserLandingProps, UserLandingState> {
           </p>
         )}
         <div className="mt-6 w-full">
-          {!hasQueryFilters ? (
-            <Card className="bg-transparent border-none shadow-none">
+          {!hasQueryFilters && (
+            <Card className="bg-transparent border-none shadow-none mb-6">
               <CardContent className="text-center">
                 <p className="text-white font-capriola text-lg italic">
                   "When we adopt a dog or any pet, we know it is going to end with
@@ -151,75 +151,74 @@ class UserLanding extends Component<UserLandingProps, UserLandingState> {
                 </p>
               </CardContent>
             </Card>
-          ) : (
-            <Query<FindAnimalsResponse, FindAnimalsVariables>
-              query={FIND_ANIMALS}
-              variables={{ ...this.state.queryFilters, limit: PAGE_SIZE, offset: 0 }}
-              onCompleted={(data) => {
-                const animals = data?.findAnimals || [];
-                if (animals.length < PAGE_SIZE && this.state.hasMore) {
-                  this.setState({ hasMore: false });
-                }
-              }}
-            >
-              {({ loading, error, data, fetchMore }) => {
-                if (loading && (!data || !data.findAnimals))
-                  return (
-                    <p className="text-white font-capriola animate-pulse text-center">
-                      Loading...
-                    </p>
-                  );
-                if (error)
-                  return <p className="text-red-500 font-capriola text-center">Error</p>;
-
-                const animals = data?.findAnimals || [];
-
-                if (animals.length === 0) {
-                  return (
-                    <p className="text-white font-capriola text-center">
-                      No animals found matching your filters.
-                    </p>
-                  );
-                }
-
-                return (
-                  <div className="w-full">
-                    <ul className="flex flex-wrap gap-4 justify-center p-4">
-                      {animals.map((animal) => (
-                        <li key={animal._id} className="list-none">
-                          <AnimalFeedItem animal={animal} />
-                        </li>
-                      ))}
-                    </ul>
-                    {this.state.hasMore && animals.length >= PAGE_SIZE && (
-                      <div className="flex justify-center mt-4">
-                        <Button
-                          variant="salmon"
-                          onClick={() => {
-                            fetchMore({
-                              variables: { offset: animals.length },
-                              updateQuery: (prev, { fetchMoreResult }) => {
-                                if (!fetchMoreResult) return prev;
-                                const newAnimals = fetchMoreResult.findAnimals;
-                                if (newAnimals.length < PAGE_SIZE) {
-                                  this.setState({ hasMore: false });
-                                }
-                                return {
-                                  findAnimals: [...prev.findAnimals, ...newAnimals],
-                                };
-                              },
-                            });
-                          }}
-                        >
-                          Load More
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                );
-              }}
-            </Query>
           )}
+          <Query<FindAnimalsResponse, FindAnimalsVariables>
+            query={FIND_ANIMALS}
+            variables={{ ...this.state.queryFilters, limit: PAGE_SIZE, offset: 0 }}
+            onCompleted={(data) => {
+              const animals = data?.findAnimals || [];
+              if (animals.length < PAGE_SIZE && this.state.hasMore) {
+                this.setState({ hasMore: false });
+              }
+            }}
+          >
+            {({ loading, error, data, fetchMore }) => {
+              if (loading && (!data || !data.findAnimals))
+                return (
+                  <p className="text-white font-capriola animate-pulse text-center">
+                    Loading...
+                  </p>
+                );
+              if (error)
+                return <p className="text-red-500 font-capriola text-center">Error</p>;
+
+              const animals = data?.findAnimals || [];
+
+              if (animals.length === 0) {
+                return (
+                  <p className="text-white font-capriola text-center">
+                    No animals found. Check back soon for new arrivals!
+                  </p>
+                );
+              }
+
+              return (
+                <div className="w-full">
+                  <ul className="flex flex-wrap gap-4 justify-center p-4">
+                    {animals.map((animal) => (
+                      <li key={animal._id} className="list-none">
+                        <AnimalFeedItem animal={animal} />
+                      </li>
+                    ))}
+                  </ul>
+                  {this.state.hasMore && animals.length >= PAGE_SIZE && (
+                    <div className="flex justify-center mt-4">
+                      <Button
+                        variant="salmon"
+                        onClick={() => {
+                          fetchMore({
+                            variables: { offset: animals.length },
+                            updateQuery: (prev, { fetchMoreResult }) => {
+                              if (!fetchMoreResult) return prev;
+                              const newAnimals = fetchMoreResult.findAnimals;
+                              if (newAnimals.length < PAGE_SIZE) {
+                                this.setState({ hasMore: false });
+                              }
+                              return {
+                                findAnimals: [...prev.findAnimals, ...newAnimals],
+                              };
+                            },
+                          });
+                        }}
+                      >
+                        Load More
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            }}
+          </Query>
         </div>
       </div>
     );
