@@ -383,6 +383,25 @@ const mutation = new GraphQLObjectType({
         recordedBy?: string;
         notes?: string;
       }) {
+        // Validate required fields
+        if (!args.animalId || !args.shelterId) {
+          throw new Error('Animal ID and Shelter ID are required');
+        }
+
+        // Validate weight is positive
+        if (!args.weight || args.weight <= 0) {
+          throw new Error('Weight must be a positive number');
+        }
+        if (args.weight > 5000) {
+          throw new Error('Weight value seems unrealistic');
+        }
+
+        // Validate unit
+        const validUnits = ['lbs', 'kg', 'oz', 'g'];
+        if (args.unit && !validUnits.includes(args.unit)) {
+          throw new Error('Invalid weight unit. Use: lbs, kg, oz, or g');
+        }
+
         const record = new WeightRecord({
           animalId: args.animalId,
           shelterId: args.shelterId,
