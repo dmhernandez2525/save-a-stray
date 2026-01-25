@@ -3,12 +3,14 @@ import { useQuery, useMutation } from "@apollo/client";
 import Queries from "../graphql/queries";
 import Mutations from "../graphql/mutations";
 import { UserIdData } from "../types";
+import { Heart } from "lucide-react";
 
 const { USER_ID, USER_FAVORITE_IDS } = Queries;
 const { ADD_FAVORITE, REMOVE_FAVORITE } = Mutations;
 
 interface FavoriteButtonProps {
   animalId: string;
+  size?: "sm" | "md" | "lg";
 }
 
 interface UserFavoriteIdsResponse {
@@ -18,7 +20,19 @@ interface UserFavoriteIdsResponse {
   } | null;
 }
 
-const FavoriteButton: React.FC<FavoriteButtonProps> = ({ animalId }) => {
+const SIZES = {
+  sm: "h-4 w-4",
+  md: "h-5 w-5",
+  lg: "h-6 w-6",
+};
+
+const BUTTON_SIZES = {
+  sm: "p-1.5",
+  md: "p-2",
+  lg: "p-2.5",
+};
+
+const FavoriteButton: React.FC<FavoriteButtonProps> = ({ animalId, size = "md" }) => {
   const { data: userIdData } = useQuery<UserIdData>(USER_ID);
   const userId = userIdData?.userId;
 
@@ -51,23 +65,16 @@ const FavoriteButton: React.FC<FavoriteButtonProps> = ({ animalId }) => {
   return (
     <button
       onClick={toggleFavorite}
-      className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+      className={`${BUTTON_SIZES[size]} rounded-full bg-white/90 dark:bg-warm-gray-800/90 backdrop-blur-sm hover:bg-white dark:hover:bg-warm-gray-700 transition-all shadow-sm hover:shadow-md hover:scale-110 active:scale-95`}
       aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
     >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill={isFavorited ? "#ef4444" : "none"}
-        stroke={isFavorited ? "#ef4444" : "#9ca3af"}
-        strokeWidth={2}
-        className="w-6 h-6"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
-        />
-      </svg>
+      <Heart
+        className={`${SIZES[size]} transition-colors ${
+          isFavorited
+            ? "fill-salmon-500 text-salmon-500"
+            : "text-warm-gray-400 hover:text-salmon-400"
+        }`}
+      />
     </button>
   );
 };
