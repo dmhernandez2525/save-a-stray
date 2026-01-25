@@ -44,6 +44,16 @@ const ShareButtons: React.FC<ShareButtonsProps> = ({ title, text, url }) => {
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      // Fallback for older browsers or permission denied
+      const textArea = document.createElement("textarea");
+      textArea.value = url;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     });
   };
 
@@ -54,13 +64,19 @@ const ShareButtons: React.FC<ShareButtonsProps> = ({ title, text, url }) => {
         size="sm"
         onClick={() => setShowMenu(!showMenu)}
         className="gap-2"
+        aria-expanded={showMenu}
+        aria-haspopup="menu"
       >
         <Share2 className="h-4 w-4" />
         Share
       </Button>
 
       {showMenu && (
-        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-warm-gray-800 rounded-xl shadow-lg border border-warm-gray-200 dark:border-warm-gray-700 z-50 py-2 animate-fade-in">
+        <div
+          className="absolute right-0 mt-2 w-48 bg-white dark:bg-warm-gray-800 rounded-xl shadow-lg border border-warm-gray-200 dark:border-warm-gray-700 z-50 py-2 animate-fade-in"
+          role="menu"
+          aria-label="Share options"
+        >
           <a
             href={getShareUrl("facebook")}
             target="_blank"
