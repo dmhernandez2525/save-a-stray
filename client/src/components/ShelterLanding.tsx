@@ -7,6 +7,7 @@ import { Shelter, Animal, AnimalStatus, FetchShelterResponse } from "../types";
 import Queries from "../graphql/queries";
 import Mutations from "../graphql/mutations";
 import ShelterApplications from "./ShelterApplications";
+import ShelterAnalytics from "./ShelterAnalytics";
 
 const { FETCH_SHELTER } = Queries;
 const { UPDATE_ANIMAL_STATUS } = Mutations;
@@ -153,6 +154,11 @@ class ShelterLanding extends Component<ShelterLandingProps, ShelterLandingState>
                       )}
                     </CardContent>
                   </Card>
+
+                  <div className="mt-6">
+                    <h2 className="text-white font-capriola text-xl mb-4">Analytics</h2>
+                    <ShelterAnalytics shelterId={shelterId} />
+                  </div>
 
                   <div className="mt-6">
                     <h2 className="text-white font-capriola text-xl mb-4">Applications</h2>

@@ -153,6 +153,25 @@ export interface CreateSuccessStoryResponse {
   createSuccessStory: SuccessStory;
 }
 
+// Shelter Analytics Types
+export interface ShelterAnalytics {
+  totalAnimals: number;
+  availableAnimals: number;
+  pendingAnimals: number;
+  adoptedAnimals: number;
+  adoptionRate: number;
+  totalApplications: number;
+  submittedApplications: number;
+  underReviewApplications: number;
+  approvedApplications: number;
+  rejectedApplications: number;
+  recentApplications: number;
+}
+
+export interface ShelterAnalyticsResponse {
+  shelterAnalytics: ShelterAnalytics;
+}
+
 // Local State Types
 export interface IsLoggedInData {
   isLoggedIn: boolean;
