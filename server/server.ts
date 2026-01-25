@@ -63,7 +63,10 @@ app.use((_req: Request, res: Response, next: NextFunction) => {
 app.use(cors());
 app.use(express.json());
 app.use(passport.initialize());
-app.use(passport.session());
+// Only use passport.session() when Facebook OAuth is configured
+if (keys.fbookClient && keys.fbookKey) {
+  app.use(passport.session());
+}
 
 // Use graphql-http instead of deprecated express-graphql
 app.all("/graphql", createHandler({ schema }));
