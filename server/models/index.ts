@@ -8,8 +8,9 @@ import ApplicationTemplate from './ApplicationTemplate';
 import ActivityLog from './ActivityLog';
 import TerminalReader from './TerminalReader';
 import Message from './Message';
+import Volunteer from './Volunteer';
 
-export { User, Animal, Application, Shelter, Foster, SavedSearch, ApplicationTemplate, ActivityLog, TerminalReader, Message };
+export { User, Animal, Application, Shelter, Foster, SavedSearch, ApplicationTemplate, ActivityLog, TerminalReader, Message, Volunteer };
 
 // Also import models to ensure they are registered with Mongoose
 import './User';
@@ -22,3 +23,4 @@ import './ApplicationTemplate';
 import './ActivityLog';
 import './TerminalReader';
 import './Message';
+import './Volunteer';

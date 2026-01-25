@@ -27,6 +27,7 @@ import ApplicationTemplateType from './application_template_type';
 import ActivityLogType from './activity_log_type';
 import TerminalReaderType from './terminal_reader_type';
 import MessageType from './message_type';
+import VolunteerType from './volunteer_type';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
 import { FosterDocument } from '../../models/Foster';
@@ -35,6 +36,7 @@ import { ApplicationTemplateDocument } from '../../models/ApplicationTemplate';
 import { ActivityLogDocument } from '../../models/ActivityLog';
 import { TerminalReaderDocument } from '../../models/TerminalReader';
 import { MessageDocument } from '../../models/Message';
+import { VolunteerDocument } from '../../models/Volunteer';
 import { ApplicationDocument } from '../../models/Application';
 import { AnimalDocument } from '../../models/Animal';
 import { UserDocument } from '../../models/User';
@@ -57,6 +59,7 @@ const ApplicationTemplateModel = mongoose.model<ApplicationTemplateDocument>('ap
 const ActivityLogModel = mongoose.model<ActivityLogDocument>('activityLog');
 const TerminalReaderModel = mongoose.model<TerminalReaderDocument>('terminalReader');
 const MessageModel = mongoose.model<MessageDocument>('message');
+const VolunteerModel = mongoose.model<VolunteerDocument>('volunteer');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -285,6 +288,15 @@ const RootQueryType = new GraphQLObjectType({
           }
         }
         return latest;
+      }
+    },
+    shelterVolunteers: {
+      type: new GraphQLList(VolunteerType),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) }
+      },
+      resolve(_, args: { shelterId: string }) {
+        return VolunteerModel.find({ shelterId: args.shelterId }).sort({ createdAt: -1 });
       }
     },
     platformStats: {

@@ -495,3 +495,26 @@ export interface ShelterConversationsResponse {
 export interface UserConversationsResponse {
   userConversations: Message[];
 }
+
+// Volunteer Types
+export type VolunteerStatus = 'active' | 'inactive' | 'pending';
+
+export interface Volunteer {
+  _id: string;
+  shelterId: string;
+  userId: string;
+  name: string;
+  email: string;
+  phone: string;
+  skills: string[];
+  availability: string;
+  status: VolunteerStatus;
+  startDate: string;
+  totalHours: number;
+  notes: string;
+  createdAt: string;
+}
+
+export interface ShelterVolunteersResponse {
+  shelterVolunteers: Volunteer[];
+}

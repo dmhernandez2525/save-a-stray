@@ -1033,3 +1033,83 @@ describe('GraphQL Schema Tests', () => {
     expect(fields.sendMessage.type).toBe(MessageType);
   });
 });
+
+describe('Volunteer Management API', () => {
+  it('should have VolunteerType with correct fields', () => {
+    const VolunteerType = require('../server/schema/types/volunteer_type').default;
+    const fields = VolunteerType.getFields();
+    expect(fields._id).toBeDefined();
+    expect(fields.shelterId).toBeDefined();
+    expect(fields.userId).toBeDefined();
+    expect(fields.name).toBeDefined();
+    expect(fields.email).toBeDefined();
+    expect(fields.phone).toBeDefined();
+    expect(fields.skills).toBeDefined();
+    expect(fields.availability).toBeDefined();
+    expect(fields.status).toBeDefined();
+    expect(fields.startDate).toBeDefined();
+    expect(fields.totalHours).toBeDefined();
+    expect(fields.notes).toBeDefined();
+    expect(fields.createdAt).toBeDefined();
+  });
+
+  it('should have shelterVolunteers query', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+    expect(fields.shelterVolunteers).toBeDefined();
+  });
+
+  it('should have addVolunteer mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const fields = mutation.getFields();
+    expect(fields.addVolunteer).toBeDefined();
+    expect(fields.addVolunteer.args).toBeDefined();
+    const argNames = fields.addVolunteer.args.map(a => a.name);
+    expect(argNames).toContain('shelterId');
+    expect(argNames).toContain('name');
+    expect(argNames).toContain('email');
+    expect(argNames).toContain('phone');
+    expect(argNames).toContain('skills');
+    expect(argNames).toContain('availability');
+    expect(argNames).toContain('notes');
+  });
+
+  it('should have updateVolunteerStatus mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const fields = mutation.getFields();
+    expect(fields.updateVolunteerStatus).toBeDefined();
+    const argNames = fields.updateVolunteerStatus.args.map(a => a.name);
+    expect(argNames).toContain('_id');
+    expect(argNames).toContain('status');
+  });
+
+  it('should have logVolunteerHours mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const fields = mutation.getFields();
+    expect(fields.logVolunteerHours).toBeDefined();
+    const argNames = fields.logVolunteerHours.args.map(a => a.name);
+    expect(argNames).toContain('_id');
+    expect(argNames).toContain('hours');
+  });
+
+  it('should return VolunteerType from addVolunteer mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const VolunteerType = require('../server/schema/types/volunteer_type').default;
+    const fields = mutation.getFields();
+    expect(fields.addVolunteer.type).toBe(VolunteerType);
+  });
+
+  it('should return VolunteerType from updateVolunteerStatus mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const VolunteerType = require('../server/schema/types/volunteer_type').default;
+    const fields = mutation.getFields();
+    expect(fields.updateVolunteerStatus.type).toBe(VolunteerType);
+  });
+
+  it('should return VolunteerType from logVolunteerHours mutation', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const VolunteerType = require('../server/schema/types/volunteer_type').default;
+    const fields = mutation.getFields();
+    expect(fields.logVolunteerHours.type).toBe(VolunteerType);
+  });
+});

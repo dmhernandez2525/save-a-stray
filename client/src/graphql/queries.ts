@@ -408,6 +408,25 @@ const queries: Queries = {
       }
     }
   `,
+  SHELTER_VOLUNTEERS: gql`
+    query ShelterVolunteers($shelterId: ID!) {
+      shelterVolunteers(shelterId: $shelterId) {
+        _id
+        shelterId
+        userId
+        name
+        email
+        phone
+        skills
+        availability
+        status
+        startDate
+        totalHours
+        notes
+        createdAt
+      }
+    }
+  `,
   SUCCESS_STORIES: gql`
     query SuccessStories {
       successStories {

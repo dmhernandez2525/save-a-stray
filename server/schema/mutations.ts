@@ -31,6 +31,7 @@ import ApplicationTemplateType from './types/application_template_type';
 import ActivityLogType from './types/activity_log_type';
 import TerminalReaderType from './types/terminal_reader_type';
 import MessageType from './types/message_type';
+import VolunteerType from './types/volunteer_type';
 import PaymentIntentType from './types/payment_intent_type';
 import * as stripeTerminal from '../services/stripeTerminal';
 import { EventDocument } from '../models/Event';
@@ -41,6 +42,7 @@ import { ApplicationTemplateDocument } from '../models/ApplicationTemplate';
 import { ActivityLogDocument } from '../models/ActivityLog';
 import { TerminalReaderDocument } from '../models/TerminalReader';
 import { MessageDocument } from '../models/Message';
+import { VolunteerDocument } from '../models/Volunteer';
 import { ReviewDocument } from '../models/Review';
 import { NotificationDocument } from '../models/Notification';
 
@@ -59,6 +61,7 @@ const ApplicationTemplateModel = mongoose.model<ApplicationTemplateDocument>('ap
 const ActivityLogModel = mongoose.model<ActivityLogDocument>('activityLog');
 const TerminalReaderModel = mongoose.model<TerminalReaderDocument>('terminalReader');
 const MessageModel = mongoose.model<MessageDocument>('message');
+const VolunteerModel = mongoose.model<VolunteerDocument>('volunteer');
 
 interface RegisterArgs {
   name: string;
@@ -1016,6 +1019,89 @@ const mutation = new GraphQLObjectType({
           { $set: { read: true } }
         );
         return true;
+      }
+    },
+    addVolunteer: {
+      type: VolunteerType,
+      args: {
+        shelterId: { type: GraphQLID },
+        name: { type: GraphQLString },
+        email: { type: GraphQLString },
+        phone: { type: GraphQLString },
+        skills: { type: new GraphQLList(GraphQLString) },
+        availability: { type: GraphQLString },
+        notes: { type: GraphQLString }
+      },
+      async resolve(_, args: { shelterId: string; name: string; email?: string; phone?: string; skills?: string[]; availability?: string; notes?: string }) {
+        // Validate required fields
+        if (!args.shelterId || !args.name || !args.name.trim()) {
+          throw new Error('Shelter ID and volunteer name are required');
+        }
+
+        // Validate email format if provided
+        if (args.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(args.email)) {
+          throw new Error('Invalid email format');
+        }
+
+        // Validate skills limit
+        if (args.skills && args.skills.length > 20) {
+          throw new Error('Cannot specify more than 20 skills');
+        }
+
+        const volunteer = new VolunteerModel({
+          shelterId: args.shelterId,
+          name: args.name.trim(),
+          email: args.email || '',
+          phone: args.phone || '',
+          skills: args.skills || [],
+          availability: args.availability || '',
+          status: 'pending',
+          startDate: new Date(),
+          totalHours: 0,
+          notes: args.notes || ''
+        });
+        await volunteer.save();
+        return volunteer;
+      }
+    },
+    updateVolunteerStatus: {
+      type: VolunteerType,
+      args: {
+        _id: { type: GraphQLID },
+        status: { type: GraphQLString }
+      },
+      async resolve(_, args: { _id: string; status: string }) {
+        const volunteer = await VolunteerModel.findById(args._id);
+        if (volunteer) {
+          volunteer.status = args.status as typeof volunteer.status;
+          await volunteer.save();
+          return volunteer;
+        }
+        return null;
+      }
+    },
+    logVolunteerHours: {
+      type: VolunteerType,
+      args: {
+        _id: { type: GraphQLID },
+        hours: { type: GraphQLInt }
+      },
+      async resolve(_, args: { _id: string; hours: number }) {
+        // Validate hours
+        if (!args.hours || args.hours < 0) {
+          throw new Error('Hours must be a positive number');
+        }
+        if (args.hours > 24) {
+          throw new Error('Cannot log more than 24 hours at once');
+        }
+
+        const volunteer = await VolunteerModel.findById(args._id);
+        if (!volunteer) {
+          throw new Error('Volunteer not found');
+        }
+        volunteer.totalHours += args.hours;
+        await volunteer.save();
+        return volunteer;
       }
     }
   })
