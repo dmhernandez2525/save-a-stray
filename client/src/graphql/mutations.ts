@@ -20,6 +20,8 @@ interface Mutations {
   ADD_SHELTER_STAFF: DocumentNode;
   REMOVE_SHELTER_STAFF: DocumentNode;
   BULK_CREATE_ANIMALS: DocumentNode;
+  CREATE_EVENT: DocumentNode;
+  DELETE_EVENT: DocumentNode;
 }
 
 const mutations: Mutations = {
@@ -317,6 +319,39 @@ const mutations: Mutations = {
         sex
         color
         status
+      }
+    }
+  `,
+  CREATE_EVENT: gql`
+    mutation CreateEvent(
+      $shelterId: ID!
+      $title: String!
+      $description: String
+      $date: String!
+      $endDate: String
+      $location: String
+      $eventType: String
+    ) {
+      createEvent(
+        shelterId: $shelterId
+        title: $title
+        description: $description
+        date: $date
+        endDate: $endDate
+        location: $location
+        eventType: $eventType
+      ) {
+        _id
+        title
+        date
+        eventType
+      }
+    }
+  `,
+  DELETE_EVENT: gql`
+    mutation DeleteEvent($_id: ID!) {
+      deleteEvent(_id: $_id) {
+        _id
       }
     }
   `

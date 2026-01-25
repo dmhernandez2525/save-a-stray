@@ -640,4 +640,49 @@ describe('GraphQL Schema Tests', () => {
     const animalsArg = fields.bulkCreateAnimals.args.find(a => a.name === 'animals');
     expect(animalsArg).toBeDefined();
   });
+
+  it('should have EventType with correct fields', () => {
+    const EventType = require('../server/schema/types/event_type').default;
+    const fields = EventType.getFields();
+    expect(fields._id).toBeDefined();
+    expect(fields.shelterId).toBeDefined();
+    expect(fields.title).toBeDefined();
+    expect(fields.description).toBeDefined();
+    expect(fields.date).toBeDefined();
+    expect(fields.endDate).toBeDefined();
+    expect(fields.location).toBeDefined();
+    expect(fields.eventType).toBeDefined();
+  });
+
+  it('should have shelterEvents query with shelterId arg', () => {
+    const RootQueryType = require('../server/schema/types/root_query_type').default;
+    const fields = RootQueryType.getFields();
+    expect(fields.shelterEvents).toBeDefined();
+    expect(fields.shelterEvents.args).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'shelterId' })
+      ])
+    );
+  });
+
+  it('should have createEvent mutation with correct args', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const fields = mutation.getFields();
+    expect(fields.createEvent).toBeDefined();
+    const argNames = fields.createEvent.args.map(a => a.name);
+    expect(argNames).toContain('shelterId');
+    expect(argNames).toContain('title');
+    expect(argNames).toContain('date');
+    expect(argNames).toContain('eventType');
+    expect(argNames).toContain('location');
+    expect(argNames).toContain('description');
+  });
+
+  it('should have deleteEvent mutation with _id arg', () => {
+    const mutation = require('../server/schema/mutations').default;
+    const fields = mutation.getFields();
+    expect(fields.deleteEvent).toBeDefined();
+    const argNames = fields.deleteEvent.args.map(a => a.name);
+    expect(argNames).toContain('_id');
+  });
 });

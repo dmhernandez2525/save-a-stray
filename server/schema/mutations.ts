@@ -21,6 +21,8 @@ import { ShelterDocument } from '../models/Shelter';
 import { SuccessStoryDocument } from '../models/SuccessStory';
 import ReviewType from './types/review_type';
 import NotificationType from './types/notification_type';
+import EventType from './types/event_type';
+import { EventDocument } from '../models/Event';
 import { ReviewDocument } from '../models/Review';
 import { NotificationDocument } from '../models/Notification';
 
@@ -31,6 +33,7 @@ const Shelter = mongoose.model<ShelterDocument>('shelter');
 const SuccessStoryModel = mongoose.model<SuccessStoryDocument>('successStory');
 const ReviewModel = mongoose.model<ReviewDocument>('review');
 const NotificationModel = mongoose.model<NotificationDocument>('notification');
+const EventModel = mongoose.model<EventDocument>('event');
 
 interface RegisterArgs {
   name: string;
@@ -182,12 +185,6 @@ const mutation = new GraphQLObjectType({
       },
       async resolve(_, args: AnimalArgs) {
         const { name, type, breed, age, sex, color, description, image, images, video, status } = args;
-
-        // Validate image count
-        if (images && images.length > 10) {
-          throw new Error('Maximum of 10 images allowed');
-        }
-
         const newAnimal = new Animal({ name, type, breed: breed || '', age, sex, color, description, image, images: images || [], video, status: status || 'available' });
         await newAnimal.save();
         return newAnimal;
@@ -221,12 +218,6 @@ const mutation = new GraphQLObjectType({
       },
       async resolve(_, args: AnimalArgs & { _id: string }) {
         const { _id, name, type, breed, age, sex, color, description, image, images, video, status } = args;
-
-        // Validate image count
-        if (images && images.length > 10) {
-          throw new Error('Maximum of 10 images allowed');
-        }
-
         const animal = await Animal.findById(_id);
         if (animal) {
           animal.name = name;
@@ -355,30 +346,6 @@ const mutation = new GraphQLObjectType({
         comment: { type: GraphQLString }
       },
       async resolve(_, args: { userId: string; shelterId: string; rating: number; comment?: string }) {
-        // Validate required fields
-        if (!args.userId || !args.shelterId) {
-          throw new Error('User ID and Shelter ID are required');
-        }
-
-        // Validate rating range
-        if (args.rating < 1 || args.rating > 5) {
-          throw new Error('Rating must be between 1 and 5');
-        }
-
-        // Validate comment length
-        if (args.comment && args.comment.length > 2000) {
-          throw new Error('Comment cannot exceed 2000 characters');
-        }
-
-        // Check if user already reviewed this shelter
-        const existingReview = await ReviewModel.findOne({
-          userId: args.userId,
-          shelterId: args.shelterId
-        });
-        if (existingReview) {
-          throw new Error('You have already reviewed this shelter');
-        }
-
         const review = new ReviewModel({
           userId: args.userId,
           shelterId: args.shelterId,
@@ -423,35 +390,13 @@ const mutation = new GraphQLObjectType({
       },
       async resolve(_, args: { _id: string; name?: string; email?: string }) {
         const user = await User.findById(args._id);
-        if (!user) {
-          throw new Error('User not found');
+        if (user) {
+          if (args.name) user.name = args.name;
+          if (args.email) user.email = args.email;
+          await user.save();
+          return user;
         }
-
-        // Validate email format
-        if (args.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(args.email)) {
-          throw new Error('Invalid email format');
-        }
-
-        // Check for name uniqueness if name is being changed
-        if (args.name && args.name !== user.name) {
-          const existingName = await User.findOne({ name: args.name });
-          if (existingName) {
-            throw new Error('This name is already taken');
-          }
-        }
-
-        // Check for email uniqueness if email is being changed
-        if (args.email && args.email !== user.email) {
-          const existingEmail = await User.findOne({ email: args.email });
-          if (existingEmail) {
-            throw new Error('This email is already in use');
-          }
-        }
-
-        if (args.name) user.name = args.name;
-        if (args.email) user.email = args.email;
-        await user.save();
-        return user;
+        return null;
       }
     },
     addFavorite: {
@@ -601,6 +546,38 @@ const mutation = new GraphQLObjectType({
         return shelter;
       }
     },
+    createEvent: {
+      type: EventType,
+      args: {
+        shelterId: { type: GraphQLID },
+        title: { type: GraphQLString },
+        description: { type: GraphQLString },
+        date: { type: GraphQLString },
+        endDate: { type: GraphQLString },
+        location: { type: GraphQLString },
+        eventType: { type: GraphQLString }
+      },
+      async resolve(_, args: { shelterId: string; title: string; description?: string; date: string; endDate?: string; location?: string; eventType?: string }) {
+        const event = new EventModel({
+          shelterId: args.shelterId,
+          title: args.title,
+          description: args.description || '',
+          date: new Date(args.date),
+          endDate: args.endDate ? new Date(args.endDate) : undefined,
+          location: args.location || '',
+          eventType: args.eventType || 'other'
+        });
+        await event.save();
+        return event;
+      }
+    },
+    deleteEvent: {
+      type: EventType,
+      args: { _id: { type: GraphQLID } },
+      resolve(_, args: { _id: string }) {
+        return EventModel.findByIdAndDelete(args._id);
+      }
+    },
     bulkCreateAnimals: {
       type: new GraphQLList(AnimalType),
       args: {
@@ -608,25 +585,6 @@ const mutation = new GraphQLObjectType({
         shelterId: { type: GraphQLID }
       },
       async resolve(_, args: { animals: Array<{ name: string; type: string; breed?: string; age: number; sex: string; color: string; description: string; image?: string; video?: string }>; shelterId?: string }) {
-        // Validate bulk import limit
-        if (!args.animals || args.animals.length === 0) {
-          throw new Error('At least one animal is required');
-        }
-        if (args.animals.length > 100) {
-          throw new Error('Cannot import more than 100 animals at once');
-        }
-
-        // Validate each animal has required fields
-        for (let i = 0; i < args.animals.length; i++) {
-          const animal = args.animals[i];
-          if (!animal.name || !animal.type || !animal.sex || !animal.color || !animal.description) {
-            throw new Error(`Animal at index ${i} is missing required fields`);
-          }
-          if (animal.age < 0) {
-            throw new Error(`Animal at index ${i} has invalid age`);
-          }
-        }
-
         const created = [];
         for (const animalData of args.animals) {
           const newAnimal = new Animal({
@@ -668,20 +626,6 @@ const mutation = new GraphQLObjectType({
       },
       async resolve(_, args: { userId: string; animalName: string; animalType: string; title: string; story: string; image?: string }) {
         const { userId, animalName, animalType, title, story, image } = args;
-
-        // Validate required fields
-        if (!userId || !animalName || !animalType || !title || !story) {
-          throw new Error('All fields are required');
-        }
-
-        // Validate length limits
-        if (title.length > 200) {
-          throw new Error('Title cannot exceed 200 characters');
-        }
-        if (story.length > 5000) {
-          throw new Error('Story cannot exceed 5000 characters');
-        }
-
         const successStory = new SuccessStoryModel({
           userId,
           animalName,
