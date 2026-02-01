@@ -1,4 +1,5 @@
 // Demo Context for managing demo mode state
+// Environment-based demo mode: set VITE_DEMO_MODE=true to enable
 import React, { createContext, useContext, useState, useCallback, ReactNode } from "react";
 import {
   demoShelter,
@@ -16,6 +17,8 @@ import {
   demoActivityLog,
   demoAnalytics,
 } from "./demoData";
+import { DemoRole, DemoUser, getDemoUser } from "./demoUsers";
+import { isDemoMode } from "../config/env";
 import {
   Animal,
   Shelter,
@@ -32,12 +35,17 @@ import {
   IntakeLog,
   ActivityLogEntry,
   AnimalStatus,
+  User,
 } from "../types";
 
 interface DemoContextType {
+  // Environment check
+  isDemoModeEnabled: boolean;
+
   // State
   isDemo: boolean;
   demoRole: "adopter" | "shelter";
+  currentDemoUser: DemoUser | null;
   shelter: Shelter;
   animals: Animal[];
   applications: Application[];
@@ -55,6 +63,8 @@ interface DemoContextType {
 
   // Actions
   setDemoRole: (role: "adopter" | "shelter") => void;
+  selectDemoUser: (role: DemoRole) => void;
+  exitDemoMode: () => void;
   updateAnimalStatus: (animalId: string, status: AnimalStatus) => void;
   updateApplicationStatus: (applicationId: string, status: ApplicationStatus) => void;
   addApplication: (application: Partial<Application>) => void;
@@ -78,9 +88,25 @@ interface DemoProviderProps {
 }
 
 export const DemoProvider: React.FC<DemoProviderProps> = ({ children }) => {
+  const isDemoModeEnabled = isDemoMode();
   const [demoRole, setDemoRole] = useState<"adopter" | "shelter">("adopter");
+  const [currentDemoUser, setCurrentDemoUser] = useState<DemoUser | null>(null);
   const [animals, setAnimals] = useState<Animal[]>(demoAnimals);
   const [applications, setApplications] = useState<Application[]>(demoApplications);
+
+  // Select a demo user by role
+  const selectDemoUser = useCallback((role: DemoRole) => {
+    const user = getDemoUser(role);
+    setCurrentDemoUser(user);
+    // Map demo role to context role
+    setDemoRole(role === "adopter" ? "adopter" : "shelter");
+  }, []);
+
+  // Exit demo mode - clear the demo user
+  const exitDemoMode = useCallback(() => {
+    setCurrentDemoUser(null);
+    setDemoRole("adopter");
+  }, []);
 
   const updateAnimalStatus = useCallback((animalId: string, status: AnimalStatus) => {
     setAnimals((prev) =>
@@ -161,8 +187,10 @@ export const DemoProvider: React.FC<DemoProviderProps> = ({ children }) => {
   );
 
   const value: DemoContextType = {
-    isDemo: true,
+    isDemoModeEnabled,
+    isDemo: currentDemoUser !== null,
     demoRole,
+    currentDemoUser,
     shelter: demoShelter,
     animals,
     applications,
@@ -178,6 +206,8 @@ export const DemoProvider: React.FC<DemoProviderProps> = ({ children }) => {
     activityLog: demoActivityLog,
     analytics: demoAnalytics,
     setDemoRole,
+    selectDemoUser,
+    exitDemoMode,
     updateAnimalStatus,
     updateApplicationStatus,
     addApplication,
