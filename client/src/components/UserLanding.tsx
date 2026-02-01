@@ -18,6 +18,8 @@ import {
   Search, SlidersHorizontal, Grid3X3, List,
   Dog, Cat, Rabbit, X, ChevronRight, Sparkles
 } from "lucide-react";
+import { useDemo } from "../demo/DemoContext";
+import DemoBanner from "../demo/DemoBanner";
 
 const { FIND_ANIMALS, USER_ID } = Queries;
 
@@ -55,6 +57,7 @@ interface UserLandingProps {
 
 const UserLanding: React.FC<UserLandingProps> = ({ splash }) => {
   const navigate = useNavigate();
+  const { isDemo, animals: demoAnimals, filterAnimals: filterDemoAnimals } = useDemo();
   const [filters, setFilters] = useState<FindAnimalsVariables>({});
   const [queryFilters, setQueryFilters] = useState<FindAnimalsVariables>({});
   const [hasMore, setHasMore] = useState(true);
@@ -234,8 +237,24 @@ const UserLanding: React.FC<UserLandingProps> = ({ splash }) => {
     </div>
   );
 
+  // Demo mode: filter and display demo animals
+  const filteredDemoAnimals = isDemo
+    ? filterDemoAnimals({
+        type: queryFilters.type,
+        status: queryFilters.status || "available",
+        sex: queryFilters.sex,
+        minAge: queryFilters.minAge,
+        maxAge: queryFilters.maxAge,
+        breed: queryFilters.breed,
+        name: queryFilters.name,
+      })
+    : [];
+
   return (
     <div className="min-h-screen bg-background col-start-1 col-end-6 row-start-1 row-end-4">
+      {/* Demo Banner */}
+      {isDemo && <DemoBanner variant="adopter" />}
+
       {/* Header */}
       <div className="bg-gradient-to-r from-sky-blue-500 to-sky-blue-600 text-white">
         <div className="container-wide py-8 md:py-12">
@@ -247,33 +266,35 @@ const UserLanding: React.FC<UserLandingProps> = ({ splash }) => {
       </div>
 
       <div className="container-wide py-6">
-        {/* Saved Searches */}
-        <Query<UserIdData> query={USER_ID}>
-          {({ data: userIdData }) => {
-            const currentUserId = userIdData?.userId;
-            if (!currentUserId) return null;
-            return (
-              <div className="mb-6">
-                <SavedSearches
-                  userId={currentUserId}
-                  onRunSearch={(savedFilters) => {
-                    const newFilters: FindAnimalsVariables = {};
-                    if (savedFilters.type) newFilters.type = savedFilters.type as string;
-                    if (savedFilters.breed) newFilters.breed = savedFilters.breed as string;
-                    if (savedFilters.sex) newFilters.sex = savedFilters.sex as string;
-                    if (savedFilters.color) newFilters.color = savedFilters.color as string;
-                    if (savedFilters.status) newFilters.status = savedFilters.status as string;
-                    if (savedFilters.minAge !== undefined && savedFilters.minAge !== null) newFilters.minAge = savedFilters.minAge as number;
-                    if (savedFilters.maxAge !== undefined && savedFilters.maxAge !== null) newFilters.maxAge = savedFilters.maxAge as number;
-                    setFilters(newFilters);
-                    setQueryFilters(newFilters);
-                    setHasMore(true);
-                  }}
-                />
-              </div>
-            );
-          }}
-        </Query>
+        {/* Saved Searches - only show when not in demo mode */}
+        {!isDemo && (
+          <Query<UserIdData> query={USER_ID}>
+            {({ data: userIdData }) => {
+              const currentUserId = userIdData?.userId;
+              if (!currentUserId) return null;
+              return (
+                <div className="mb-6">
+                  <SavedSearches
+                    userId={currentUserId}
+                    onRunSearch={(savedFilters) => {
+                      const newFilters: FindAnimalsVariables = {};
+                      if (savedFilters.type) newFilters.type = savedFilters.type as string;
+                      if (savedFilters.breed) newFilters.breed = savedFilters.breed as string;
+                      if (savedFilters.sex) newFilters.sex = savedFilters.sex as string;
+                      if (savedFilters.color) newFilters.color = savedFilters.color as string;
+                      if (savedFilters.status) newFilters.status = savedFilters.status as string;
+                      if (savedFilters.minAge !== undefined && savedFilters.minAge !== null) newFilters.minAge = savedFilters.minAge as number;
+                      if (savedFilters.maxAge !== undefined && savedFilters.maxAge !== null) newFilters.maxAge = savedFilters.maxAge as number;
+                      setFilters(newFilters);
+                      setQueryFilters(newFilters);
+                      setHasMore(true);
+                    }}
+                  />
+                </div>
+              );
+            }}
+          </Query>
+        )}
 
         <div className="flex gap-6">
           {/* Desktop Sidebar Filters */}
@@ -398,111 +419,151 @@ const UserLanding: React.FC<UserLandingProps> = ({ splash }) => {
               </div>
             )}
 
-            {/* Results */}
-            <Query<FindAnimalsResponse, FindAnimalsVariables>
-              query={FIND_ANIMALS}
-              variables={{ ...queryFilters, limit: PAGE_SIZE, offset: 0 }}
-              onCompleted={(data) => {
-                const animals = data?.findAnimals || [];
-                if (animals.length < PAGE_SIZE && hasMore) {
-                  setHasMore(false);
-                }
-              }}
-            >
-              {({ loading, error, data, fetchMore }) => {
-                if (loading && (!data || !data.findAnimals)) {
-                  return (
-                    <div className={viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6" : "space-y-4"}>
-                      {[...Array(6)].map((_, i) => (
-                        <Card key={i} className="overflow-hidden">
-                          <Skeleton className="h-48 w-full" />
-                          <CardContent className="p-4">
-                            <Skeleton className="h-6 w-32 mb-2" />
-                            <Skeleton className="h-4 w-24" />
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  );
-                }
-
-                if (error) {
-                  return (
-                    <Card className="p-12 text-center">
-                      <p className="text-destructive font-medium">Error loading animals. Please try again.</p>
-                    </Card>
-                  );
-                }
-
-                const animals = data?.findAnimals || [];
-
-                if (animals.length === 0) {
-                  return (
-                    <Card className="p-12 text-center">
-                      <Sparkles className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <h3 className="font-capriola text-xl mb-2">No animals found</h3>
-                      <p className="text-muted-foreground mb-4">
-                        Try adjusting your filters or check back soon for new arrivals!
-                      </p>
-                      {activeFilterCount > 0 && (
-                        <Button variant="outline" onClick={clearFilters}>
-                          Clear Filters
-                        </Button>
-                      )}
-                    </Card>
-                  );
-                }
-
-                return (
+            {/* Results - Demo Mode */}
+            {isDemo ? (
+              <>
+                {filteredDemoAnimals.length === 0 ? (
+                  <Card className="p-12 text-center">
+                    <Sparkles className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="font-capriola text-xl mb-2">No animals found</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Try adjusting your filters or check back soon for new arrivals!
+                    </p>
+                    {activeFilterCount > 0 && (
+                      <Button variant="outline" onClick={clearFilters}>
+                        Clear Filters
+                      </Button>
+                    )}
+                  </Card>
+                ) : (
                   <>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Showing {animals.length} pet{animals.length !== 1 ? "s" : ""}
+                      Showing {filteredDemoAnimals.length} pet{filteredDemoAnimals.length !== 1 ? "s" : ""}
                     </p>
 
                     {viewMode === "grid" ? (
                       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {animals.map((animal, index) => (
-                          <AnimalCard key={animal._id} animal={animal} index={index} />
+                        {filteredDemoAnimals.map((animal, index) => (
+                          <AnimalCard key={animal._id} animal={animal} index={index} isDemo />
                         ))}
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        {animals.map((animal, index) => (
-                          <AnimalListItem key={animal._id} animal={animal} index={index} />
+                        {filteredDemoAnimals.map((animal, index) => (
+                          <AnimalListItem key={animal._id} animal={animal} index={index} isDemo />
                         ))}
                       </div>
                     )}
-
-                    {hasMore && animals.length >= PAGE_SIZE && (
-                      <div className="flex justify-center mt-8">
-                        <Button
-                          variant="outline"
-                          size="lg"
-                          onClick={() => {
-                            fetchMore({
-                              variables: { offset: animals.length },
-                              updateQuery: (prev, { fetchMoreResult }) => {
-                                if (!fetchMoreResult) return prev;
-                                const newAnimals = fetchMoreResult.findAnimals;
-                                if (newAnimals.length < PAGE_SIZE) {
-                                  setHasMore(false);
-                                }
-                                return {
-                                  findAnimals: [...prev.findAnimals, ...newAnimals],
-                                };
-                              },
-                            });
-                          }}
-                        >
-                          Load More Pets
-                          <ChevronRight className="h-4 w-4 ml-1" />
-                        </Button>
-                      </div>
-                    )}
                   </>
-                );
-              }}
-            </Query>
+                )}
+              </>
+            ) : (
+              /* Results - Real Mode */
+              <Query<FindAnimalsResponse, FindAnimalsVariables>
+                query={FIND_ANIMALS}
+                variables={{ ...queryFilters, limit: PAGE_SIZE, offset: 0 }}
+                onCompleted={(data) => {
+                  const animals = data?.findAnimals || [];
+                  if (animals.length < PAGE_SIZE && hasMore) {
+                    setHasMore(false);
+                  }
+                }}
+              >
+                {({ loading, error, data, fetchMore }) => {
+                  if (loading && (!data || !data.findAnimals)) {
+                    return (
+                      <div className={viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6" : "space-y-4"}>
+                        {[...Array(6)].map((_, i) => (
+                          <Card key={i} className="overflow-hidden">
+                            <Skeleton className="h-48 w-full" />
+                            <CardContent className="p-4">
+                              <Skeleton className="h-6 w-32 mb-2" />
+                              <Skeleton className="h-4 w-24" />
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    );
+                  }
+
+                  if (error) {
+                    return (
+                      <Card className="p-12 text-center">
+                        <p className="text-destructive font-medium">Error loading animals. Please try again.</p>
+                      </Card>
+                    );
+                  }
+
+                  const animals = data?.findAnimals || [];
+
+                  if (animals.length === 0) {
+                    return (
+                      <Card className="p-12 text-center">
+                        <Sparkles className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                        <h3 className="font-capriola text-xl mb-2">No animals found</h3>
+                        <p className="text-muted-foreground mb-4">
+                          Try adjusting your filters or check back soon for new arrivals!
+                        </p>
+                        {activeFilterCount > 0 && (
+                          <Button variant="outline" onClick={clearFilters}>
+                            Clear Filters
+                          </Button>
+                        )}
+                      </Card>
+                    );
+                  }
+
+                  return (
+                    <>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Showing {animals.length} pet{animals.length !== 1 ? "s" : ""}
+                      </p>
+
+                      {viewMode === "grid" ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                          {animals.map((animal, index) => (
+                            <AnimalCard key={animal._id} animal={animal} index={index} />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {animals.map((animal, index) => (
+                            <AnimalListItem key={animal._id} animal={animal} index={index} />
+                          ))}
+                        </div>
+                      )}
+
+                      {hasMore && animals.length >= PAGE_SIZE && (
+                        <div className="flex justify-center mt-8">
+                          <Button
+                            variant="outline"
+                            size="lg"
+                            onClick={() => {
+                              fetchMore({
+                                variables: { offset: animals.length },
+                                updateQuery: (prev, { fetchMoreResult }) => {
+                                  if (!fetchMoreResult) return prev;
+                                  const newAnimals = fetchMoreResult.findAnimals;
+                                  if (newAnimals.length < PAGE_SIZE) {
+                                    setHasMore(false);
+                                  }
+                                  return {
+                                    findAnimals: [...prev.findAnimals, ...newAnimals],
+                                  };
+                                },
+                              });
+                            }}
+                          >
+                            Load More Pets
+                            <ChevronRight className="h-4 w-4 ml-1" />
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  );
+                }}
+              </Query>
+            )}
           </div>
         </div>
       </div>
@@ -511,17 +572,24 @@ const UserLanding: React.FC<UserLandingProps> = ({ splash }) => {
 };
 
 // Animal Card Component (Grid View)
-const AnimalCard: React.FC<{ animal: Animal; index: number }> = ({ animal, index }) => {
+const AnimalCard: React.FC<{ animal: Animal; index: number; isDemo?: boolean }> = ({ animal, index, isDemo }) => {
   const navigate = useNavigate();
   const status = (animal.status || "available") as AnimalStatus;
   const statusStyle = STATUS_STYLES[status];
+
+  const handleClick = () => {
+    // In demo mode, don't navigate to real animal pages (which won't have data)
+    if (!isDemo) {
+      navigate(`/AnimalShow/${animal._id}`);
+    }
+  };
 
   return (
     <Card
       variant="interactive"
       className="overflow-hidden group animate-fade-in-up"
       style={{ animationDelay: `${index * 0.05}s` }}
-      onClick={() => navigate(`/AnimalShow/${animal._id}`)}
+      onClick={handleClick}
     >
       <div className="relative h-56 overflow-hidden">
         <img
@@ -536,10 +604,12 @@ const AnimalCard: React.FC<{ animal: Animal; index: number }> = ({ animal, index
           {status.charAt(0).toUpperCase() + status.slice(1)}
         </Badge>
 
-        {/* Favorite Button */}
-        <div className="absolute top-3 right-3" onClick={(e) => e.stopPropagation()}>
-          <FavoriteButton animalId={animal._id} />
-        </div>
+        {/* Favorite Button - only show when not in demo mode */}
+        {!isDemo && (
+          <div className="absolute top-3 right-3" onClick={(e) => e.stopPropagation()}>
+            <FavoriteButton animalId={animal._id} />
+          </div>
+        )}
 
         {/* Name Overlay */}
         <div className="absolute bottom-3 left-3 right-3">
@@ -557,7 +627,7 @@ const AnimalCard: React.FC<{ animal: Animal; index: number }> = ({ animal, index
             {animal.color && <span>{animal.color}</span>}
           </div>
           <Button variant="ghost" size="sm" className="text-sky-blue-500 -mr-2">
-            View <ChevronRight className="h-4 w-4 ml-1" />
+            {isDemo ? "Demo" : "View"} <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         </div>
       </CardContent>
@@ -566,17 +636,24 @@ const AnimalCard: React.FC<{ animal: Animal; index: number }> = ({ animal, index
 };
 
 // Animal List Item Component (List View)
-const AnimalListItem: React.FC<{ animal: Animal; index: number }> = ({ animal, index }) => {
+const AnimalListItem: React.FC<{ animal: Animal; index: number; isDemo?: boolean }> = ({ animal, index, isDemo }) => {
   const navigate = useNavigate();
   const status = (animal.status || "available") as AnimalStatus;
   const statusStyle = STATUS_STYLES[status];
+
+  const handleClick = () => {
+    // In demo mode, don't navigate to real animal pages (which won't have data)
+    if (!isDemo) {
+      navigate(`/AnimalShow/${animal._id}`);
+    }
+  };
 
   return (
     <Card
       variant="interactive"
       className="overflow-hidden animate-fade-in-up"
       style={{ animationDelay: `${index * 0.05}s` }}
-      onClick={() => navigate(`/AnimalShow/${animal._id}`)}
+      onClick={handleClick}
     >
       <div className="flex">
         <div className="relative w-40 h-40 flex-shrink-0 overflow-hidden">
@@ -609,9 +686,9 @@ const AnimalListItem: React.FC<{ animal: Animal; index: number }> = ({ animal, i
               {animal.color && <span>{animal.color}</span>}
             </div>
             <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-              <FavoriteButton animalId={animal._id} />
+              {!isDemo && <FavoriteButton animalId={animal._id} />}
               <Button variant="skyBlue" size="sm">
-                View Details
+                {isDemo ? "Demo View" : "View Details"}
               </Button>
             </div>
           </div>

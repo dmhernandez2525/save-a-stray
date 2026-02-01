@@ -54,11 +54,11 @@ const DemoRoleSelector: React.FC<DemoRoleSelectorProps> = ({ onClose }) => {
 
   const handleSelectRole = (role: DemoRole) => {
     selectDemoUser(role);
-    // Navigate based on role
+    // Navigate to actual app routes (not /demo/* routes)
     if (role === "adopter") {
-      navigate("/demo/adopter");
+      navigate("/User");
     } else {
-      navigate("/demo/shelter");
+      navigate("/Shelter");
     }
     onClose?.();
   };

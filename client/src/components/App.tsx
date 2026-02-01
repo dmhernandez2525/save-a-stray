@@ -8,7 +8,7 @@ import Animal from "./Animal";
 import AnimalShow from "./AnimalShow";
 import Application from "./Application";
 import Shelter from "./Shelter";
-import ShelterLanding from "./ShelterLanding";
+import ShelterPage from "./ShelterPage";
 import Landing from "./Landing";
 import ProfilePage from "./ProfilePage";
 import SuccessStories from "./SuccessStories";
@@ -25,8 +25,6 @@ import TermsOfService from "./TermsOfService";
 // Demo Mode Components
 import { DemoProvider } from "../demo/DemoContext";
 import DemoLanding from "../demo/DemoLanding";
-import DemoAdopterExperience from "../demo/DemoAdopterExperience";
-import DemoShelterExperience from "../demo/DemoShelterExperience";
 
 const App: React.FC = () => {
   return (
@@ -57,7 +55,7 @@ const App: React.FC = () => {
             />
             <Route
               path="/Shelter"
-              element={<ProtectedRoute element={<ShelterLanding />} />}
+              element={<ProtectedRoute element={<ShelterPage />} />}
             />
             <Route path="/newApplication" element={<Application />} />
             <Route
@@ -84,10 +82,8 @@ const App: React.FC = () => {
             <Route path="/success-stories" element={<SuccessStories />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/tos" element={<TermsOfService />} />
-            {/* Demo Mode Routes */}
+            {/* Demo Mode Entry - redirects to /login for role selection */}
             <Route path="/demo" element={<DemoLanding />} />
-            <Route path="/demo/adopter" element={<DemoAdopterExperience />} />
-            <Route path="/demo/shelter" element={<DemoShelterExperience />} />
           </Routes>
         </div>
       </HashRouter>
