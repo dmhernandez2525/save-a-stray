@@ -61,7 +61,7 @@ const DemoShelterExperience: React.FC = () => {
 
   const handleExit = () => {
     exitDemoMode();
-    navigate("/login");
+    navigate("/");
   };
 
   const handleUpdateApplicationStatus = (status: ApplicationStatus) => {
@@ -128,12 +128,6 @@ const DemoShelterExperience: React.FC = () => {
       {/* Header */}
       <header className="border-b bg-card">
         <div className="container-wide py-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/demo")}>
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Back to Demo
-            </Button>
-          </div>
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-xl bg-salmon-100 dark:bg-salmon-900/30 flex items-center justify-center">
               <Building2 className="h-8 w-8 text-salmon-600" />

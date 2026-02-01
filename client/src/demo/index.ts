@@ -27,6 +27,7 @@ export {
 } from './demoData';
 
 // Components
+export { default as DemoBanner } from './DemoBanner';
 export { default as DemoLanding } from './DemoLanding';
 export { default as DemoRoleSelector } from './DemoRoleSelector';
 export { default as DemoAdopterExperience } from './DemoAdopterExperience';

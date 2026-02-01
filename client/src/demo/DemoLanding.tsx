@@ -44,22 +44,20 @@ const DemoLanding: React.FC = () => {
               <Button
                 variant="skyBlue"
                 size="xl"
-                onClick={() => navigate("/demo/adopter")}
+                onClick={() => navigate("/login")}
                 className="group"
               >
                 <Heart className="h-5 w-5 mr-2" />
-                Browse as an Adopter
+                Try Demo Mode
                 <ArrowRight className="h-5 w-5 ml-2 transition-transform group-hover:translate-x-1" />
               </Button>
               <Button
-                variant="salmon"
+                variant="outline"
                 size="xl"
-                onClick={() => navigate("/demo/shelter")}
-                className="group"
+                onClick={() => navigate("/register")}
+                className="border-warm-gray-300 dark:border-warm-gray-600"
               >
-                <Building2 className="h-5 w-5 mr-2" />
-                View as a Shelter
-                <ArrowRight className="h-5 w-5 ml-2 transition-transform group-hover:translate-x-1" />
+                Create Real Account
               </Button>
             </div>
           </div>
@@ -99,9 +97,9 @@ const DemoLanding: React.FC = () => {
                 <Button
                   variant="outline"
                   className="w-full mt-6 border-sky-blue-300 text-sky-blue-600 hover:bg-sky-blue-50"
-                  onClick={() => navigate("/demo/adopter")}
+                  onClick={() => navigate("/login")}
                 >
-                  Try Adopter View
+                  Try Demo Mode
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </CardContent>
@@ -132,9 +130,9 @@ const DemoLanding: React.FC = () => {
                 <Button
                   variant="outline"
                   className="w-full mt-6 border-salmon-300 text-salmon-600 hover:bg-salmon-50"
-                  onClick={() => navigate("/demo/shelter")}
+                  onClick={() => navigate("/login")}
                 >
-                  Try Shelter View
+                  Try Demo Mode
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </CardContent>
@@ -164,7 +162,7 @@ const DemoLanding: React.FC = () => {
                 <Button
                   variant="default"
                   className="bg-gold-500 hover:bg-gold-600 text-white flex-shrink-0"
-                  onClick={() => navigate("/demo/adopter")}
+                  onClick={() => navigate("/login")}
                 >
                   Start Exploring
                 </Button>
