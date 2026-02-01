@@ -21,6 +21,8 @@ services:
     envVars:
       - key: VITE_API_URL
         sync: false
+      - key: VITE_DEMO_MODE
+        value: "true"
 
   # Backend - Express/GraphQL/TypeScript API (FREE)
   # NOTE: NODE_ENV is set inline in commands, NOT as an env var.

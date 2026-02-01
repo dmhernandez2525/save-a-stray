@@ -11,6 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/
 import { Separator } from "./ui/separator";
 import { LoginResponse } from "../types";
 import { PawPrint, ArrowLeft, Mail, Lock, Heart, Sparkles } from "lucide-react";
+import { isDemoMode } from "../config/env";
+import DemoRoleSelector from "../demo/DemoRoleSelector";
 
 const { LOGIN_USER } = Mutations;
 const { IS_LOGGED_IN, USER_ID } = Queries;
@@ -19,6 +21,8 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showDemoSelector, setShowDemoSelector] = useState(isDemoMode());
+  const demoModeEnabled = isDemoMode();
 
   const updateCache = (
     cache: ApolloCache<unknown>,
@@ -153,23 +157,31 @@ const Login: React.FC = () => {
                       </span>
                     </div>
 
-                    {/* Demo Login */}
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      className="w-full"
-                      onClick={() => {
-                        loginUser({
-                          variables: {
-                            email: "demo@demo.com",
-                            password: "hunter12",
-                          },
-                        });
-                      }}
-                    >
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Try Demo Account
-                    </Button>
+                    {/* Demo Mode Section */}
+                    {demoModeEnabled && showDemoSelector ? (
+                      <DemoRoleSelector onClose={() => setShowDemoSelector(false)} />
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        className="w-full"
+                        onClick={() => {
+                          if (demoModeEnabled) {
+                            setShowDemoSelector(true);
+                          } else {
+                            loginUser({
+                              variables: {
+                                email: "demo@demo.com",
+                                password: "hunter12",
+                              },
+                            });
+                          }
+                        }}
+                      >
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        {demoModeEnabled ? "Try Demo Mode" : "Try Demo Account"}
+                      </Button>
+                    )}
 
                     <p className="text-center mt-6 text-muted-foreground">
                       Don't have an account?{" "}

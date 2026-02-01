@@ -10,7 +10,9 @@ import { Label } from "./ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Separator } from "./ui/separator";
 import { RegisterResponse } from "../types";
-import { PawPrint, ArrowLeft, Mail, Lock, User, Building2, MapPin, CreditCard, Heart, Users, CheckCircle2 } from "lucide-react";
+import { PawPrint, ArrowLeft, Mail, Lock, User, Building2, MapPin, CreditCard, Heart, Users, CheckCircle2, Sparkles } from "lucide-react";
+import { isDemoMode } from "../config/env";
+import DemoRoleSelector from "../demo/DemoRoleSelector";
 
 const { REGISTER_USER } = Mutations;
 const { IS_LOGGED_IN, USER_ID } = Queries;
@@ -26,6 +28,8 @@ const Register: React.FC = () => {
   const [shelterName, setShelterName] = useState("");
   const [shelterLocation, setShelterLocation] = useState("");
   const [shelterPaymentEmail, setShelterPaymentEmail] = useState("");
+  const [showDemoSelector, setShowDemoSelector] = useState(false);
+  const demoModeEnabled = isDemoMode();
 
   const updateCache = (
     cache: ApolloCache<unknown>,
@@ -305,6 +309,31 @@ const Register: React.FC = () => {
                         Sign in
                       </Link>
                     </p>
+
+                    {/* Demo Mode Section */}
+                    {demoModeEnabled && (
+                      <>
+                        <div className="relative my-6">
+                          <Separator />
+                          <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-4 text-sm text-muted-foreground">
+                            or
+                          </span>
+                        </div>
+                        {showDemoSelector ? (
+                          <DemoRoleSelector onClose={() => setShowDemoSelector(false)} />
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="lg"
+                            className="w-full"
+                            onClick={() => setShowDemoSelector(true)}
+                          >
+                            <Sparkles className="h-4 w-4 mr-2" />
+                            Try Demo Mode
+                          </Button>
+                        )}
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </div>
