@@ -3,6 +3,14 @@ import { Request } from 'express';
 import keys from '../../config/keys';
 import { createLoaders, Loaders } from './loaders';
 
+// Validate JWT secret at startup to prevent silent auth failures
+if (!keys.secretOrKey || keys.secretOrKey.length < 32) {
+  throw new Error(
+    'SECRET_OR_KEY must be configured with at least 32 characters. ' +
+    'Set the JWT_SECRET or SECRET_OR_KEY environment variable.'
+  );
+}
+
 export interface GraphQLContext {
   loaders: Loaders;
   userId?: string;
@@ -29,7 +37,8 @@ const isTokenPayload = (value: jwt.JwtPayload): value is TokenPayload =>
 const getUserIdFromToken = (token: string | null): string | undefined => {
   if (!token) return undefined;
   try {
-    const decoded = jwt.verify(token, keys.secretOrKey);
+    // Explicitly specify algorithm to prevent algorithm confusion attacks
+    const decoded = jwt.verify(token, keys.secretOrKey, { algorithms: ['HS256'] });
     if (!isJwtPayload(decoded)) return undefined;
     if (!isTokenPayload(decoded)) return undefined;
     return decoded.id?.toString();
