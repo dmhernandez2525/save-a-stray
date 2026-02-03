@@ -49,7 +49,9 @@ const getUserIdFromToken = (token: string | null): string | undefined => {
 
 export const createGraphQLContext = (req?: Request, authToken?: string): GraphQLContext => {
   const headerToken = req?.headers?.authorization;
-  const token = authToken ?? getTokenFromHeader(headerToken);
+  // Process authToken the same way as header token to normalize Bearer prefix
+  const rawToken = authToken ?? headerToken;
+  const token = getTokenFromHeader(rawToken);
   return {
     loaders: createLoaders(),
     userId: getUserIdFromToken(token),
