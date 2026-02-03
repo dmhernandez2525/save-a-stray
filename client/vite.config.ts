@@ -1,9 +1,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [tailwindcss(), react()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -15,6 +16,7 @@ export default defineConfig({
     exclude: [],
   },
   optimizeDeps: {
+    include: ["react", "react-dom", "@apollo/client"],
     esbuildOptions: {
       loader: {
         '.js': 'jsx',
@@ -25,6 +27,10 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    strictPort: true,
+    hmr: {
+      overlay: true,
+    },
     proxy: {
       '/graphql': {
         target: 'http://localhost:5000',
@@ -34,6 +40,8 @@ export default defineConfig({
   },
   build: {
     outDir: 'build',
+    target: 'es2020',
+    sourcemap: true,
   },
   test: {
     globals: true,

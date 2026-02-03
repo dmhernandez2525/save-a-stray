@@ -63,6 +63,19 @@ import { ShelterDocument } from '../../models/Shelter';
 import { SuccessStoryDocument } from '../../models/SuccessStory';
 import { ReviewDocument } from '../../models/Review';
 
+const DEFAULT_ANIMAL_LIMIT = 50;
+const MAX_ANIMAL_LIMIT = 100;
+
+const clampLimit = (limit: number | undefined, fallback: number, max: number): number => {
+  if (limit === undefined || Number.isNaN(limit)) {
+    return fallback;
+  }
+  if (limit < 1) {
+    return 1;
+  }
+  return Math.min(limit, max);
+};
+
 const Application = mongoose.model<ApplicationDocument>('application');
 const Animal = mongoose.model<AnimalDocument>('animal');
 const User = mongoose.model<UserDocument>('user');
@@ -147,7 +160,8 @@ const RootQueryType = new GraphQLObjectType({
         }
         let query = Animal.find(filter);
         if (args.offset !== undefined) query = query.skip(args.offset);
-        if (args.limit !== undefined) query = query.limit(args.limit);
+        const limit = clampLimit(args.limit, DEFAULT_ANIMAL_LIMIT, MAX_ANIMAL_LIMIT);
+        query = query.limit(limit);
         return query;
       }
     },

@@ -1,7 +1,7 @@
 # Save A Stray - Architecture
 
-**Version:** 2.0.0
-**Last Updated:** January 22, 2026
+**Version:** 2.1.0
+**Last Updated:** February 3, 2026
 
 ---
 
@@ -56,14 +56,14 @@
 
 | Category | Technology | Version |
 |----------|-----------|---------|
-| Framework | React | 18.3.1 |
-| Build Tool | Vite | 6.0.7 |
+| Framework | React | 19.1.1 |
+| Build Tool | Vite | 7.1.4 |
 | Language | TypeScript | Strict mode |
-| Styling | Tailwind CSS | 3.4.17 |
-| State/Data | Apollo Client | 3.12.5 |
-| Routing | React Router | 7.1.1 |
+| Styling | Tailwind CSS | 4.1.13 |
+| State/Data | Apollo Client | 4.0.4 |
+| Routing | React Router | 7.9.1 |
 | UI Components | Custom Shadcn-style + Radix | - |
-| Testing | Vitest + Testing Library | 2.1.8 |
+| Testing | Vitest + Testing Library | 3.2.4 |
 
 ### Backend (server/)
 
@@ -71,7 +71,7 @@
 |----------|-----------|---------|
 | Runtime | Node.js | 20+ |
 | Framework | Express | 4.21.2 |
-| API | GraphQL via graphql-http | 16.10.0 / 1.22.3 |
+| API | GraphQL via Apollo Server | 16.11.0 / 4.x |
 | Database | MongoDB via Mongoose | 8.9.5 |
 | Auth | Passport.js + JWT + bcryptjs | 0.7.0 |
 | OAuth | Facebook, Google | - |
@@ -165,6 +165,10 @@ save-a-stray/
 │   │       ├── shelter_type.ts
 │   │       ├── application_type.ts
 │   │       └── success_story_type.ts
+│   ├── graphql/                      # GraphQL context/loaders/pubsub
+│   │   ├── context.ts
+│   │   ├── loaders.ts
+│   │   └── pubsub.ts
 │   ├── services/                     # Business logic
 │   │   └── auth.ts
 │   ├── validation/                   # Input validation
@@ -311,6 +315,8 @@ save-a-stray/
 ---
 
 ## GraphQL API
+
+**Subscriptions:** WebSocket subscriptions are served via `graphql-ws` on `/graphql`.
 
 ### Queries
 
@@ -494,6 +500,7 @@ Adopter → Application Form → GraphQL Mutation → MongoDB
 |---------|------|--------|---------|
 | 1.0.0 | Jan 2026 | Original | Basic architecture overview |
 | 2.0.0 | Jan 22, 2026 | Claude Code | Complete rewrite to match current codebase |
+| 2.1.0 | Feb 3, 2026 | Codex | Updated frontend and GraphQL stack versions |
 
 ---
 

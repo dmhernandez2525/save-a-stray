@@ -1,13 +1,20 @@
 import './models';
 import express, { Request, Response, NextFunction } from 'express';
-import keys from '../config/keys';
-import { createHandler } from 'graphql-http/lib/use/express';
-import schema from './schema/schema';
+import { createServer } from 'http';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import { Strategy as FacebookStrategy, Profile } from 'passport-facebook';
 import passport from 'passport';
+import { ApolloServer } from '@apollo/server';
+import { expressMiddleware } from '@apollo/server/express4';
+import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
+import { WebSocketServer } from 'ws';
+import { useServer } from 'graphql-ws/lib/use/ws';
+import keys from '../config/keys';
+import schema from './schema/schema';
 import { facebookRegister } from './services/auth';
+import { createGraphQLContext } from './graphql/context';
+import { logger } from './services/logger';
 
 const db = keys.MONGO_URI;
 
@@ -37,7 +44,9 @@ if (keys.fbookClient && keys.fbookKey) {
     ),
   );
 } else {
-  console.warn("WARNING: Facebook OAuth not configured. FBOOK_CLIENT and FBOOK_KEY env vars required.");
+  logger.warn('facebook_oauth_unconfigured', {
+    message: 'Facebook OAuth not configured. FBOOK_CLIENT and FBOOK_KEY env vars required.'
+  });
 }
 
 passport.serializeUser((user, cb) => {
@@ -49,6 +58,7 @@ passport.deserializeUser((obj: Express.User, cb) => {
 });
 
 const app = express();
+const httpServer = createServer(app);
 
 // Health check endpoint for Render.com
 app.get('/health', (_req: Request, res: Response) => {
@@ -68,9 +78,6 @@ if (keys.fbookClient && keys.fbookKey) {
   app.use(passport.session());
 }
 
-// Use graphql-http instead of deprecated express-graphql
-app.all("/graphql", createHandler({ schema }));
-
 app.get('/facebooklogin', cors(), passport.authenticate('facebook'));
 app.get(
   '/auth/facebook/callback',
@@ -85,10 +92,61 @@ app.get(
 if (db) {
   mongoose
     .connect(db)
-    .then(() => console.log("Connected to MongoDB successfully"))
-    .catch(err => console.error("MongoDB connection error:", err));
+    .then(() => logger.info('mongodb_connected', { message: 'Connected to MongoDB successfully' }))
+    .catch((err: Error) => logger.error('mongodb_connection_error', { message: err.message }));
 } else {
-  console.warn("WARNING: MONGO_URI not configured. Database features will not work.");
+  logger.warn('mongodb_unconfigured', {
+    message: 'MONGO_URI not configured. Database features will not work.'
+  });
 }
 
+const startApolloServer = async (): Promise<void> => {
+  const wsServer = new WebSocketServer({
+    server: httpServer,
+    path: '/graphql',
+  });
+
+  const serverCleanup = useServer(
+    {
+      schema,
+      context: async (ctx) => {
+        const authHeader =
+          typeof ctx.connectionParams?.authorization === 'string'
+            ? ctx.connectionParams.authorization
+            : undefined;
+        return createGraphQLContext(undefined, authHeader);
+      },
+    },
+    wsServer
+  );
+
+  const apolloServer = new ApolloServer({
+    schema,
+    plugins: [
+      ApolloServerPluginDrainHttpServer({ httpServer }),
+      {
+        async serverWillStart() {
+          return {
+            async drainServer() {
+              await serverCleanup.dispose();
+            },
+          };
+        },
+      },
+    ],
+  });
+
+  await apolloServer.start();
+
+  app.use(
+    '/graphql',
+    cors(),
+    express.json(),
+    expressMiddleware(apolloServer, {
+      context: async ({ req }) => createGraphQLContext(req),
+    })
+  );
+};
+
+export { app, httpServer, startApolloServer };
 export default app;

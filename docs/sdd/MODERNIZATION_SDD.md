@@ -1,15 +1,16 @@
 # Software Design Document: save-a-stray Modernization
 
-**Version:** 2.0.0
+**Version:** 2.1.0
 **Author:** Daniel Hernandez
 **Created:** January 2026
-**Status:** Mostly Complete - TypeScript migration in progress
+**Last Updated:** February 3, 2026
+**Status:** In Progress - React 19 + Tailwind v4 upgrade underway
 
 ---
 
 ## 1. Executive Summary
 
-This document outlines the modernization strategy for save-a-stray, upgrading from 2019-era technologies to current LTS versions. **Most phases are now complete.** The remaining work is completing the TypeScript strict mode migration for backend files.
+This document outlines the modernization strategy for save-a-stray, upgrading from 2019-era technologies to current LTS versions. **Most phases are complete, but modernization is still active.** The remaining work includes React 19, Tailwind CSS v4, dependency refresh, and completing the TypeScript strict mode migration for backend files.
 
 ### Migration Status
 
@@ -35,18 +36,25 @@ This document outlines the modernization strategy for save-a-stray, upgrading fr
 - **Database:** Mongoose 5.7.5
 - **Auth:** Firebase Admin 8.6.0, Passport 0.4.0
 
-### Current State (January 2026)
+### Current State (February 2026)
 
 - **Node.js:** 20+ LTS
-- **React:** 18.3.1
-- **Build Tool:** Vite 6.0.7
-- **GraphQL:** graphql 16.10.0 + graphql-http 1.22.3
-- **Apollo Client:** 3.12.5
-- **Styling:** Tailwind CSS 3.4.17 + Shadcn-style components
+- **React:** 19.1.1 (upgrade in progress)
+- **Build Tool:** Vite 7.1.4
+- **GraphQL:** Apollo Server v4 + graphql 16.11.0
+- **Apollo Client:** 4.0.4
+- **Styling:** Tailwind CSS 4.1.13 + Shadcn-style components (migration in progress)
 - **Database:** Mongoose 8.9.5
 - **Auth:** Passport.js 0.7.0 + JWT + bcryptjs
 - **TypeScript:** 5.9.3 (strict mode enabled, migration partial)
 - **Testing:** Vitest 2.1.8 (frontend), Jest 29.7.0 (backend)
+
+### Target State (Post-Phase 1 Modernization)
+
+- **React:** 19.x (client)
+- **Build Tool:** Vite 6.x with optimized HMR
+- **Styling:** Tailwind CSS 4.x + shadcn/ui (updated tokens + dark mode support)
+- **TypeScript:** Strict mode, no legacy `.js` duplicates in server
 
 ---
 
@@ -65,9 +73,10 @@ This document outlines the modernization strategy for save-a-stray, upgrading fr
 
 ### Phase 2: GraphQL Server (Complete)
 
-- Replaced deprecated `express-graphql` with `graphql-http`
-- Upgraded `graphql` to 16.10.0
-- Updated resolver patterns
+- Replaced deprecated `express-graphql` with Apollo Server v4
+- Upgraded `graphql` to 16.11.0
+- Added WebSocket subscriptions (graphql-ws)
+- Introduced request-scoped DataLoaders for N+1 mitigation
 
 ### Phase 3: Frontend Build System (Complete)
 
@@ -109,6 +118,20 @@ This document outlines the modernization strategy for save-a-stray, upgrading fr
 
 ## 3. Remaining Work
 
+### React 19 Upgrade (Planned)
+
+- Upgrade `react` and `react-dom` to 19.x
+- Align `@types/react` and `@types/react-dom` to React 19
+- Validate React Router 7 compatibility
+- Verify Vite build + HMR on React 19
+
+### Tailwind CSS v4 Upgrade (Planned)
+
+- Upgrade Tailwind to v4
+- Update Tailwind config, PostCSS, and build output as needed
+- Refresh design tokens and shadcn/ui configuration
+- Verify dark mode implementation
+
 ### TypeScript Strict Migration (In Progress)
 
 The TypeScript compiler is configured in strict mode, but many server files still have both `.js` and `.ts` versions. The `.ts` files are being developed alongside the legacy `.js` files.
@@ -144,10 +167,10 @@ Component-specific CSS files in `client/src/components/css/` coexist with Tailwi
 
 | Planned | Actual | Reason |
 |---------|--------|--------|
-| React 19.x | React 18.3.1 | 18.x is current stable; 19.x has breaking changes |
+| React 19.x | React 18.3.1 → 19.x (planned) | 19.x now stable; upgrade scheduled in Phase 1 |
 | Node.js 22.x | Node.js 20+ | 20.x is current LTS |
-| Tailwind v4 | Tailwind 3.4.17 | v4 was in beta; 3.x is stable |
-| graphql-yoga | graphql-http | Simpler, lighter-weight |
+| Tailwind v4 | Tailwind 3.4.17 → 4.x (planned) | v4 now stable; upgrade scheduled in Phase 1 |
+| graphql-yoga | Apollo Server v4 | Standardized server + subscriptions |
 | Firebase Auth retained | Custom JWT + bcryptjs | Reduced external dependencies |
 
 ---
@@ -158,8 +181,10 @@ Component-specific CSS files in `client/src/components/css/` coexist with Tailwi
 - [x] Vite build system operational
 - [x] Apollo Client 3 integrated
 - [x] React Router 7 working
-- [x] Tailwind CSS configured
+- [x] Tailwind CSS configured (v3)
 - [x] TypeScript strict mode enabled
+- [ ] React 19 upgrade completed
+- [ ] Tailwind CSS v4 upgrade completed
 - [ ] All server files migrated to TypeScript-only
 - [ ] Legacy CSS files removed
 - [ ] 85% test coverage achieved
@@ -173,3 +198,4 @@ Component-specific CSS files in `client/src/components/css/` coexist with Tailwi
 |---------|------|--------|---------|
 | 1.0.0 | Jan 2026 | Original | Initial modernization plan |
 | 2.0.0 | Jan 22, 2026 | Claude Code | Updated to reflect completed migration status |
+| 2.1.0 | Feb 3, 2026 | Codex | Added React 19 + Tailwind v4 upgrade plan |

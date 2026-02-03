@@ -15,7 +15,8 @@ import {
 } from "./ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "./ui/sheet";
 import { IsLoggedInData, UserIdData } from "../types";
-import { PawPrint, Menu, User, Settings, LogOut, Heart, BookOpen, ChevronDown } from "lucide-react";
+import { PawPrint, Menu, User, Settings, LogOut, Heart, BookOpen, ChevronDown, Sun, Moon } from "lucide-react";
+import { useTheme } from "./ThemeProvider";
 
 const { IS_LOGGED_IN, USER_ID } = Queries;
 
@@ -24,9 +25,14 @@ type NavProps = WithRouterProps;
 const Nav: React.FC<NavProps> = (props) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { resolvedTheme, setTheme } = useTheme();
 
   const isAuthPage = ["/login", "/register", "/newShelter"].includes(location.pathname);
   const isLandingPage = location.pathname === "/" || location.pathname === "/splash";
+  const isDarkMode = resolvedTheme === "dark";
+  const handleThemeToggle = () => {
+    setTheme(isDarkMode ? "light" : "dark");
+  };
 
   // Don't show nav on auth pages
   if (isAuthPage) {
@@ -153,6 +159,15 @@ const Nav: React.FC<NavProps> = (props) => {
                 </Query>
               )}
             </ApolloConsumer>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="ml-2 text-warm-gray-700 dark:text-warm-gray-300"
+              aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+              onClick={handleThemeToggle}
+            >
+              {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </Button>
           </div>
 
           {/* Mobile Menu */}
@@ -266,6 +281,18 @@ const Nav: React.FC<NavProps> = (props) => {
                       </Query>
                     )}
                   </ApolloConsumer>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start gap-3"
+                    aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+                    onClick={() => {
+                      handleThemeToggle();
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                    {isDarkMode ? "Light Mode" : "Dark Mode"}
+                  </Button>
                 </div>
               </SheetContent>
             </Sheet>

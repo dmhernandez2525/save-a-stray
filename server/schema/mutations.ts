@@ -63,6 +63,7 @@ import { AdoptionFeeDocument } from '../models/AdoptionFee';
 import { SpayNeuterDocument } from '../models/SpayNeuter';
 import { IntakeLogDocument } from '../models/IntakeLog';
 import { OutcomeLogDocument } from '../models/OutcomeLog';
+import { pubsub, SUBSCRIPTION_EVENTS } from '../graphql/pubsub';
 
 const User = mongoose.model<UserDocument>('user');
 const Animal = mongoose.model<AnimalDocument>('animal');
@@ -313,6 +314,9 @@ const mutation = new GraphQLObjectType({
         if (animal) {
           animal.status = args.status as typeof animal.status;
           await animal.save();
+          await pubsub.publish(SUBSCRIPTION_EVENTS.ANIMAL_STATUS_CHANGED, {
+            animalStatusChanged: animal
+          });
           return animal;
         }
         return null;
@@ -333,6 +337,11 @@ const mutation = new GraphQLObjectType({
           animal.applications.push(newApp._id);
           await animal.save();
           await newApp.save();
+          const shelter = await Shelter.findOne({ animals: animal._id });
+          await pubsub.publish(SUBSCRIPTION_EVENTS.NEW_APPLICATION, {
+            newApplication: newApp,
+            newApplicationShelterId: shelter?._id.toString()
+          });
           return newApp;
         }
         return null;
@@ -376,6 +385,9 @@ const mutation = new GraphQLObjectType({
         if (application) {
           application.status = args.status as typeof application.status;
           await application.save();
+          await pubsub.publish(SUBSCRIPTION_EVENTS.APPLICATION_STATUS_CHANGED, {
+            applicationStatusChanged: application
+          });
           return application;
         }
         return null;
