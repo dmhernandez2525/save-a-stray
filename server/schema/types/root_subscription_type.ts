@@ -37,31 +37,32 @@ const RootSubscriptionType = new GraphQLObjectType({
     applicationStatusChanged: {
       type: ApplicationType,
       args: { applicationId: { type: new GraphQLNonNull(GraphQLID) } },
-      subscribe: withFilter<SubscriptionPayload, ApplicationStatusArgs>(
+      subscribe: withFilter(
         () => pubsub.asyncIterator(SUBSCRIPTION_EVENTS.APPLICATION_STATUS_CHANGED),
-        (payload, variables) =>
+        (payload: SubscriptionPayload, variables: ApplicationStatusArgs) =>
           payload.applicationStatusChanged?._id.toString() === variables.applicationId
       ),
-      resolve: (payload) => payload.applicationStatusChanged ?? null,
+      resolve: (payload: SubscriptionPayload) => payload.applicationStatusChanged ?? null,
     },
     newApplication: {
       type: ApplicationType,
       args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
-      subscribe: withFilter<SubscriptionPayload, NewApplicationArgs>(
+      subscribe: withFilter(
         () => pubsub.asyncIterator(SUBSCRIPTION_EVENTS.NEW_APPLICATION),
-        (payload, variables) => payload.newApplicationShelterId === variables.shelterId
+        (payload: SubscriptionPayload, variables: NewApplicationArgs) =>
+          payload.newApplicationShelterId === variables.shelterId
       ),
-      resolve: (payload) => payload.newApplication ?? null,
+      resolve: (payload: SubscriptionPayload) => payload.newApplication ?? null,
     },
     animalStatusChanged: {
       type: AnimalType,
       args: { animalId: { type: new GraphQLNonNull(GraphQLID) } },
-      subscribe: withFilter<SubscriptionPayload, AnimalStatusArgs>(
+      subscribe: withFilter(
         () => pubsub.asyncIterator(SUBSCRIPTION_EVENTS.ANIMAL_STATUS_CHANGED),
-        (payload, variables) =>
+        (payload: SubscriptionPayload, variables: AnimalStatusArgs) =>
           payload.animalStatusChanged?._id.toString() === variables.animalId
       ),
-      resolve: (payload) => payload.animalStatusChanged ?? null,
+      resolve: (payload: SubscriptionPayload) => payload.animalStatusChanged ?? null,
     },
   }),
 });

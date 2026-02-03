@@ -13,7 +13,7 @@ import { useServer } from 'graphql-ws/lib/use/ws';
 import keys from '../config/keys';
 import schema from './schema/schema';
 import { facebookRegister } from './services/auth';
-import { createGraphQLContext } from './graphql/context';
+import { createGraphQLContext, GraphQLContext } from './graphql/context';
 import { logger } from './services/logger';
 
 const db = keys.MONGO_URI;
@@ -120,7 +120,7 @@ const startApolloServer = async (): Promise<void> => {
     wsServer
   );
 
-  const apolloServer = new ApolloServer({
+  const apolloServer = new ApolloServer<GraphQLContext>({
     schema,
     plugins: [
       ApolloServerPluginDrainHttpServer({ httpServer }),
@@ -140,11 +140,10 @@ const startApolloServer = async (): Promise<void> => {
 
   app.use(
     '/graphql',
-    cors(),
     express.json(),
     expressMiddleware(apolloServer, {
       context: async ({ req }) => createGraphQLContext(req),
-    })
+    }) as express.RequestHandler
   );
 };
 
