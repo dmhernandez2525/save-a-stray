@@ -110,10 +110,14 @@ const startApolloServer = async (): Promise<void> => {
     {
       schema,
       context: async (ctx) => {
+        // Accept both 'authorization' and 'Authorization' for case-insensitive header handling
+        const params = ctx.connectionParams ?? {};
         const authHeader =
-          typeof ctx.connectionParams?.authorization === 'string'
-            ? ctx.connectionParams.authorization
-            : undefined;
+          typeof params.authorization === 'string'
+            ? params.authorization
+            : typeof params.Authorization === 'string'
+              ? params.Authorization
+              : undefined;
         return createGraphQLContext(undefined, authHeader);
       },
     },

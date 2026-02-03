@@ -104,8 +104,16 @@ const RootSubscriptionType = new GraphQLObjectType({
           requireAuth(context);
           return pubsub.asyncIterator(SUBSCRIPTION_EVENTS.ANIMAL_STATUS_CHANGED);
         },
-        (payload: SubscriptionPayload, variables: AnimalStatusArgs) =>
-          payload.animalStatusChanged?._id.toString() === variables.animalId
+        async (payload: SubscriptionPayload, variables: AnimalStatusArgs, context: GraphQLContext) => {
+          const animal = payload.animalStatusChanged;
+          if (!animal) return false;
+          if (animal._id.toString() !== variables.animalId) return false;
+
+          // Check if user is staff at the shelter that owns this animal
+          const shelter = await Shelter.findOne({ animals: animal._id });
+          if (!shelter || !context.userId) return false;
+          return isShelterStaff(context.userId, shelter._id.toString());
+        }
       ),
       resolve: (payload: SubscriptionPayload) => payload.animalStatusChanged ?? null,
     },
