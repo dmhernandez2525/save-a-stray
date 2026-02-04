@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import { Types } from 'mongoose';
 import {
   GraphQLObjectType,
   GraphQLString,
@@ -7,20 +7,21 @@ import {
   GraphQLList,
   GraphQLFieldConfigMap
 } from 'graphql';
-import { ShelterDocument } from '../../models/Shelter';
-
-const Shelter = mongoose.model<ShelterDocument>('shelter');
+import { GraphQLContext } from '../../graphql/context';
+import { filterLoaderResults } from '../../graphql/loaders';
 
 interface ShelterParentValue {
   _id: string;
   name: string;
   location: string;
   paymentEmail: string;
+  animals?: Array<string | Types.ObjectId>;
+  users?: Array<string | Types.ObjectId>;
 }
 
 const ShelterType: GraphQLObjectType = new GraphQLObjectType({
   name: "ShelterType",
-  fields: (): GraphQLFieldConfigMap<ShelterParentValue, unknown> => ({
+  fields: (): GraphQLFieldConfigMap<ShelterParentValue, GraphQLContext> => ({
     _id: { type: GraphQLID },
     name: { type: GraphQLString },
     location: { type: GraphQLString },
@@ -34,18 +35,20 @@ const ShelterType: GraphQLObjectType = new GraphQLObjectType({
     verifiedAt: { type: GraphQLString },
     animals: {
       type: new GraphQLList(require("./animal_type").default),
-      resolve(parentValue: ShelterParentValue) {
-        return Shelter.findById(parentValue._id).populate("animals").then(shelter => {
-          return shelter?.animals || [];
-        });
+      async resolve(parentValue: ShelterParentValue, _args, context: GraphQLContext) {
+        const animalIds = parentValue.animals?.map((id) => id.toString()) ?? [];
+        if (animalIds.length === 0) return [];
+        const results = await context.loaders.animalById.loadMany(animalIds);
+        return filterLoaderResults(results);
       }
     },
     users: {
       type: new GraphQLList(require("./user_type").default),
-      resolve(parentValue: ShelterParentValue) {
-        return Shelter.findById(parentValue._id).populate("users").then(shelter => {
-          return shelter?.users || [];
-        });
+      async resolve(parentValue: ShelterParentValue, _args, context: GraphQLContext) {
+        const userIds = parentValue.users?.map((id) => id.toString()) ?? [];
+        if (userIds.length === 0) return [];
+        const results = await context.loaders.userById.loadMany(userIds);
+        return filterLoaderResults(results);
       }
     }
   })

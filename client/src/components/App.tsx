@@ -25,14 +25,16 @@ import TermsOfService from "./TermsOfService";
 // Demo Mode Components
 import { DemoProvider } from "../demo/DemoContext";
 import DemoLanding from "../demo/DemoLanding";
+import { ThemeProvider } from "./ThemeProvider";
 
 const App: React.FC = () => {
   return (
     <DemoProvider>
-      <HashRouter>
-        <div className="text-white grid grid-cols-main grid-rows-main h-screen">
-          <Nav />
-          <Routes>
+      <ThemeProvider defaultTheme="system" storageKey="save-a-stray-theme">
+        <HashRouter>
+          <div className="text-foreground grid grid-cols-main grid-rows-main h-screen">
+            <Nav />
+            <Routes>
             <Route
               path="/"
               element={<AuthRoute element={<Slug />} routeType="auth" />}
@@ -84,9 +86,10 @@ const App: React.FC = () => {
             <Route path="/tos" element={<TermsOfService />} />
             {/* Demo Mode Entry - redirects to /login for role selection */}
             <Route path="/demo" element={<DemoLanding />} />
-          </Routes>
-        </div>
-      </HashRouter>
+            </Routes>
+          </div>
+        </HashRouter>
+      </ThemeProvider>
     </DemoProvider>
   );
 };

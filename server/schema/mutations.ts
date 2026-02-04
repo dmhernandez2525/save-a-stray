@@ -63,6 +63,15 @@ import { AdoptionFeeDocument } from '../models/AdoptionFee';
 import { SpayNeuterDocument } from '../models/SpayNeuter';
 import { IntakeLogDocument } from '../models/IntakeLog';
 import { OutcomeLogDocument } from '../models/OutcomeLog';
+import { pubsub, SUBSCRIPTION_EVENTS } from '../graphql/pubsub';
+import { GraphQLContext } from '../graphql/context';
+import {
+  requireAuth,
+  requireShelterStaff,
+  requireAdmin,
+  requireSelf,
+  requireApplicationAccess
+} from '../graphql/authorization';
 
 const User = mongoose.model<UserDocument>('user');
 const Animal = mongoose.model<AnimalDocument>('animal');
@@ -178,7 +187,7 @@ const AnimalInput = new GraphQLInputObjectType({
 
 const mutation = new GraphQLObjectType({
   name: "Mutation",
-  fields: (): GraphQLFieldConfigMap<unknown, unknown> => ({
+  fields: (): GraphQLFieldConfigMap<unknown, GraphQLContext> => ({
     register: {
       type: UserType,
       args: {
@@ -246,9 +255,16 @@ const mutation = new GraphQLObjectType({
         images: { type: new GraphQLList(GraphQLString) },
         video: { type: GraphQLString },
         status: { type: GraphQLString },
-        applications: { type: GraphQLID }
+        applications: { type: GraphQLID },
+        shelterId: { type: GraphQLID }
       },
-      async resolve(_, args: AnimalArgs) {
+      async resolve(_, args: AnimalArgs & { shelterId?: string }, context: GraphQLContext) {
+        // Require authentication and shelter staff access
+        if (args.shelterId) {
+          await requireShelterStaff(context, args.shelterId);
+        } else {
+          requireAuth(context);
+        }
         const { name, type, breed, age, sex, color, description, image, images, video, status } = args;
         const newAnimal = new Animal({ name, type, breed: breed || '', age, sex, color, description, image, images: images || [], video, status: status || 'available' });
         await newAnimal.save();
@@ -258,9 +274,24 @@ const mutation = new GraphQLObjectType({
     deleteAnimal: {
       type: AnimalType,
       args: {
-        _id: { type: GraphQLID }
+        _id: { type: GraphQLID },
+        shelterId: { type: GraphQLID }
       },
-      resolve(_, args: { _id: string }) {
+      async resolve(_, args: { _id: string; shelterId?: string }, context: GraphQLContext) {
+        // Find the animal to get the shelter it belongs to
+        const animal = await Animal.findById(args._id);
+        if (!animal) return null;
+
+        // Find the shelter that owns this animal
+        const shelter = await Shelter.findOne({ animals: args._id });
+        if (shelter) {
+          await requireShelterStaff(context, shelter._id.toString());
+        } else if (args.shelterId) {
+          await requireShelterStaff(context, args.shelterId);
+        } else {
+          requireAdmin(context);
+        }
+
         return Animal.deleteOne({ _id: args._id });
       }
     },
@@ -281,25 +312,32 @@ const mutation = new GraphQLObjectType({
         status: { type: GraphQLString },
         applications: { type: GraphQLID }
       },
-      async resolve(_, args: AnimalArgs & { _id: string }) {
+      async resolve(_, args: AnimalArgs & { _id: string }, context: GraphQLContext) {
         const { _id, name, type, breed, age, sex, color, description, image, images, video, status } = args;
         const animal = await Animal.findById(_id);
-        if (animal) {
-          animal.name = name;
-          animal.type = type;
-          if (breed !== undefined) animal.breed = breed;
-          animal.age = age;
-          animal.sex = sex;
-          animal.color = color;
-          animal.description = description;
-          animal.image = image;
-          if (images !== undefined) animal.images = images;
-          animal.video = video;
-          if (status) animal.status = status as typeof animal.status;
-          await animal.save();
-          return animal;
+        if (!animal) return null;
+
+        // Find the shelter that owns this animal and require staff access
+        const shelter = await Shelter.findOne({ animals: _id });
+        if (shelter) {
+          await requireShelterStaff(context, shelter._id.toString());
+        } else {
+          requireAdmin(context);
         }
-        return null;
+
+        animal.name = name;
+        animal.type = type;
+        if (breed !== undefined) animal.breed = breed;
+        animal.age = age;
+        animal.sex = sex;
+        animal.color = color;
+        animal.description = description;
+        animal.image = image;
+        if (images !== undefined) animal.images = images;
+        animal.video = video;
+        if (status) animal.status = status as typeof animal.status;
+        await animal.save();
+        return animal;
       }
     },
     updateAnimalStatus: {
@@ -308,14 +346,24 @@ const mutation = new GraphQLObjectType({
         _id: { type: GraphQLID },
         status: { type: GraphQLString }
       },
-      async resolve(_, args: { _id: string; status: string }) {
+      async resolve(_, args: { _id: string; status: string }, context: GraphQLContext) {
         const animal = await Animal.findById(args._id);
-        if (animal) {
-          animal.status = args.status as typeof animal.status;
-          await animal.save();
-          return animal;
+        if (!animal) return null;
+
+        // Find the shelter that owns this animal and require staff access
+        const shelter = await Shelter.findOne({ animals: args._id });
+        if (shelter) {
+          await requireShelterStaff(context, shelter._id.toString());
+        } else {
+          requireAdmin(context);
         }
-        return null;
+
+        animal.status = args.status as typeof animal.status;
+        await animal.save();
+        await pubsub.publish(SUBSCRIPTION_EVENTS.ANIMAL_STATUS_CHANGED, {
+          animalStatusChanged: animal
+        });
+        return animal;
       }
     },
     newApplication: {
@@ -325,7 +373,13 @@ const mutation = new GraphQLObjectType({
         userId: { type: GraphQLString },
         applicationData: { type: GraphQLString }
       },
-      async resolve(_, args: ApplicationArgs) {
+      async resolve(_, args: ApplicationArgs, context: GraphQLContext) {
+        // Users can only create applications for themselves
+        const authenticatedUserId = requireAuth(context);
+        if (args.userId !== authenticatedUserId && context.userRole !== 'admin') {
+          throw new Error('You can only submit applications for yourself');
+        }
+
         const { animalId, userId, applicationData } = args;
         const newApp = new Application({ animalId, userId, applicationData, status: 'submitted', submittedAt: new Date() });
         const animal = await Animal.findById(animalId);
@@ -333,6 +387,11 @@ const mutation = new GraphQLObjectType({
           animal.applications.push(newApp._id);
           await animal.save();
           await newApp.save();
+          const shelter = await Shelter.findOne({ animals: animal._id });
+          await pubsub.publish(SUBSCRIPTION_EVENTS.NEW_APPLICATION, {
+            newApplication: newApp,
+            newApplicationShelterId: shelter?._id.toString()
+          });
           return newApp;
         }
         return null;
@@ -343,7 +402,21 @@ const mutation = new GraphQLObjectType({
       args: {
         _id: { type: GraphQLID }
       },
-      resolve(_, args: { _id: string }) {
+      async resolve(_, args: { _id: string }, context: GraphQLContext) {
+        const application = await Application.findById(args._id);
+        if (!application) return null;
+
+        // Find the shelter that owns the animal
+        const animal = await Animal.findById(application.animalId);
+        const shelter = animal ? await Shelter.findOne({ animals: animal._id }) : null;
+
+        // Allow application owner or shelter staff to delete
+        await requireApplicationAccess(
+          context,
+          application.userId.toString(),
+          shelter?._id.toString()
+        );
+
         return Application.deleteOne({ _id: args._id });
       }
     },
@@ -354,15 +427,17 @@ const mutation = new GraphQLObjectType({
         animalId: { type: GraphQLString },
         applicationData: { type: GraphQLString }
       },
-      async resolve(_, args: { _id: string; applicationData: string }) {
+      async resolve(_, args: { _id: string; applicationData: string }, context: GraphQLContext) {
         const { _id, applicationData } = args;
         const application = await Application.findById(_id);
-        if (application) {
-          application.applicationData = applicationData;
-          await application.save();
-          return application;
-        }
-        return null;
+        if (!application) return null;
+
+        // Only the application owner can edit their own application
+        requireSelf(context, application.userId.toString());
+
+        application.applicationData = applicationData;
+        await application.save();
+        return application;
       }
     },
     updateApplicationStatus: {
@@ -371,33 +446,49 @@ const mutation = new GraphQLObjectType({
         _id: { type: GraphQLID },
         status: { type: GraphQLString }
       },
-      async resolve(_, args: { _id: string; status: string }) {
+      async resolve(_, args: { _id: string; status: string }, context: GraphQLContext) {
         const application = await Application.findById(args._id);
-        if (application) {
-          application.status = args.status as typeof application.status;
-          await application.save();
-          return application;
+        if (!application) return null;
+
+        // Find the shelter that owns the animal - only shelter staff can update status
+        const animal = await Animal.findById(application.animalId);
+        const shelter = animal ? await Shelter.findOne({ animals: animal._id }) : null;
+        if (shelter) {
+          await requireShelterStaff(context, shelter._id.toString());
+        } else {
+          requireAdmin(context);
         }
-        return null;
+
+        application.status = args.status as typeof application.status;
+        await application.save();
+        await pubsub.publish(SUBSCRIPTION_EVENTS.APPLICATION_STATUS_CHANGED, {
+          applicationStatusChanged: application
+        });
+        return application;
       }
     },
     markNotificationRead: {
       type: NotificationType,
       args: { _id: { type: GraphQLID } },
-      async resolve(_, args: { _id: string }) {
+      async resolve(_, args: { _id: string }, context: GraphQLContext) {
+        requireAuth(context);
         const notification = await NotificationModel.findById(args._id);
-        if (notification) {
-          notification.read = true;
-          await notification.save();
-          return notification;
-        }
-        return null;
+        if (!notification) return null;
+
+        // Users can only mark their own notifications as read
+        requireSelf(context, notification.userId.toString());
+
+        notification.read = true;
+        await notification.save();
+        return notification;
       }
     },
     markAllNotificationsRead: {
       type: GraphQLString,
       args: { userId: { type: GraphQLString } },
-      async resolve(_, args: { userId: string }) {
+      async resolve(_, args: { userId: string }, context: GraphQLContext) {
+        // Users can only mark their own notifications as read
+        requireSelf(context, args.userId);
         await NotificationModel.updateMany({ userId: args.userId, read: false }, { read: true });
         return 'success';
       }
@@ -410,7 +501,10 @@ const mutation = new GraphQLObjectType({
         rating: { type: GraphQLInt },
         comment: { type: GraphQLString }
       },
-      async resolve(_, args: { userId: string; shelterId: string; rating: number; comment?: string }) {
+      async resolve(_, args: { userId: string; shelterId: string; rating: number; comment?: string }, context: GraphQLContext) {
+        // Users can only create reviews as themselves
+        requireSelf(context, args.userId);
+
         const review = new ReviewModel({
           userId: args.userId,
           shelterId: args.shelterId,
@@ -430,20 +524,27 @@ const mutation = new GraphQLObjectType({
         description: { type: GraphQLString },
         veterinarian: { type: GraphQLString }
       },
-      async resolve(_, args: { animalId: string; date: string; recordType: string; description: string; veterinarian?: string }) {
+      async resolve(_, args: { animalId: string; date: string; recordType: string; description: string; veterinarian?: string }, context: GraphQLContext) {
         const animal = await Animal.findById(args.animalId);
-        if (animal) {
-          if (!animal.medicalRecords) animal.medicalRecords = [];
-          animal.medicalRecords.push({
-            date: args.date,
-            recordType: args.recordType,
-            description: args.description,
-            veterinarian: args.veterinarian || ''
-          });
-          await animal.save();
-          return animal;
+        if (!animal) return null;
+
+        // Find the shelter that owns this animal and require staff access
+        const shelter = await Shelter.findOne({ animals: args.animalId });
+        if (shelter) {
+          await requireShelterStaff(context, shelter._id.toString());
+        } else {
+          requireAdmin(context);
         }
-        return null;
+
+        if (!animal.medicalRecords) animal.medicalRecords = [];
+        animal.medicalRecords.push({
+          date: args.date,
+          recordType: args.recordType,
+          description: args.description,
+          veterinarian: args.veterinarian || ''
+        });
+        await animal.save();
+        return animal;
       }
     },
     updateUser: {
@@ -453,7 +554,10 @@ const mutation = new GraphQLObjectType({
         name: { type: GraphQLString },
         email: { type: GraphQLString }
       },
-      async resolve(_, args: { _id: string; name?: string; email?: string }) {
+      async resolve(_, args: { _id: string; name?: string; email?: string }, context: GraphQLContext) {
+        // Users can only update their own profile
+        requireSelf(context, args._id);
+
         const user = await User.findById(args._id);
         if (user) {
           if (args.name) user.name = args.name;
@@ -470,7 +574,10 @@ const mutation = new GraphQLObjectType({
         userId: { type: GraphQLID },
         animalId: { type: GraphQLID }
       },
-      async resolve(_, args: { userId: string; animalId: string }) {
+      async resolve(_, args: { userId: string; animalId: string }, context: GraphQLContext) {
+        // Users can only modify their own favorites
+        requireSelf(context, args.userId);
+
         const user = await User.findById(args.userId);
         if (user) {
           const alreadyFavorited = user.favorites.some(
@@ -491,7 +598,10 @@ const mutation = new GraphQLObjectType({
         userId: { type: GraphQLID },
         animalId: { type: GraphQLID }
       },
-      async resolve(_, args: { userId: string; animalId: string }) {
+      async resolve(_, args: { userId: string; animalId: string }, context: GraphQLContext) {
+        // Users can only modify their own favorites
+        requireSelf(context, args.userId);
+
         const user = await User.findById(args.userId);
         if (user) {
           user.favorites = user.favorites.filter(
@@ -515,7 +625,10 @@ const mutation = new GraphQLObjectType({
         hours: { type: GraphQLString },
         description: { type: GraphQLString }
       },
-      async resolve(_, args: ShelterArgs) {
+      async resolve(_, args: ShelterArgs, context: GraphQLContext) {
+        // Only authenticated users can create shelters
+        requireAuth(context);
+
         const { name, location, paymentEmail, phone, email, website, hours, description } = args;
         const newShelter = new Shelter({ name, location, paymentEmail, phone, email, website, hours, description });
         await newShelter.save();
@@ -527,7 +640,9 @@ const mutation = new GraphQLObjectType({
       args: {
         _id: { type: GraphQLID }
       },
-      resolve(_, args: { _id: string }) {
+      async resolve(_, args: { _id: string }, context: GraphQLContext) {
+        // Only admins can delete shelters
+        requireAdmin(context);
         return Shelter.deleteOne({ _id: args._id });
       }
     },
@@ -546,7 +661,10 @@ const mutation = new GraphQLObjectType({
         description: { type: GraphQLString },
         animals: { type: GraphQLString }
       },
-      async resolve(_, args: ShelterArgs & { _id: string }) {
+      async resolve(_, args: ShelterArgs & { _id: string }, context: GraphQLContext) {
+        // Only shelter staff can edit their shelter
+        await requireShelterStaff(context, args._id);
+
         const { _id, name, location, users, paymentEmail, phone, email, website, hours, description, animals } = args;
         const shelter = await Shelter.findById(_id);
         if (shelter) {
@@ -572,7 +690,10 @@ const mutation = new GraphQLObjectType({
         shelterId: { type: GraphQLID },
         email: { type: GraphQLString }
       },
-      async resolve(_, args: { shelterId: string; email: string }) {
+      async resolve(_, args: { shelterId: string; email: string }, context: GraphQLContext) {
+        // Only shelter staff can add new staff
+        await requireShelterStaff(context, args.shelterId);
+
         const shelter = await Shelter.findById(args.shelterId);
         if (!shelter) return null;
         const user = await User.findOne({ email: args.email });
@@ -595,7 +716,10 @@ const mutation = new GraphQLObjectType({
         shelterId: { type: GraphQLID },
         userId: { type: GraphQLID }
       },
-      async resolve(_, args: { shelterId: string; userId: string }) {
+      async resolve(_, args: { shelterId: string; userId: string }, context: GraphQLContext) {
+        // Only shelter staff can remove staff
+        await requireShelterStaff(context, args.shelterId);
+
         const shelter = await Shelter.findById(args.shelterId);
         if (!shelter) return null;
         shelter.users = shelter.users.filter(
@@ -622,7 +746,10 @@ const mutation = new GraphQLObjectType({
         location: { type: GraphQLString },
         eventType: { type: GraphQLString }
       },
-      async resolve(_, args: { shelterId: string; title: string; description?: string; date: string; endDate?: string; location?: string; eventType?: string }) {
+      async resolve(_, args: { shelterId: string; title: string; description?: string; date: string; endDate?: string; location?: string; eventType?: string }, context: GraphQLContext) {
+        // Only shelter staff can create events
+        await requireShelterStaff(context, args.shelterId);
+
         const event = new EventModel({
           shelterId: args.shelterId,
           title: args.title,
@@ -639,7 +766,13 @@ const mutation = new GraphQLObjectType({
     deleteEvent: {
       type: EventType,
       args: { _id: { type: GraphQLID } },
-      resolve(_, args: { _id: string }) {
+      async resolve(_, args: { _id: string }, context: GraphQLContext) {
+        const event = await EventModel.findById(args._id);
+        if (!event) return null;
+
+        // Only shelter staff can delete events
+        await requireShelterStaff(context, event.shelterId.toString());
+
         return EventModel.findByIdAndDelete(args._id);
       }
     },
@@ -652,7 +785,12 @@ const mutation = new GraphQLObjectType({
         amount: { type: GraphQLFloat },
         message: { type: GraphQLString }
       },
-      async resolve(_, args: { shelterId: string; userId?: string; donorName: string; amount: number; message?: string }) {
+      async resolve(_, args: { shelterId: string; userId?: string; donorName: string; amount: number; message?: string }, context: GraphQLContext) {
+        // Donations can be anonymous (no auth required) but if userId is provided, verify it matches
+        if (args.userId && context.userId && args.userId !== context.userId && context.userRole !== 'admin') {
+          throw new Error('Cannot create donation for another user');
+        }
+
         // Validate required fields
         if (!args.shelterId || !args.donorName) {
           throw new Error('Shelter ID and donor name are required');
@@ -694,7 +832,10 @@ const mutation = new GraphQLObjectType({
         endDate: { type: GraphQLString },
         notes: { type: GraphQLString }
       },
-      async resolve(_, args: { shelterId: string; animalId: string; userId?: string; fosterName: string; fosterEmail?: string; startDate: string; endDate?: string; notes?: string }) {
+      async resolve(_, args: { shelterId: string; animalId: string; userId?: string; fosterName: string; fosterEmail?: string; startDate: string; endDate?: string; notes?: string }, context: GraphQLContext) {
+        // Only shelter staff can create foster records
+        await requireShelterStaff(context, args.shelterId);
+
         const foster = new FosterModel({
           shelterId: args.shelterId,
           animalId: args.animalId,
@@ -718,16 +859,18 @@ const mutation = new GraphQLObjectType({
         endDate: { type: GraphQLString },
         notes: { type: GraphQLString }
       },
-      async resolve(_, args: { _id: string; status?: string; endDate?: string; notes?: string }) {
+      async resolve(_, args: { _id: string; status?: string; endDate?: string; notes?: string }, context: GraphQLContext) {
         const foster = await FosterModel.findById(args._id);
-        if (foster) {
-          if (args.status) foster.status = args.status as typeof foster.status;
-          if (args.endDate) foster.endDate = new Date(args.endDate);
-          if (args.notes !== undefined) foster.notes = args.notes;
-          await foster.save();
-          return foster;
-        }
-        return null;
+        if (!foster) return null;
+
+        // Only shelter staff can update foster records
+        await requireShelterStaff(context, foster.shelterId.toString());
+
+        if (args.status) foster.status = args.status as typeof foster.status;
+        if (args.endDate) foster.endDate = new Date(args.endDate);
+        if (args.notes !== undefined) foster.notes = args.notes;
+        await foster.save();
+        return foster;
       }
     },
     createSavedSearch: {
@@ -743,7 +886,10 @@ const mutation = new GraphQLObjectType({
         minAge: { type: GraphQLInt },
         maxAge: { type: GraphQLInt }
       },
-      async resolve(_, args: { userId: string; name: string; type?: string; breed?: string; sex?: string; color?: string; status?: string; minAge?: number; maxAge?: number }) {
+      async resolve(_, args: { userId: string; name: string; type?: string; breed?: string; sex?: string; color?: string; status?: string; minAge?: number; maxAge?: number }, context: GraphQLContext) {
+        // Users can only create saved searches for themselves
+        requireSelf(context, args.userId);
+
         const filters: Record<string, unknown> = {};
         if (args.type) filters.type = args.type;
         if (args.breed) filters.breed = args.breed;
@@ -764,7 +910,13 @@ const mutation = new GraphQLObjectType({
     deleteSavedSearch: {
       type: SavedSearchType,
       args: { _id: { type: GraphQLID } },
-      resolve(_, args: { _id: string }) {
+      async resolve(_, args: { _id: string }, context: GraphQLContext) {
+        const savedSearch = await SavedSearchModel.findById(args._id);
+        if (!savedSearch) return null;
+
+        // Users can only delete their own saved searches
+        requireSelf(context, savedSearch.userId.toString());
+
         return SavedSearchModel.findByIdAndDelete(args._id);
       }
     },
@@ -777,7 +929,10 @@ const mutation = new GraphQLObjectType({
         entityId: { type: GraphQLString },
         description: { type: GraphQLString }
       },
-      async resolve(_, args: { shelterId: string; action: string; entityType: string; entityId?: string; description: string }) {
+      async resolve(_, args: { shelterId: string; action: string; entityType: string; entityId?: string; description: string }, context: GraphQLContext) {
+        // Only shelter staff can log activity
+        await requireShelterStaff(context, args.shelterId);
+
         const log = new ActivityLogModel({
           shelterId: args.shelterId,
           action: args.action,
@@ -795,7 +950,10 @@ const mutation = new GraphQLObjectType({
         shelterId: { type: GraphQLID },
         verified: { type: GraphQLBoolean }
       },
-      async resolve(_, args: { shelterId: string; verified: boolean }) {
+      async resolve(_, args: { shelterId: string; verified: boolean }, context: GraphQLContext) {
+        // Only admins can verify shelters
+        requireAdmin(context);
+
         const shelter = await Shelter.findById(args.shelterId);
         if (shelter) {
           shelter.verified = args.verified;
@@ -813,7 +971,10 @@ const mutation = new GraphQLObjectType({
         name: { type: GraphQLString },
         fields: { type: new GraphQLList(TemplateFieldInput) }
       },
-      async resolve(_, args: { shelterId: string; name: string; fields: Array<{ label: string; fieldType: string; required?: boolean; options?: string[] }> }) {
+      async resolve(_, args: { shelterId: string; name: string; fields: Array<{ label: string; fieldType: string; required?: boolean; options?: string[] }> }, context: GraphQLContext) {
+        // Only shelter staff can create templates
+        await requireShelterStaff(context, args.shelterId);
+
         const template = new ApplicationTemplateModel({
           shelterId: args.shelterId,
           name: args.name,
@@ -831,7 +992,13 @@ const mutation = new GraphQLObjectType({
     deleteApplicationTemplate: {
       type: ApplicationTemplateType,
       args: { _id: { type: GraphQLID } },
-      resolve(_, args: { _id: string }) {
+      async resolve(_, args: { _id: string }, context: GraphQLContext) {
+        const template = await ApplicationTemplateModel.findById(args._id);
+        if (!template) return null;
+
+        // Only shelter staff can delete templates
+        await requireShelterStaff(context, template.shelterId.toString());
+
         return ApplicationTemplateModel.findByIdAndDelete(args._id);
       }
     },
@@ -841,7 +1008,14 @@ const mutation = new GraphQLObjectType({
         animals: { type: new GraphQLList(AnimalInput) },
         shelterId: { type: GraphQLID }
       },
-      async resolve(_, args: { animals: Array<{ name: string; type: string; breed?: string; age: number; sex: string; color: string; description: string; image?: string; video?: string }>; shelterId?: string }) {
+      async resolve(_, args: { animals: Array<{ name: string; type: string; breed?: string; age: number; sex: string; color: string; description: string; image?: string; video?: string }>; shelterId?: string }, context: GraphQLContext) {
+        // Require shelter staff access if shelterId is provided
+        if (args.shelterId) {
+          await requireShelterStaff(context, args.shelterId);
+        } else {
+          requireAdmin(context);
+        }
+
         const created = [];
         for (const animalData of args.animals) {
           const newAnimal = new Animal({
@@ -881,7 +1055,10 @@ const mutation = new GraphQLObjectType({
         story: { type: GraphQLString },
         image: { type: GraphQLString }
       },
-      async resolve(_, args: { userId: string; animalName: string; animalType: string; title: string; story: string; image?: string }) {
+      async resolve(_, args: { userId: string; animalName: string; animalType: string; title: string; story: string; image?: string }, context: GraphQLContext) {
+        // Users can only create stories as themselves
+        requireSelf(context, args.userId);
+
         const { userId, animalName, animalType, title, story, image } = args;
         const successStory = new SuccessStoryModel({
           userId,
@@ -904,7 +1081,10 @@ const mutation = new GraphQLObjectType({
         label: { type: GraphQLString },
         location: { type: GraphQLString }
       },
-      async resolve(_, args: { shelterId: string; registrationCode: string; label: string; location?: string }) {
+      async resolve(_, args: { shelterId: string; registrationCode: string; label: string; location?: string }, context: GraphQLContext) {
+        // Only shelter staff can register terminal readers
+        await requireShelterStaff(context, args.shelterId);
+
         // Validate required fields
         if (!args.shelterId || !args.registrationCode || !args.label) {
           throw new Error('Shelter ID, registration code, and label are required');
@@ -940,9 +1120,12 @@ const mutation = new GraphQLObjectType({
       args: {
         _id: { type: GraphQLID }
       },
-      async resolve(_, args: { _id: string }) {
+      async resolve(_, args: { _id: string }, context: GraphQLContext) {
         const reader = await TerminalReaderModel.findById(args._id);
         if (!reader) return null;
+
+        // Only shelter staff can delete terminal readers
+        await requireShelterStaff(context, reader.shelterId.toString());
 
         await stripeTerminal.deleteReader(reader.stripeReaderId);
         await TerminalReaderModel.deleteOne({ _id: args._id });
@@ -958,7 +1141,10 @@ const mutation = new GraphQLObjectType({
         currency: { type: GraphQLString },
         description: { type: GraphQLString }
       },
-      async resolve(_, args: { shelterId: string; readerId: string; amount: number; currency?: string; description?: string }) {
+      async resolve(_, args: { shelterId: string; readerId: string; amount: number; currency?: string; description?: string }, context: GraphQLContext) {
+        // Only shelter staff can create payment intents
+        await requireShelterStaff(context, args.shelterId);
+
         // Validate required fields
         if (!args.shelterId || !args.readerId) {
           throw new Error('Shelter ID and Reader ID are required');
@@ -997,7 +1183,10 @@ const mutation = new GraphQLObjectType({
         shelterId: { type: GraphQLString },
         content: { type: GraphQLString }
       },
-      async resolve(_, args: { senderId: string; recipientId: string; shelterId: string; content: string }) {
+      async resolve(_, args: { senderId: string; recipientId: string; shelterId: string; content: string }, context: GraphQLContext) {
+        // Users can only send messages as themselves
+        requireSelf(context, args.senderId);
+
         // Validate required fields
         if (!args.senderId || !args.recipientId || !args.shelterId) {
           throw new Error('Sender ID, recipient ID, and shelter ID are required');
@@ -1035,7 +1224,10 @@ const mutation = new GraphQLObjectType({
         userId: { type: GraphQLString },
         readerId: { type: GraphQLString }
       },
-      async resolve(_, args: { shelterId: string; userId: string; readerId: string }) {
+      async resolve(_, args: { shelterId: string; userId: string; readerId: string }, context: GraphQLContext) {
+        // Only the recipient can mark messages as read
+        requireSelf(context, args.readerId);
+
         await MessageModel.updateMany(
           {
             shelterId: args.shelterId,
@@ -1059,7 +1251,10 @@ const mutation = new GraphQLObjectType({
         availability: { type: GraphQLString },
         notes: { type: GraphQLString }
       },
-      async resolve(_, args: { shelterId: string; name: string; email?: string; phone?: string; skills?: string[]; availability?: string; notes?: string }) {
+      async resolve(_, args: { shelterId: string; name: string; email?: string; phone?: string; skills?: string[]; availability?: string; notes?: string }, context: GraphQLContext) {
+        // Only shelter staff can add volunteers
+        await requireShelterStaff(context, args.shelterId);
+
         // Validate required fields
         if (!args.shelterId || !args.name || !args.name.trim()) {
           throw new Error('Shelter ID and volunteer name are required');
@@ -1097,14 +1292,16 @@ const mutation = new GraphQLObjectType({
         _id: { type: GraphQLID },
         status: { type: GraphQLString }
       },
-      async resolve(_, args: { _id: string; status: string }) {
+      async resolve(_, args: { _id: string; status: string }, context: GraphQLContext) {
         const volunteer = await VolunteerModel.findById(args._id);
-        if (volunteer) {
-          volunteer.status = args.status as typeof volunteer.status;
-          await volunteer.save();
-          return volunteer;
-        }
-        return null;
+        if (!volunteer) return null;
+
+        // Only shelter staff can update volunteer status
+        await requireShelterStaff(context, volunteer.shelterId.toString());
+
+        volunteer.status = args.status as typeof volunteer.status;
+        await volunteer.save();
+        return volunteer;
       }
     },
     logVolunteerHours: {
@@ -1113,7 +1310,7 @@ const mutation = new GraphQLObjectType({
         _id: { type: GraphQLID },
         hours: { type: GraphQLInt }
       },
-      async resolve(_, args: { _id: string; hours: number }) {
+      async resolve(_, args: { _id: string; hours: number }, context: GraphQLContext) {
         // Validate hours
         if (!args.hours || args.hours < 0) {
           throw new Error('Hours must be a positive number');
@@ -1126,6 +1323,10 @@ const mutation = new GraphQLObjectType({
         if (!volunteer) {
           throw new Error('Volunteer not found');
         }
+
+        // Only shelter staff can log volunteer hours
+        await requireShelterStaff(context, volunteer.shelterId.toString());
+
         volunteer.totalHours += args.hours;
         await volunteer.save();
         return volunteer;
@@ -1148,7 +1349,10 @@ const mutation = new GraphQLObjectType({
         severity: string;
         content: string;
         author?: string;
-      }) {
+      }, context: GraphQLContext) {
+        // Only shelter staff can add behavior notes
+        await requireShelterStaff(context, args.shelterId);
+
         // Validate required fields
         if (!args.animalId || !args.shelterId) {
           throw new Error('Animal ID and Shelter ID are required');
@@ -1176,11 +1380,15 @@ const mutation = new GraphQLObjectType({
       args: {
         _id: { type: GraphQLID }
       },
-      async resolve(_, args: { _id: string }) {
+      async resolve(_, args: { _id: string }, context: GraphQLContext) {
         const note = await BehaviorNoteModel.findById(args._id);
         if (!note) {
           throw new Error('Behavior note not found');
         }
+
+        // Only shelter staff can resolve behavior notes
+        await requireShelterStaff(context, note.shelterId.toString());
+
         note.resolved = true;
         note.resolvedAt = new Date();
         await note.save();
@@ -1202,7 +1410,10 @@ const mutation = new GraphQLObjectType({
         content: string;
         category: string;
         author?: string;
-      }) {
+      }, context: GraphQLContext) {
+        // Only shelter staff can create announcements
+        await requireShelterStaff(context, args.shelterId);
+
         if (!args.shelterId) {
           throw new Error('Shelter ID is required');
         }
@@ -1232,11 +1443,15 @@ const mutation = new GraphQLObjectType({
       args: {
         _id: { type: GraphQLID }
       },
-      async resolve(_, args: { _id: string }) {
+      async resolve(_, args: { _id: string }, context: GraphQLContext) {
         const announcement = await AnnouncementModel.findById(args._id);
         if (!announcement) {
           throw new Error('Announcement not found');
         }
+
+        // Only shelter staff can toggle announcement pins
+        await requireShelterStaff(context, announcement.shelterId.toString());
+
         announcement.pinned = !announcement.pinned;
         await announcement.save();
         return announcement;
@@ -1247,9 +1462,14 @@ const mutation = new GraphQLObjectType({
       args: {
         _id: { type: GraphQLID }
       },
-      async resolve(_, args: { _id: string }) {
-        const announcement = await AnnouncementModel.findByIdAndDelete(args._id);
-        return announcement;
+      async resolve(_, args: { _id: string }, context: GraphQLContext) {
+        const announcement = await AnnouncementModel.findById(args._id);
+        if (!announcement) return null;
+
+        // Only shelter staff can delete announcements
+        await requireShelterStaff(context, announcement.shelterId.toString());
+
+        return AnnouncementModel.findByIdAndDelete(args._id);
       }
     },
     registerMicrochip: {
@@ -1260,7 +1480,10 @@ const mutation = new GraphQLObjectType({
         chipNumber: { type: GraphQLString },
         manufacturer: { type: GraphQLString }
       },
-      async resolve(_, args: { animalId: string; shelterId: string; chipNumber: string; manufacturer?: string }) {
+      async resolve(_, args: { animalId: string; shelterId: string; chipNumber: string; manufacturer?: string }, context: GraphQLContext) {
+        // Only shelter staff can register microchips
+        await requireShelterStaff(context, args.shelterId);
+
         if (!args.chipNumber || args.chipNumber.length < 9 || args.chipNumber.length > 15) {
           throw new Error('Chip number must be between 9 and 15 characters');
         }
@@ -1287,9 +1510,13 @@ const mutation = new GraphQLObjectType({
         _id: { type: GraphQLID },
         status: { type: GraphQLString }
       },
-      async resolve(_, args: { _id: string; status: string }) {
+      async resolve(_, args: { _id: string; status: string }, context: GraphQLContext) {
         const microchip = await MicrochipModel.findById(args._id);
         if (!microchip) throw new Error('Microchip not found');
+
+        // Only shelter staff can update microchip status
+        await requireShelterStaff(context, microchip.shelterId.toString());
+
         microchip.status = args.status as typeof microchip.status;
         await microchip.save();
         return microchip;
@@ -1304,7 +1531,10 @@ const mutation = new GraphQLObjectType({
         unit: { type: GraphQLString },
         notes: { type: GraphQLString }
       },
-      async resolve(_, args: { animalId: string; shelterId: string; weight: number; unit: string; notes?: string }) {
+      async resolve(_, args: { animalId: string; shelterId: string; weight: number; unit: string; notes?: string }, context: GraphQLContext) {
+        // Only shelter staff can add weight records
+        await requireShelterStaff(context, args.shelterId);
+
         if (!args.weight || args.weight <= 0) {
           throw new Error('Weight must be a positive number');
         }
@@ -1335,7 +1565,10 @@ const mutation = new GraphQLObjectType({
         veterinarian: { type: GraphQLString },
         notes: { type: GraphQLString }
       },
-      async resolve(_, args: { animalId: string; shelterId: string; vaccineName: string; dateAdministered: string; nextDueDate?: string; veterinarian?: string; notes?: string }) {
+      async resolve(_, args: { animalId: string; shelterId: string; vaccineName: string; dateAdministered: string; nextDueDate?: string; veterinarian?: string; notes?: string }, context: GraphQLContext) {
+        // Only shelter staff can add vaccinations
+        await requireShelterStaff(context, args.shelterId);
+
         if (!args.vaccineName) {
           throw new Error('Vaccine name is required');
         }
@@ -1360,9 +1593,13 @@ const mutation = new GraphQLObjectType({
         _id: { type: GraphQLID },
         status: { type: GraphQLString }
       },
-      async resolve(_, args: { _id: string; status: string }) {
+      async resolve(_, args: { _id: string; status: string }, context: GraphQLContext) {
         const vaccination = await VaccinationModel.findById(args._id);
         if (!vaccination) throw new Error('Vaccination not found');
+
+        // Only shelter staff can update vaccination status
+        await requireShelterStaff(context, vaccination.shelterId.toString());
+
         vaccination.status = args.status as typeof vaccination.status;
         await vaccination.save();
         return vaccination;
@@ -1378,7 +1615,10 @@ const mutation = new GraphQLObjectType({
         specialNeedsDiscount: { type: GraphQLFloat },
         description: { type: GraphQLString }
       },
-      async resolve(_, args: { shelterId: string; animalType: string; baseFee: number; seniorDiscount?: number; specialNeedsDiscount?: number; description?: string }) {
+      async resolve(_, args: { shelterId: string; animalType: string; baseFee: number; seniorDiscount?: number; specialNeedsDiscount?: number; description?: string }, context: GraphQLContext) {
+        // Only shelter staff can create adoption fees
+        await requireShelterStaff(context, args.shelterId);
+
         if (!args.baseFee || args.baseFee < 0) {
           throw new Error('Base fee must be a non-negative number');
         }
@@ -1405,9 +1645,13 @@ const mutation = new GraphQLObjectType({
         specialNeedsDiscount: { type: GraphQLFloat },
         active: { type: GraphQLBoolean }
       },
-      async resolve(_, args: { _id: string; baseFee?: number; seniorDiscount?: number; specialNeedsDiscount?: number; active?: boolean }) {
+      async resolve(_, args: { _id: string; baseFee?: number; seniorDiscount?: number; specialNeedsDiscount?: number; active?: boolean }, context: GraphQLContext) {
         const fee = await AdoptionFeeModel.findById(args._id);
         if (!fee) throw new Error('Adoption fee not found');
+
+        // Only shelter staff can update adoption fees
+        await requireShelterStaff(context, fee.shelterId.toString());
+
         if (args.baseFee !== undefined) fee.baseFee = args.baseFee;
         if (args.seniorDiscount !== undefined) fee.seniorDiscount = args.seniorDiscount;
         if (args.specialNeedsDiscount !== undefined) fee.specialNeedsDiscount = args.specialNeedsDiscount;
@@ -1427,7 +1671,10 @@ const mutation = new GraphQLObjectType({
         veterinarian: { type: GraphQLString },
         notes: { type: GraphQLString }
       },
-      async resolve(_, args: { animalId: string; shelterId: string; status: string; scheduledDate?: string; completedDate?: string; veterinarian?: string; notes?: string }) {
+      async resolve(_, args: { animalId: string; shelterId: string; status: string; scheduledDate?: string; completedDate?: string; veterinarian?: string; notes?: string }, context: GraphQLContext) {
+        // Only shelter staff can update spay/neuter records
+        await requireShelterStaff(context, args.shelterId);
+
         let record = await SpayNeuterModel.findOne({ animalId: args.animalId });
         if (!record) {
           record = new SpayNeuterModel({
@@ -1458,7 +1705,10 @@ const mutation = new GraphQLObjectType({
         notes: { type: GraphQLString },
         createdBy: { type: GraphQLString }
       },
-      async resolve(_, args: { animalId: string; shelterId: string; intakeType: string; intakeDate: string; source?: string; condition?: string; notes?: string; createdBy?: string }) {
+      async resolve(_, args: { animalId: string; shelterId: string; intakeType: string; intakeDate: string; source?: string; condition?: string; notes?: string; createdBy?: string }, context: GraphQLContext) {
+        // Only shelter staff can create intake logs
+        await requireShelterStaff(context, args.shelterId);
+
         const log = new IntakeLogModel({
           animalId: args.animalId,
           shelterId: args.shelterId,
@@ -1485,7 +1735,10 @@ const mutation = new GraphQLObjectType({
         notes: { type: GraphQLString },
         createdBy: { type: GraphQLString }
       },
-      async resolve(_, args: { animalId: string; shelterId: string; outcomeType: string; outcomeDate: string; destination?: string; notes?: string; createdBy?: string }) {
+      async resolve(_, args: { animalId: string; shelterId: string; outcomeType: string; outcomeDate: string; destination?: string; notes?: string; createdBy?: string }, context: GraphQLContext) {
+        // Only shelter staff can create outcome logs
+        await requireShelterStaff(context, args.shelterId);
+
         const log = new OutcomeLogModel({
           animalId: args.animalId,
           shelterId: args.shelterId,

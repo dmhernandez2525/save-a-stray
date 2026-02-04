@@ -68,9 +68,13 @@ jest.mock('../server/services/auth', () => ({
 describe('API Integration Tests', () => {
   let app;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     // Import app after mocks are set up
-    app = require('../server/server').default;
+    const server = require('../server/server');
+    app = server.app || server.default;
+    if (server.startApolloServer) {
+      await server.startApolloServer();
+    }
   });
 
   beforeEach(() => {

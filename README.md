@@ -31,8 +31,8 @@ Save A Stray addresses three key challenges faced by animal shelters:
 
 | Layer | Technology |
 |-------|------------|
-| Frontend | React 18, Vite, TypeScript, Tailwind CSS, Apollo Client |
-| Backend | Node.js 20+, Express, GraphQL (graphql-http), TypeScript |
+| Frontend | React 19, Vite 7, TypeScript, Tailwind CSS v4, Apollo Client |
+| Backend | Node.js 20+, Express, GraphQL (Apollo Server v4), TypeScript |
 | Database | MongoDB (Mongoose 8) |
 | Auth | Passport.js (JWT, Google OAuth, Facebook OAuth) |
 | Testing | Vitest (frontend), Jest (backend) |
