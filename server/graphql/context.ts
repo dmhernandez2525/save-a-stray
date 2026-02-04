@@ -14,10 +14,14 @@ if (!keys.secretOrKey || keys.secretOrKey.length < 32) {
 export interface GraphQLContext {
   loaders: Loaders;
   userId?: string;
+  userRole?: string;
+  shelterId?: string;
 }
 
 interface TokenPayload extends jwt.JwtPayload {
   id?: string | number;
+  userRole?: string;
+  shelterId?: string;
 }
 
 const getTokenFromHeader = (header?: string): string | null => {
@@ -34,16 +38,26 @@ const isJwtPayload = (value: string | jwt.JwtPayload): value is jwt.JwtPayload =
 const isTokenPayload = (value: jwt.JwtPayload): value is TokenPayload =>
   typeof value.id === 'string' || typeof value.id === 'number';
 
-const getUserIdFromToken = (token: string | null): string | undefined => {
-  if (!token) return undefined;
+interface DecodedUser {
+  userId?: string;
+  userRole?: string;
+  shelterId?: string;
+}
+
+const getUserFromToken = (token: string | null): DecodedUser => {
+  if (!token) return {};
   try {
     // Explicitly specify algorithm to prevent algorithm confusion attacks
     const decoded = jwt.verify(token, keys.secretOrKey, { algorithms: ['HS256'] });
-    if (!isJwtPayload(decoded)) return undefined;
-    if (!isTokenPayload(decoded)) return undefined;
-    return decoded.id?.toString();
+    if (!isJwtPayload(decoded)) return {};
+    if (!isTokenPayload(decoded)) return {};
+    return {
+      userId: decoded.id?.toString(),
+      userRole: decoded.userRole,
+      shelterId: decoded.shelterId,
+    };
   } catch {
-    return undefined;
+    return {};
   }
 };
 
@@ -52,8 +66,11 @@ export const createGraphQLContext = (req?: Request, authToken?: string): GraphQL
   // Process authToken the same way as header token to normalize Bearer prefix
   const rawToken = authToken ?? headerToken;
   const token = getTokenFromHeader(rawToken);
+  const { userId, userRole, shelterId } = getUserFromToken(token);
   return {
     loaders: createLoaders(),
-    userId: getUserIdFromToken(token),
+    userId,
+    userRole,
+    shelterId,
   };
 };

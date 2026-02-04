@@ -29,7 +29,23 @@ const UserType: GraphQLObjectType = new GraphQLObjectType({
     varId: { type: GraphQLID },
     name: { type: GraphQLString },
     email: { type: GraphQLString },
-    token: { type: GraphQLString },
+    // Token is only returned to the user themselves (during login/register)
+    // and is null for other users to prevent token exposure
+    token: {
+      type: GraphQLString,
+      resolve(parentValue: UserParentValue, _args, context: GraphQLContext) {
+        // Only return token if:
+        // 1. The token exists (it was just created during login/register)
+        // 2. AND either:
+        //    a. No user is authenticated yet (initial login response), or
+        //    b. The authenticated user is requesting their own token
+        if (!parentValue.token) return null;
+        if (!context.userId || context.userId === parentValue._id.toString()) {
+          return parentValue.token;
+        }
+        return null;
+      }
+    },
     loggedIn: { type: GraphQLBoolean },
     userRole: { type: GraphQLString },
     shelter: {

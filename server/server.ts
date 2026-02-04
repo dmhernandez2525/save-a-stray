@@ -65,12 +65,44 @@ app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
-app.use((_req: Request, res: Response, next: NextFunction) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  next();
-});
+// Configure CORS with specific allowed origins
+const getAllowedOrigins = (): string[] => {
+  const originsEnv = process.env.ALLOWED_ORIGINS;
+  if (originsEnv) {
+    return originsEnv.split(',').map(origin => origin.trim()).filter(Boolean);
+  }
+  // Default allowed origins for development
+  if (process.env.NODE_ENV !== 'production') {
+    return ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:3000', 'http://127.0.0.1:5173'];
+  }
+  // In production, require explicit configuration
+  logger.warn('cors_unconfigured', {
+    message: 'ALLOWED_ORIGINS not configured in production. CORS will be restrictive.'
+  });
+  return [];
+};
 
-app.use(cors());
+const allowedOrigins = getAllowedOrigins();
+
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl, Postman)
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+    if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`Origin ${origin} not allowed by CORS`));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(passport.initialize());
 // Only use passport.session() when Facebook OAuth is configured
