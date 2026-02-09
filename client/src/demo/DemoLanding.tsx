@@ -20,7 +20,7 @@ const DemoLanding: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-background col-start-1 col-end-6 row-start-1 row-end-4 overflow-y-auto">
+    <div className="min-h-screen bg-background col-start-1 col-end-6 row-start-1 row-end-4 overflow-y-auto pb-20 md:pb-0">
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-sky-blue-50 via-white to-salmon-50 dark:from-warm-gray-900 dark:via-warm-gray-900 dark:to-warm-gray-800" />

@@ -92,7 +92,7 @@ const DemoShelterExperience: React.FC = () => {
   const isAdmin = currentDemoUser?.demoRole === "shelter_admin";
 
   return (
-    <div className="min-h-screen bg-background col-start-1 col-end-6 row-start-1 row-end-4 overflow-y-auto">
+    <div className="min-h-screen bg-background col-start-1 col-end-6 row-start-1 row-end-4 overflow-y-auto pb-20 md:pb-0">
       {/* Demo Banner */}
       <div className="bg-salmon-500 text-white px-4 py-2 flex items-center justify-between">
         <div className="flex items-center gap-2">

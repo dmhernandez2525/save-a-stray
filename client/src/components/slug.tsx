@@ -9,7 +9,7 @@ import Footer from "./marketing/Footer";
 
 const Slug: React.FC = () => {
   return (
-    <div className="col-start-1 col-end-6 row-start-1 row-end-4 overflow-y-auto bg-background">
+    <div className="col-start-1 col-end-6 row-start-1 row-end-4 overflow-y-auto bg-background pb-20 md:pb-0">
       {/* Hero Section */}
       <Hero />
 

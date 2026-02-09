@@ -236,7 +236,7 @@ const ShelterDashboardLayout: React.FC<ShelterDashboardLayoutProps> = ({
   );
 
   return (
-    <div className="min-h-screen bg-background flex col-start-1 col-end-6 row-start-1 row-end-4">
+    <div className="min-h-screen bg-background flex col-start-1 col-end-6 row-start-1 row-end-4 pb-20 md:pb-0">
       {/* Desktop Sidebar */}
       <aside className={`hidden lg:flex flex-col border-r bg-card transition-all duration-300 ${sidebarCollapsed ? "w-16" : "w-64"}`}>
         <SidebarContent />

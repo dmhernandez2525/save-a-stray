@@ -330,7 +330,7 @@ export default function SuccessStories() {
   const handleFormClose = useCallback(() => setShowForm(false), []);
 
   return (
-    <div className="min-h-screen bg-background col-start-1 col-end-6 row-start-1 row-end-4">
+    <div className="min-h-screen bg-background col-start-1 col-end-6 row-start-1 row-end-4 pb-20 md:pb-0">
       {/* Header */}
       <header className="bg-gradient-to-r from-salmon-300 to-salmon-400 text-white">
         <div className="container-wide py-8 md:py-12">

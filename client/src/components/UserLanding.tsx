@@ -251,7 +251,7 @@ const UserLanding: React.FC<UserLandingProps> = ({ splash }) => {
     : [];
 
   return (
-    <div className="min-h-screen bg-background col-start-1 col-end-6 row-start-1 row-end-4">
+    <div className="min-h-screen bg-background col-start-1 col-end-6 row-start-1 row-end-4 pb-20 md:pb-0">
       {/* Demo Banner */}
       {isDemo && <DemoBanner variant="adopter" />}
 
@@ -656,7 +656,7 @@ const AnimalListItem: React.FC<{ animal: Animal; index: number; isDemo?: boolean
       onClick={handleClick}
     >
       <div className="flex">
-        <div className="relative w-40 h-40 flex-shrink-0 overflow-hidden">
+        <div className="relative w-28 h-28 sm:w-40 sm:h-40 flex-shrink-0 overflow-hidden">
           <img
             src={animal.image || `https://images.unsplash.com/photo-${animal.type === 'Dog' ? '1587300003388-59208cc962cb' : '1514888286974-6c03e2ca1dba'}?w=200&h=200&fit=crop`}
             alt={animal.name}

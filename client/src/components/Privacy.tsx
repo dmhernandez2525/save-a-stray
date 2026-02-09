@@ -7,7 +7,7 @@ import { ArrowLeft, Shield, Database, Cookie, Lock, Phone, User, Activity } from
  */
 export default function Privacy() {
   return (
-    <div className="min-h-screen bg-background col-start-1 col-end-6 row-start-1 row-end-4">
+    <div className="min-h-screen bg-background col-start-1 col-end-6 row-start-1 row-end-4 pb-20 md:pb-0">
       {/* Header */}
       <header className="bg-gradient-to-r from-salmon-400 to-salmon-500 text-white">
         <div className="container-wide py-8 md:py-12">

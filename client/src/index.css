@@ -127,6 +127,13 @@
     min-height: 100vh;
   }
 
+  /* Mobile bottom nav clearance */
+  @media (max-width: 767px) {
+    body {
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+  }
+
   /* Improved focus states */
   *:focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
@@ -337,5 +344,10 @@ code {
 
   .glass-strong {
     @apply bg-white/90 dark:bg-warm-gray-900/90 backdrop-blur-xl;
+  }
+
+  /* Bottom navigation spacer - prevents content from being hidden behind BottomNav */
+  .has-bottom-nav {
+    @apply pb-20 md:pb-0;
   }
 }

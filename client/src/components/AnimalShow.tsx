@@ -48,7 +48,7 @@ const AnimalShow: React.FC = () => {
   const [showApplication, setShowApplication] = useState(false);
 
   return (
-    <div className="min-h-screen bg-background col-start-1 col-end-6 row-start-1 row-end-4">
+    <div className="min-h-screen bg-background col-start-1 col-end-6 row-start-1 row-end-4 pb-20 md:pb-0">
       <Query<FetchAnimalResponse>
         query={FETCH_ANIMAL}
         variables={{ id }}

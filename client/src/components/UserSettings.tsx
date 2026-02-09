@@ -370,7 +370,7 @@ export default function UserSettings() {
 // Page wrapper with header
 function PageWrapper({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-background col-start-1 col-end-6 row-start-1 row-end-4">
+    <div className="min-h-screen bg-background col-start-1 col-end-6 row-start-1 row-end-4 pb-20 md:pb-0">
       <header className="bg-gradient-to-r from-sky-blue-500 to-sky-blue-600 text-white">
         <div className="container-wide py-8 md:py-12">
           <Link
