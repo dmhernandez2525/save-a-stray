@@ -78,7 +78,7 @@ const Login: React.FC = () => {
                 {/* Form Card */}
                 <Card variant="ghost" className="border-none shadow-none p-0">
                   <CardHeader className="px-0">
-                    <CardTitle className="text-3xl font-capriola">Welcome back</CardTitle>
+                    <CardTitle className="text-2xl sm:text-3xl font-capriola">Welcome back</CardTitle>
                     <CardDescription className="text-base">
                       Sign in to continue finding your perfect companion
                     </CardDescription>
@@ -210,7 +210,7 @@ const Login: React.FC = () => {
               </div>
 
               {/* Content */}
-              <div className="flex flex-col justify-center items-center p-12 text-white relative z-10">
+              <div className="flex flex-col justify-center items-center p-6 sm:p-12 text-white relative z-10">
                 <div className="max-w-md text-center">
                   <Heart className="h-16 w-16 mx-auto mb-6 fill-white/20" />
                   <h2 className="font-capriola text-3xl mb-4">
