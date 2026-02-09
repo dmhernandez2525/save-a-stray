@@ -67,7 +67,7 @@ const DemoLanding: React.FC = () => {
       {/* Features Preview */}
       <section className="py-16 bg-warm-gray-50 dark:bg-warm-gray-900/50">
         <div className="container-wide">
-          <h2 className="font-capriola text-3xl text-center text-warm-gray-900 dark:text-white mb-12">
+          <h2 className="font-capriola text-2xl sm:text-3xl text-center text-warm-gray-900 dark:text-white mb-12">
             What You Can Explore
           </h2>
 
@@ -145,7 +145,7 @@ const DemoLanding: React.FC = () => {
       <section className="py-16">
         <div className="container-wide">
           <Card className="bg-gradient-to-r from-gold-50 to-gold-100 dark:from-gold-900/20 dark:to-gold-800/20 border-gold-200 dark:border-gold-800">
-            <CardContent className="p-8">
+            <CardContent className="p-4 sm:p-8">
               <div className="flex flex-col md:flex-row items-center gap-6">
                 <div className="w-16 h-16 rounded-full bg-gold-200 dark:bg-gold-800 flex items-center justify-center flex-shrink-0">
                   <Sparkles className="h-8 w-8 text-gold-600 dark:text-gold-400" />
@@ -175,7 +175,7 @@ const DemoLanding: React.FC = () => {
       {/* CTA Section */}
       <section className="py-16 bg-gradient-to-r from-sky-blue-500 to-sky-blue-600">
         <div className="container-wide text-center">
-          <h2 className="font-capriola text-3xl text-white mb-4">
+          <h2 className="font-capriola text-2xl sm:text-3xl text-white mb-4">
             Ready to Get Started?
           </h2>
           <p className="text-white/90 text-lg mb-8 max-w-2xl mx-auto">

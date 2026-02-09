@@ -125,7 +125,7 @@ const ShelterLanding: React.FC<ShelterLandingProps> = ({ shelterInfo }) => {
         onSectionChange={setActiveSection}
       >
         <Card className="max-w-md mx-auto">
-          <CardContent className="p-8 text-center">
+          <CardContent className="p-4 sm:p-8 text-center">
             <AlertCircle className="h-12 w-12 mx-auto text-warning-500 mb-4" />
             <h2 className="font-capriola text-xl mb-2">No Shelter Found</h2>
             <p className="text-muted-foreground mb-6">
@@ -173,7 +173,7 @@ const ShelterLanding: React.FC<ShelterLandingProps> = ({ shelterInfo }) => {
               onSectionChange={setActiveSection}
             >
               <Card className="max-w-md mx-auto">
-                <CardContent className="p-8 text-center">
+                <CardContent className="p-4 sm:p-8 text-center">
                   <XCircle className="h-12 w-12 mx-auto text-destructive mb-4" />
                   <h2 className="font-capriola text-xl mb-2">Error Loading Data</h2>
                   <p className="text-muted-foreground">
@@ -709,7 +709,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, color, tr
         <div className="flex items-start justify-between">
           <div>
             <p className="text-sm text-muted-foreground">{title}</p>
-            <p className="text-3xl font-bold mt-1">{value}</p>
+            <p className="text-2xl sm:text-3xl font-bold mt-1">{value}</p>
             {trend && (
               <p className="text-xs text-success-600 dark:text-success-400 flex items-center gap-1 mt-1">
                 <TrendingUp className="h-3 w-3" />

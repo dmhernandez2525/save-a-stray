@@ -85,7 +85,7 @@ const Register: React.FC = () => {
                 {/* Form Card */}
                 <Card variant="ghost" className="border-none shadow-none p-0">
                   <CardHeader className="px-0">
-                    <CardTitle className="text-3xl font-capriola">Create your account</CardTitle>
+                    <CardTitle className="text-2xl sm:text-3xl font-capriola">Create your account</CardTitle>
                     <CardDescription className="text-base">
                       Join our community and help pets find their forever homes
                     </CardDescription>
@@ -352,10 +352,10 @@ const Register: React.FC = () => {
               </div>
 
               {/* Content */}
-              <div className="flex flex-col justify-center items-center p-12 text-white relative z-10">
+              <div className="flex flex-col justify-center items-center p-6 sm:p-12 text-white relative z-10">
                 <div className="max-w-md text-center">
                   <Users className="h-16 w-16 mx-auto mb-6 fill-white/20" />
-                  <h2 className="font-capriola text-3xl mb-4">
+                  <h2 className="font-capriola text-2xl sm:text-3xl mb-4">
                     Join Our Community
                   </h2>
                   <p className="text-white/90 text-lg leading-relaxed">

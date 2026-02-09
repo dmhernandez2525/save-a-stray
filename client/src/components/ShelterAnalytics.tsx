@@ -45,7 +45,7 @@ const ShelterAnalytics: React.FC<ShelterAnalyticsProps> = ({ shelterId }) => {
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-4">
-                  <div className="text-4xl font-bold text-gray-800">
+                  <div className="text-3xl sm:text-4xl font-bold text-gray-800">
                     {adoptionRate}%
                   </div>
                   <div className="flex-1">

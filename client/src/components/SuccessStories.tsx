@@ -369,7 +369,7 @@ export default function SuccessStories() {
         {loading && <LoadingSkeleton />}
 
         {error && (
-          <Card className="p-8 text-center" role="alert">
+          <Card className="p-4 sm:p-8 text-center" role="alert">
             <AlertCircle className="h-8 w-8 mx-auto text-destructive mb-4" />
             <p className="text-destructive">Error loading stories. Please try again later.</p>
           </Card>
