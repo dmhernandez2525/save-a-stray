@@ -19,6 +19,7 @@ import UserLanding from "./UserLanding";
 import AuthRoute from "../util/route_util";
 import ProtectedRoute from "../util/protected_route";
 import Nav from "./Nav";
+import BottomNav from "./BottomNav";
 import Slug from "./slug";
 import Privacy from "./Privacy";
 import TermsOfService from "./TermsOfService";
@@ -32,7 +33,7 @@ const App: React.FC = () => {
     <DemoProvider>
       <ThemeProvider defaultTheme="system" storageKey="save-a-stray-theme">
         <HashRouter>
-          <div className="text-foreground grid grid-cols-main grid-rows-main h-screen">
+          <div className="text-foreground grid grid-cols-1 md:grid-cols-main grid-rows-[auto_1fr] md:grid-rows-main min-h-screen md:h-screen">
             <Nav />
             <Routes>
             <Route
@@ -87,6 +88,7 @@ const App: React.FC = () => {
             {/* Demo Mode Entry - redirects to /login for role selection */}
             <Route path="/demo" element={<DemoLanding />} />
             </Routes>
+            <BottomNav />
           </div>
         </HashRouter>
       </ThemeProvider>

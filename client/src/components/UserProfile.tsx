@@ -76,13 +76,13 @@ class UserProfile extends Component<UserProfileProps, UserProfileState> {
                 <Link
                   key={animal._id}
                   to={`/AnimalShow/${animal._id}`}
-                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors no-underline"
+                  className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors no-underline"
                 >
                   <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
                     <img src={animal.image} alt={animal.name} className="w-full h-full object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-800 truncate">{animal.name}</p>
+                    <p className="font-semibold text-foreground truncate">{animal.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {animal.breed && `${animal.breed} · `}{animal.type} · {animal.age} yrs
                     </p>
@@ -129,14 +129,14 @@ class UserProfile extends Component<UserProfileProps, UserProfileState> {
               {applications.map((app: Application) => {
                 const status = (app.status || "submitted") as ApplicationStatus;
                 return (
-                  <div key={app._id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <div key={app._id} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                     {app.animal?.image && (
                       <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
                         <img src={app.animal.image} alt={app.animal?.name || "Animal"} className="w-full h-full object-cover" />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-800 truncate">
+                      <p className="font-semibold text-foreground truncate">
                         {app.animal?.name || "Unknown Animal"}
                       </p>
                       <p className="text-xs text-muted-foreground">
@@ -162,7 +162,7 @@ class UserProfile extends Component<UserProfileProps, UserProfileState> {
     const { activeTab } = this.state;
 
     return (
-      <div className="max-w-3xl mx-auto p-4">
+      <div className="max-w-3xl mx-auto p-4 pt-6">
         <Query<FetchUserResponse>
           query={FETCH_USER}
           variables={{ _id: userId }}
@@ -175,14 +175,14 @@ class UserProfile extends Component<UserProfileProps, UserProfileState> {
 
             return (
               <>
-                <Card className="bg-white mb-6">
+                <Card className="bg-card mb-6">
                   <CardContent className="pt-6">
                     <div className="flex items-center gap-4">
                       <div className="w-16 h-16 rounded-full bg-sky-blue flex items-center justify-center text-white text-2xl font-bold">
                         {user?.name?.charAt(0)?.toUpperCase() || "?"}
                       </div>
                       <div>
-                        <h1 className="text-xl font-bold text-gray-800">{user?.name || "User"}</h1>
+                        <h1 className="text-xl font-bold text-foreground">{user?.name || "User"}</h1>
                         <p className="text-sm text-muted-foreground">{user?.email}</p>
                         <p className="text-xs text-muted-foreground capitalize mt-1">
                           {user?.userRole === "endUser" ? "Adopter" : "Shelter Staff"}
@@ -200,8 +200,8 @@ class UserProfile extends Component<UserProfileProps, UserProfileState> {
                       onClick={() => this.setState({ activeTab: tab })}
                       className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${
                         activeTab === tab
-                          ? "bg-white text-gray-800 shadow-md"
-                          : "bg-white/20 text-white hover:bg-white/30"
+                          ? "bg-card text-foreground shadow-md"
+                          : "bg-muted text-muted-foreground hover:bg-muted/80"
                       }`}
                     >
                       {tab === "favorites" ? "Favorites" : "My Applications"}
@@ -209,7 +209,7 @@ class UserProfile extends Component<UserProfileProps, UserProfileState> {
                   ))}
                 </div>
 
-                <Card className="bg-white">
+                <Card className="bg-card">
                   <CardHeader>
                     <CardTitle className="text-sky-blue font-capriola">
                       {activeTab === "favorites" ? "Favorites" : "My Applications"}

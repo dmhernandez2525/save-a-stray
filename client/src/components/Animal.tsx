@@ -54,8 +54,8 @@ class NewAnimal extends Component<AnimalProps, AnimalState> {
             );
 
           return (
-            <div className="col-start-2 col-end-5 row-start-2 flex justify-center items-start p-4">
-              <Card className="w-full max-w-lg bg-white">
+            <div className="col-start-1 col-end-6 md:col-start-2 md:col-end-5 row-start-1 md:row-start-2 flex justify-center items-start p-4 pb-20 md:pb-4">
+              <Card className="w-full max-w-lg bg-card">
                 <CardHeader>
                   <CardTitle className="text-sky-blue font-capriola text-2xl text-center">
                     Put up an animal for adoption

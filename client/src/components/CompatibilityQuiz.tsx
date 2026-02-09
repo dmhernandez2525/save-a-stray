@@ -327,7 +327,7 @@ export default function CompatibilityQuiz() {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-sky-blue-50 to-background dark:from-warm-gray-900 dark:to-background col-start-1 col-end-6 row-start-1 row-end-4">
+    <div className="min-h-screen bg-gradient-to-b from-sky-blue-50 to-background dark:from-warm-gray-900 dark:to-background col-start-1 col-end-6 row-start-1 row-end-4 pb-20 md:pb-0">
       {/* Header */}
       <header className="bg-white/80 dark:bg-warm-gray-900/80 backdrop-blur-sm border-b sticky top-0 z-10">
         <div className="container-wide py-4">

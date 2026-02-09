@@ -17,7 +17,7 @@ const openFeed = () => {
 
 const Splash: React.FC<SplashProps> = () => {
   return (
-    <div className="col-start-3 col-end-5 row-start-2 row-end-3 bg-cover grid grid-cols-splash">
+    <div className="col-start-1 col-end-6 md:col-start-3 md:col-end-5 row-start-1 md:row-start-2 row-end-3 bg-cover grid grid-cols-1 md:grid-cols-splash pb-20 md:pb-0">
       <div
         className="col-start-1 col-end-4 rounded-[20px] bg-[url('/src/components/css/adorable-animal-black-and-white-207903.jpg')] bg-no-repeat bg-cover bg-center grid grid-rows-splash-top grid-cols-splash-top"
       >
