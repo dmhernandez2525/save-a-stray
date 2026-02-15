@@ -13,6 +13,7 @@
 | [Roadmap](./ROADMAP.md) | 5-phase implementation plan with success criteria |
 | [Feature Backlog](./FEATURE_BACKLOG.md) | 326 features organized by phase and priority |
 | [Coding Standards](./CODING_STANDARDS.md) | Code style, patterns, and quality requirements |
+| [Design System](./DESIGN_SYSTEM.md) | Token definitions, theme usage, and layout conventions |
 | [SDDs](./sdd/) | Software Design Documents for planned features |
 
 ---

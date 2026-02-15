@@ -6,8 +6,6 @@ import { MockedProvider } from '@apollo/client/testing';
 import { gql } from '@apollo/client';
 
 // Mock the CSS import
-vi.mock('../components/css/Animal.css', () => ({}));
-
 // GraphQL mutation for creating an animal
 const CREATE_ANIMAL = gql`
   mutation CreateAnimal(

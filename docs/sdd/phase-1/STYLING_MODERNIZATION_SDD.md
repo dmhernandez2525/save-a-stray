@@ -1,161 +1,144 @@
-# Software Design Document: Styling Modernization (Tailwind v4 + shadcn/ui)
+# Software Design Document: Styling Modernization (F1.2)
 
-**Version:** 1.0.0
-**Author:** Codex
-**Created:** February 3, 2026
-**Last Updated:** February 3, 2026
-**Status:** In Progress
+**Version:** 1.1.0  
+**Author:** Codex  
+**Created:** February 3, 2026  
+**Last Updated:** February 15, 2026  
+**Status:** In Progress  
 **Feature IDs:** F1.2
-
----
 
 ## 1. Overview
 
 ### 1.1 Purpose
-Modernize the frontend styling stack by upgrading to Tailwind CSS v4, aligning shadcn/ui usage with the new Tailwind pipeline, formalizing design tokens, and providing a first-class dark mode experience. This work reduces legacy CSS debt and aligns styling with the project’s long-term design system.
+Complete Phase 1 styling modernization by standardizing Tailwind usage, hardening dark mode behavior, removing remaining legacy CSS artifacts, and establishing a reusable design-system foundation.
 
 ### 1.2 Goals
-- Upgrade Tailwind CSS to v4 and adopt the recommended Vite integration.
-- Replace deprecated Tailwind animation tooling with the v4-supported alternative.
-- Centralize design tokens using CSS variables and Tailwind theme extensions.
-- Implement a consistent dark mode experience via class-based theming.
-- Reduce legacy CSS by migrating component styles to Tailwind utilities.
-- Keep build output and render configuration compatible with the current Vite setup.
+
+- Remove remaining legacy references tied to `client/src/components/css/`.
+- Keep dark mode class-based and system-aware with persisted user preference.
+- Add reusable layout primitives for consistent page structure.
+- Add typed design token and responsive utility sources for maintainable styling.
+- Document token usage and component conventions in `docs/DESIGN_SYSTEM.md`.
 
 ### 1.3 Non-Goals
-- Full UI redesign or brand refresh.
-- Rewriting all UI components in a single pass.
-- Introducing new third-party component libraries beyond shadcn/ui.
 
----
+- Full visual redesign of every page.
+- Full refactor of all existing large legacy components in one PR.
+- Replacing shadcn/ui with a different component system.
 
-## 2. Background
+## 2. Current State and Gaps
 
-### 2.1 Current State
-- Tailwind CSS v3 with a custom `tailwind.config.js` and `@tailwind` directives in `client/src/index.css`.
-- Partial shadcn/ui component usage with custom utility classes.
-- Dark mode variables exist in CSS but no global UI toggle.
-- Legacy CSS files remain in `client/src/components/css/` and some SCSS usage persists.
+### 2.1 Baseline
 
-### 2.2 Problem Statement
-The existing stack mixes Tailwind v3 configuration, legacy CSS files, and ad-hoc component styles. This prevents consistent theming, increases maintenance cost, and blocks adoption of Tailwind v4 features and performance improvements.
+- Tailwind v4 and shadcn-style UI components are already in use.
+- `ThemeProvider` existed with localStorage and system preference support.
+- Dark mode toggles were present in desktop and mobile navigation.
 
-### 2.3 User Stories
-- As a user, I want a cohesive visual style that works in both light and dark mode.
-- As a developer, I want predictable design tokens and utility classes so new UI is faster to build.
-- As a maintainer, I want fewer custom CSS files to manage and less styling drift.
+### 2.2 Gaps addressed in F1.2
 
----
+- Stale legacy path references to `components/css` still existed.
+- `ThemeProvider` accepted unvalidated storage values and did not sync across tabs.
+- Reusable layout primitives (`PageLayout`, `AuthLayout`, `DashboardLayout`) were missing.
+- Typed token references and responsive helpers were not formalized.
+- Design system documentation was missing.
 
 ## 3. Technical Design
 
-### 3.1 Architecture Overview
-```
-Vite → Tailwind v4 (Vite plugin) → Tailwind theme tokens → Components
-```
+### 3.1 Theming
 
-### 3.2 Dependencies
-- Upgrade `tailwindcss` to v4.
-- Add `@tailwindcss/vite` for the recommended Vite integration.
-- Replace `tailwindcss-animate` with `tw-animate-css` (Tailwind v4-compatible).
-- Remove `autoprefixer` if unused (Tailwind v4 handles vendor prefixing).
+- Keep Tailwind dark mode strategy: `darkMode: ["class"]`.
+- Use `ThemeProvider` as the single source for:
+  - `theme` (`light`, `dark`, `system`)
+  - `resolvedTheme` (`light`, `dark`)
+  - `setTheme` updates
+- ThemeProvider implementation details:
+  - Validate stored values before applying.
+  - Apply both root class and `color-scheme`.
+  - React to OS theme changes when in `system` mode.
+  - React to `storage` events for cross-tab sync.
 
-### 3.3 Tailwind Pipeline Updates
-- Vite config loads Tailwind via `@tailwindcss/vite`.
-- `client/src/index.css` replaces `@tailwind` directives with `@import "tailwindcss"`.
-- `tw-animate-css` is imported in `index.css` to preserve animation utilities.
-- `postcss.config.js` is simplified to avoid double-processing Tailwind.
+### 3.2 Design Tokens
 
-### 3.4 Design Tokens
-- Continue using CSS variables under `:root` and `.dark` to define colors, radii, and shadows.
-- Tailwind theme extensions map to CSS variables to keep utilities consistent across themes.
-- Tokens are documented in `index.css` and used by shadcn/ui components.
+- Keep CSS variable tokens in `client/src/index.css` for runtime theming.
+- Add typed token maps in `client/src/lib/design-tokens.ts` for color, spacing, typography, and breakpoints.
+- Add responsive helpers in `client/src/lib/responsive.ts`.
 
-### 3.5 Dark Mode
-- Maintain `darkMode: ["class"]` and use a `dark` class on the root element.
-- Add a global UI toggle (Nav or settings) to switch themes.
-- Persist theme choice via `ThemeProvider` using `localStorage` key `save-a-stray-theme`.
+### 3.3 Layout Primitives
 
-### 3.6 Legacy CSS Migration
-- Migrate legacy component CSS into Tailwind utilities in-place, prioritizing:
-  - `App.css`
-  - `Animal.css`
-  - `AnimalFeedItem.css`
-  - `AnimalShow.css`
-  - `auth.css`
-- Retain any large/complex styling temporarily, then remove files once migrated.
+- Add reusable layout components in `client/src/layouts/`:
+  - `PageLayout`
+  - `AuthLayout`
+  - `DashboardLayout`
+- Export through `client/src/layouts/index.ts`.
+- Use these as migration-safe primitives for gradual adoption without forcing large rewrites.
 
----
+### 3.4 Legacy Artifact Cleanup
 
-## 4. Implementation Plan
+- Remove `client/src/App.scss` (unused legacy stylesheet).
+- Remove stale `components/css` references from test files.
+- Replace stale splash image path with Tailwind-native gradient background.
+- Remove inline style where static Tailwind arbitrary values are sufficient.
 
-### 4.1 Phase 1: Tailwind v4 Upgrade (Config)
-1. Update dependencies (`tailwindcss`, `@tailwindcss/vite`, `tw-animate-css`).
-2. Update Vite configuration to use Tailwind v4 plugin.
-3. Update `index.css` to use `@import "tailwindcss"` and `@import "tw-animate-css"`.
-4. Simplify PostCSS configuration.
+### 3.5 shadcn/ui Configuration
 
-### 4.2 Phase 2: Tokens + Dark Mode
-1. Validate token mappings in `tailwind.config.js`.
-2. Implement a theme toggle and persist user preference.
-3. Confirm dark mode across major routes (Splash, Landing, Shelter, Animal).
+- Add `client/components.json` to keep shadcn configuration explicit and reproducible.
+- Continue using Radix primitives through existing `client/src/components/ui/*` wrappers.
 
-### 4.3 Phase 3: Legacy CSS Migration
-1. Migrate high-traffic components to Tailwind utilities.
-2. Remove deprecated CSS files once migration is complete.
-3. Audit for unused classes and dead styles.
+## 4. Implementation Summary
 
----
+### 4.1 Files Added
+
+- `client/components.json`
+- `client/src/layouts/PageLayout.tsx`
+- `client/src/layouts/AuthLayout.tsx`
+- `client/src/layouts/DashboardLayout.tsx`
+- `client/src/layouts/index.ts`
+- `client/src/lib/design-tokens.ts`
+- `client/src/lib/responsive.ts`
+- `client/src/test/ThemeProvider.test.tsx`
+- `client/src/test/layouts.visual.test.tsx`
+- `client/src/test/responsive.test.ts`
+- `docs/DESIGN_SYSTEM.md`
+
+### 4.2 Files Updated
+
+- `client/src/components/ThemeProvider.tsx`
+- `client/src/components/Splash.tsx`
+- `client/src/components/BottomNav.tsx`
+- `client/src/components/layouts/ShelterDashboardLayout.tsx`
+- `client/src/test/setup.js`
+- Legacy test files that contained `components/css` mocks
+
+### 4.3 Files Removed
+
+- `client/src/App.scss`
 
 ## 5. Testing Strategy
 
-### 5.1 Build Validation
-- `npm run build` in `client/` succeeds with Tailwind v4.
+### 5.1 Automated Checks
 
-### 5.2 Visual Regression
-- Smoke-check core pages in light and dark mode.
-- Validate shadcn/ui components render as expected.
+- `cd client && npm run lint`
+- `cd client && npm run typecheck`
+- `cd client && npm run test:run`
+- `cd client && npm run build`
 
-### 5.3 Accessibility
-- Confirm contrast ratios for text and primary UI elements in both themes.
+### 5.2 New F1.2 Coverage
 
----
+- Theme behavior, persistence, and system mode transitions:
+  - `client/src/test/ThemeProvider.test.tsx`
+- Layout visual baselines (snapshot regression):
+  - `client/src/test/layouts.visual.test.tsx`
+- Responsive breakpoint utility verification:
+  - `client/src/test/responsive.test.ts`
 
-## 6. Security Considerations
-- No new data flows or authentication changes.
-- Theme preference storage should not expose sensitive data.
+## 6. Risks and Follow-Ups
 
----
+- Several legacy components remain large and include additional inline style usage. Those are tracked for incremental cleanup in future feature branches.
+- Layout primitives are available now, but broad adoption should be done feature-by-feature to avoid high-risk UI regressions.
 
-## 7. Performance Considerations
-- Tailwind v4 reduces runtime overhead and improves build performance.
-- Removing legacy CSS reduces bundle size and avoids duplicated styles.
-
----
-
-## 8. Rollout Plan
-- Land Tailwind v4 upgrade behind a short-lived feature branch.
-- Verify builds and basic visual checks before merging.
-- Continue migration of legacy CSS in follow-up PRs.
-
----
-
-## 9. Open Questions
-- Should the theme preference be user-scoped (profile) or device-scoped (localStorage only)?
-- Which legacy CSS files are safe to remove immediately after migration without regressions?
-
----
-
-## 10. References
-- Tailwind v4 Upgrade Guide: https://tailwindcss.com/docs/upgrade-guide
-- Tailwind v4 Vite Plugin: https://tailwindcss.com/docs/v4-alpha#vite
-- shadcn/ui Tailwind v4 notes: https://ui.shadcn.com/docs/tailwind-v4
-- tw-animate-css: https://www.npmjs.com/package/tw-animate-css
-
----
-
-## 11. Document History
+## 7. Document History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0.0 | Feb 3, 2026 | Codex | Initial draft for Tailwind v4 migration |
+| 1.0.0 | Feb 3, 2026 | Codex | Initial draft |
+| 1.1.0 | Feb 15, 2026 | Codex | Updated to implemented F1.2 architecture and validation plan |
