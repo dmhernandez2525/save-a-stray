@@ -1,3 +1,14 @@
+import {
+  describe,
+  it,
+  expect,
+  jest,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  afterEach,
+} from '@jest/globals';
+import '../server/models';
 import RootSubscriptionType from '../server/schema/types/root_subscription_type';
 
 describe('root subscription type', () => {

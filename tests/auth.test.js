@@ -8,6 +8,7 @@ jest.mock('../server/models/User', () => {
 
 jest.mock('../server/models/Shelter', () => {
   const mockShelter = jest.fn();
+  mockShelter.findOne = jest.fn();
   mockShelter.findById = jest.fn();
   return { __esModule: true, default: mockShelter };
 });
@@ -17,21 +18,21 @@ jest.mock('bcryptjs', () => ({
   default: {
     hash: jest.fn(),
     compareSync: jest.fn(),
-    genSalt: jest.fn()
-  }
+    genSalt: jest.fn(),
+  },
 }));
 
 jest.mock('jsonwebtoken', () => ({
   __esModule: true,
   default: {
     sign: jest.fn(),
-    verify: jest.fn()
-  }
+    verify: jest.fn(),
+  },
 }));
 
 jest.mock('../config/keys', () => ({
   __esModule: true,
-  default: { secretOrKey: 'test-secret-key' }
+  default: { secretOrKey: 'test-secret-key' },
 }));
 
 const User = require('../server/models/User').default;
@@ -52,7 +53,7 @@ describe('Auth Service Tests', () => {
         name: 'Test User',
         email: 'test@example.com',
         password: 'validpassword123',
-        userRole: 'endUser'
+        userRole: 'endUser',
       });
 
       expect(result.isValid).toBe(true);
@@ -64,7 +65,7 @@ describe('Auth Service Tests', () => {
         name: 'A',
         email: 'test@example.com',
         password: 'validpassword123',
-        userRole: 'endUser'
+        userRole: 'endUser',
       });
 
       expect(result.isValid).toBe(false);
@@ -76,7 +77,7 @@ describe('Auth Service Tests', () => {
         name: 'A'.repeat(35),
         email: 'test@example.com',
         password: 'validpassword123',
-        userRole: 'endUser'
+        userRole: 'endUser',
       });
 
       expect(result.isValid).toBe(false);
@@ -88,7 +89,7 @@ describe('Auth Service Tests', () => {
         name: 'Test User',
         email: 'invalid-email',
         password: 'validpassword123',
-        userRole: 'endUser'
+        userRole: 'endUser',
       });
 
       expect(result.isValid).toBe(false);
@@ -100,7 +101,7 @@ describe('Auth Service Tests', () => {
         name: 'Test User',
         email: 'test@example.com',
         password: 'short',
-        userRole: 'endUser'
+        userRole: 'endUser',
       });
 
       expect(result.isValid).toBe(false);
@@ -112,7 +113,7 @@ describe('Auth Service Tests', () => {
         name: 'Test User',
         email: 'test@example.com',
         password: 'a'.repeat(35),
-        userRole: 'endUser'
+        userRole: 'endUser',
       });
 
       expect(result.isValid).toBe(false);
@@ -124,7 +125,7 @@ describe('Auth Service Tests', () => {
         name: '',
         email: 'test@example.com',
         password: 'validpassword123',
-        userRole: 'endUser'
+        userRole: 'endUser',
       });
 
       expect(result.isValid).toBe(false);
@@ -136,7 +137,7 @@ describe('Auth Service Tests', () => {
         name: 'Test User',
         email: '',
         password: 'validpassword123',
-        userRole: 'endUser'
+        userRole: 'endUser',
       });
 
       expect(result.isValid).toBe(false);
@@ -148,7 +149,7 @@ describe('Auth Service Tests', () => {
         name: 'Test User',
         email: 'test@example.com',
         password: '',
-        userRole: 'endUser'
+        userRole: 'endUser',
       });
 
       expect(result.isValid).toBe(false);
@@ -160,7 +161,7 @@ describe('Auth Service Tests', () => {
     it('should validate correct login data', () => {
       const result = validateLoginInput({
         email: 'test@example.com',
-        password: 'password123'
+        password: 'password123',
       });
 
       expect(result.isValid).toBe(true);
@@ -170,7 +171,7 @@ describe('Auth Service Tests', () => {
     it('should reject login with missing email', () => {
       const result = validateLoginInput({
         email: '',
-        password: 'password123'
+        password: 'password123',
       });
 
       expect(result.isValid).toBe(false);
@@ -180,7 +181,7 @@ describe('Auth Service Tests', () => {
     it('should reject login with invalid email format', () => {
       const result = validateLoginInput({
         email: 'not-valid-email',
-        password: 'password123'
+        password: 'password123',
       });
 
       expect(result.isValid).toBe(false);
@@ -190,7 +191,7 @@ describe('Auth Service Tests', () => {
     it('should reject login with missing password', () => {
       const result = validateLoginInput({
         email: 'test@example.com',
-        password: ''
+        password: '',
       });
 
       expect(result.isValid).toBe(false);
@@ -200,7 +201,7 @@ describe('Auth Service Tests', () => {
     it('should handle null values gracefully', () => {
       const result = validateLoginInput({
         email: null,
-        password: null
+        password: null,
       });
 
       expect(result.isValid).toBe(false);
@@ -283,7 +284,7 @@ describe('Auth Service Tests', () => {
         name: 'Shelter Admin',
         email: 'admin@shelter.com',
         password: 'validpassword123',
-        userRole: 'shelter'
+        userRole: 'shelter',
       });
 
       expect(result.isValid).toBe(true);
@@ -294,7 +295,7 @@ describe('Auth Service Tests', () => {
         name: 'Shelter User',
         email: 'shelter@test.com',
         password: 'password123',
-        userRole: 'shelter'
+        userRole: 'shelter',
       });
 
       expect(result.isValid).toBe(true);
@@ -318,7 +319,7 @@ describe('Auth Service Tests', () => {
         email: 'admin@shelter.com',
         userRole: 'shelter',
         shelterId: mockShelterId,
-        save: jest.fn().mockResolvedValue(true)
+        save: jest.fn().mockResolvedValue(true),
       };
       User.mockImplementation(() => mockUserInstance);
 
@@ -329,7 +330,7 @@ describe('Auth Service Tests', () => {
         location: 'NYC',
         paymentEmail: 'pay@shelter.com',
         users: [],
-        save: jest.fn().mockResolvedValue(true)
+        save: jest.fn().mockResolvedValue(true),
       };
       Shelter.mockImplementation(() => mockShelterInstance);
       Shelter.findById.mockResolvedValue(mockShelterInstance);
@@ -346,7 +347,7 @@ describe('Auth Service Tests', () => {
         userRole: 'shelter',
         shelterName: 'Happy Paws',
         shelterLocation: 'NYC',
-        shelterPaymentEmail: 'pay@shelter.com'
+        shelterPaymentEmail: 'pay@shelter.com',
       });
 
       expect(result.token).toBe('mock-token');
@@ -369,7 +370,7 @@ describe('Auth Service Tests', () => {
         email: 'user@test.com',
         userRole: 'endUser',
         shelterId: undefined,
-        save: jest.fn().mockResolvedValue(true)
+        save: jest.fn().mockResolvedValue(true),
       };
       User.mockImplementation(() => mockUserInstance);
 
@@ -381,7 +382,7 @@ describe('Auth Service Tests', () => {
         name: 'Regular User',
         email: 'user@test.com',
         password: 'validpassword123',
-        userRole: 'endUser'
+        userRole: 'endUser',
       });
 
       expect(result.token).toBe('mock-token');
@@ -402,7 +403,7 @@ describe('Auth Service Tests', () => {
         email: 'admin@test.com',
         userRole: 'shelter',
         shelterId: mockShelterId,
-        save: jest.fn().mockResolvedValue(true)
+        save: jest.fn().mockResolvedValue(true),
       };
       User.mockImplementation(() => mockUserInstance);
 
@@ -412,7 +413,7 @@ describe('Auth Service Tests', () => {
         location: 'LA',
         paymentEmail: 'pay@test.com',
         users: [],
-        save: jest.fn().mockResolvedValue(true)
+        save: jest.fn().mockResolvedValue(true),
       };
       Shelter.mockImplementation(() => mockShelterInstance);
       Shelter.findById.mockResolvedValue(mockShelterInstance);
@@ -428,7 +429,7 @@ describe('Auth Service Tests', () => {
         userRole: 'shelter',
         shelterName: 'Test Shelter',
         shelterLocation: 'LA',
-        shelterPaymentEmail: 'pay@test.com'
+        shelterPaymentEmail: 'pay@test.com',
       });
 
       expect(Shelter.findById).toHaveBeenCalledWith(mockShelterId);

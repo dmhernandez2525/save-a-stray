@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { printSchema } from 'graphql';
+import '../server/models';
 import schema from '../server/schema/schema';
 import { logger } from '../server/services/logger';
 

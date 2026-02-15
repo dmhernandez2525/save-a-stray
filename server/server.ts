@@ -15,6 +15,8 @@ import schema from './schema/schema';
 import { facebookRegister } from './services/auth';
 import { createGraphQLContext, GraphQLContext } from './graphql/context';
 import { logger } from './services/logger';
+import { createGraphQLValidationRules } from './graphql/validation-rules';
+import { formatGraphQLError } from './graphql/errors';
 
 const db = keys.MONGO_URI;
 
@@ -26,13 +28,19 @@ interface UserStuff {
 // Only initialize Facebook OAuth if credentials are configured
 if (keys.fbookClient && keys.fbookKey) {
   passport.use(
-    new FacebookStrategy({
-      clientID: keys.fbookClient,
-      clientSecret: keys.fbookKey,
-      callbackURL: keys.fbookCallbackURL || '/auth/facebook/callback',
-      profileFields: ['id', 'displayName', 'photos', 'email']
-    },
-      async (accessToken: string, refreshToken: string, profile: Profile, cb: (error: Error | null, user?: UserStuff) => void) => {
+    new FacebookStrategy(
+      {
+        clientID: keys.fbookClient,
+        clientSecret: keys.fbookKey,
+        callbackURL: keys.fbookCallbackURL || '/auth/facebook/callback',
+        profileFields: ['id', 'displayName', 'photos', 'email'],
+      },
+      async (
+        accessToken: string,
+        refreshToken: string,
+        profile: Profile,
+        cb: (error: Error | null, user?: UserStuff) => void
+      ) => {
         try {
           const userData = await facebookRegister(profile);
           const userStuff: UserStuff = { userId: userData._id, token: userData.token };
@@ -40,12 +48,12 @@ if (keys.fbookClient && keys.fbookKey) {
         } catch (error) {
           cb(error as Error);
         }
-      },
-    ),
+      }
+    )
   );
 } else {
   logger.warn('facebook_oauth_unconfigured', {
-    message: 'Facebook OAuth not configured. FBOOK_CLIENT and FBOOK_KEY env vars required.'
+    message: 'Facebook OAuth not configured. FBOOK_CLIENT and FBOOK_KEY env vars required.',
   });
 }
 
@@ -69,15 +77,23 @@ app.get('/health', (_req: Request, res: Response) => {
 const getAllowedOrigins = (): string[] => {
   const originsEnv = process.env.ALLOWED_ORIGINS;
   if (originsEnv) {
-    return originsEnv.split(',').map(origin => origin.trim()).filter(Boolean);
+    return originsEnv
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean);
   }
   // Default allowed origins for development
   if (process.env.NODE_ENV !== 'production') {
-    return ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:3000', 'http://127.0.0.1:5173'];
+    return [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:5173',
+    ];
   }
   // In production, require explicit configuration
   logger.warn('cors_unconfigured', {
-    message: 'ALLOWED_ORIGINS not configured in production. CORS will be restrictive.'
+    message: 'ALLOWED_ORIGINS not configured in production. CORS will be restrictive.',
   });
   return [];
 };
@@ -117,7 +133,7 @@ app.get(
   passport.authenticate('facebook', { session: false }),
   (req: Request & { userStuff?: UserStuff }, res: Response) => {
     res.json({ my_token: req.userStuff?.token });
-  },
+  }
 );
 
 // Connect to MongoDB
@@ -128,7 +144,7 @@ if (db) {
     .catch((err: Error) => logger.error('mongodb_connection_error', { message: err.message }));
 } else {
   logger.warn('mongodb_unconfigured', {
-    message: 'MONGO_URI not configured. Database features will not work.'
+    message: 'MONGO_URI not configured. Database features will not work.',
   });
 }
 
@@ -158,6 +174,8 @@ const startApolloServer = async (): Promise<void> => {
 
   const apolloServer = new ApolloServer<GraphQLContext>({
     schema,
+    validationRules: createGraphQLValidationRules(),
+    formatError: formatGraphQLError,
     plugins: [
       ApolloServerPluginDrainHttpServer({ httpServer }),
       {

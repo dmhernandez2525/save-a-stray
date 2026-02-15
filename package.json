@@ -17,6 +17,8 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "schema:export": "ts-node scripts/export-schema.ts",
+    "schema:types": "ts-node scripts/generate-graphql-types.ts",
+    "schema:generate": "npm run schema:export && npm run schema:types",
     "format": "prettier --write \"server/**/*.{ts,js}\" \"shared/**/*.ts\" \"index.ts\"",
     "format:check": "prettier --check \"server/**/*.{ts,js}\" \"shared/**/*.ts\" \"index.ts\""
   },

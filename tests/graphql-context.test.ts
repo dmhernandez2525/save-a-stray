@@ -1,10 +1,22 @@
+import {
+  describe,
+  it,
+  expect,
+  jest,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  afterEach,
+} from '@jest/globals';
+import '../server/models';
+
 describe('graphql context', () => {
   const originalNodeEnv = process.env.NODE_ENV;
   const originalSecret = process.env.SECRET_OR_KEY;
 
   beforeAll(() => {
     process.env.NODE_ENV = 'production';
-    process.env.SECRET_OR_KEY = 'test-secret';
+    process.env.SECRET_OR_KEY = 'test-secret-with-at-least-32-characters';
   });
 
   afterAll(() => {
