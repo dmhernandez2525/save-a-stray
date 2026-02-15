@@ -155,6 +155,19 @@ interface AnimalArgs {
   images?: string[];
   video: string;
   status?: string;
+  size?: string;
+  temperament?: string;
+  energyLevel?: string;
+  houseTrained?: boolean;
+  goodWithKids?: boolean;
+  goodWithDogs?: boolean;
+  goodWithCats?: boolean;
+  personalityTraits?: string[];
+  specialNeeds?: string;
+  microchipId?: string;
+  intakeDate?: string;
+  intakeSource?: string;
+  adoptionFee?: number;
   applications?: string;
 }
 
@@ -200,7 +213,22 @@ const AnimalInput = new GraphQLInputObjectType({
     color: { type: GraphQLString },
     description: { type: GraphQLString },
     image: { type: GraphQLString },
+    images: { type: new GraphQLList(GraphQLString) },
     video: { type: GraphQLString },
+    status: { type: GraphQLString },
+    size: { type: GraphQLString },
+    temperament: { type: GraphQLString },
+    energyLevel: { type: GraphQLString },
+    houseTrained: { type: GraphQLBoolean },
+    goodWithKids: { type: GraphQLBoolean },
+    goodWithDogs: { type: GraphQLBoolean },
+    goodWithCats: { type: GraphQLBoolean },
+    personalityTraits: { type: new GraphQLList(GraphQLString) },
+    specialNeeds: { type: GraphQLString },
+    microchipId: { type: GraphQLString },
+    intakeDate: { type: GraphQLString },
+    intakeSource: { type: GraphQLString },
+    adoptionFee: { type: GraphQLFloat },
   },
 });
 
@@ -385,6 +413,19 @@ const mutation = new GraphQLObjectType({
         images: { type: new GraphQLList(GraphQLString) },
         video: { type: GraphQLString },
         status: { type: GraphQLString },
+        size: { type: GraphQLString },
+        temperament: { type: GraphQLString },
+        energyLevel: { type: GraphQLString },
+        houseTrained: { type: GraphQLBoolean },
+        goodWithKids: { type: GraphQLBoolean },
+        goodWithDogs: { type: GraphQLBoolean },
+        goodWithCats: { type: GraphQLBoolean },
+        personalityTraits: { type: new GraphQLList(GraphQLString) },
+        specialNeeds: { type: GraphQLString },
+        microchipId: { type: GraphQLString },
+        intakeDate: { type: GraphQLString },
+        intakeSource: { type: GraphQLString },
+        adoptionFee: { type: GraphQLFloat },
         applications: { type: GraphQLID },
         shelterId: { type: GraphQLID },
       },
@@ -395,20 +436,31 @@ const mutation = new GraphQLObjectType({
         } else {
           requireAuth(context);
         }
-        const { name, type, breed, age, sex, color, description, image, images, video, status } =
-          args;
         const newAnimal = new Animal({
-          name,
-          type,
-          breed: breed || '',
-          age,
-          sex,
-          color,
-          description,
-          image,
-          images: images || [],
-          video,
-          status: status || 'available',
+          name: args.name,
+          type: args.type,
+          breed: args.breed || '',
+          age: args.age,
+          sex: args.sex,
+          color: args.color,
+          description: args.description,
+          image: args.image,
+          images: args.images || [],
+          video: args.video,
+          status: args.status || 'available',
+          size: args.size,
+          temperament: args.temperament || '',
+          energyLevel: args.energyLevel,
+          houseTrained: args.houseTrained,
+          goodWithKids: args.goodWithKids,
+          goodWithDogs: args.goodWithDogs,
+          goodWithCats: args.goodWithCats,
+          personalityTraits: args.personalityTraits || [],
+          specialNeeds: args.specialNeeds || '',
+          microchipId: args.microchipId || '',
+          intakeDate: args.intakeDate ? new Date(args.intakeDate) : undefined,
+          intakeSource: args.intakeSource || '',
+          adoptionFee: args.adoptionFee,
         });
         await newAnimal.save();
         return newAnimal;
@@ -453,45 +505,57 @@ const mutation = new GraphQLObjectType({
         images: { type: new GraphQLList(GraphQLString) },
         video: { type: GraphQLString },
         status: { type: GraphQLString },
+        size: { type: GraphQLString },
+        temperament: { type: GraphQLString },
+        energyLevel: { type: GraphQLString },
+        houseTrained: { type: GraphQLBoolean },
+        goodWithKids: { type: GraphQLBoolean },
+        goodWithDogs: { type: GraphQLBoolean },
+        goodWithCats: { type: GraphQLBoolean },
+        personalityTraits: { type: new GraphQLList(GraphQLString) },
+        specialNeeds: { type: GraphQLString },
+        microchipId: { type: GraphQLString },
+        intakeDate: { type: GraphQLString },
+        intakeSource: { type: GraphQLString },
+        adoptionFee: { type: GraphQLFloat },
         applications: { type: GraphQLID },
       },
       async resolve(_, args: AnimalArgs & { _id: string }, context: GraphQLContext) {
-        const {
-          _id,
-          name,
-          type,
-          breed,
-          age,
-          sex,
-          color,
-          description,
-          image,
-          images,
-          video,
-          status,
-        } = args;
-        const animal = await Animal.findById(_id);
+        const animal = await Animal.findById(args._id);
         if (!animal) return null;
 
         // Find the shelter that owns this animal and require staff access
-        const shelter = await Shelter.findOne({ animals: _id });
+        const shelter = await Shelter.findOne({ animals: args._id });
         if (shelter) {
           await requireShelterStaff(context, shelter._id.toString());
         } else {
           requireAdmin(context);
         }
 
-        animal.name = name;
-        animal.type = type;
-        if (breed !== undefined) animal.breed = breed;
-        animal.age = age;
-        animal.sex = sex;
-        animal.color = color;
-        animal.description = description;
-        animal.image = image;
-        if (images !== undefined) animal.images = images;
-        animal.video = video;
-        if (status) animal.status = status as typeof animal.status;
+        animal.name = args.name;
+        animal.type = args.type;
+        if (args.breed !== undefined) animal.breed = args.breed;
+        animal.age = args.age;
+        animal.sex = args.sex;
+        animal.color = args.color;
+        animal.description = args.description;
+        animal.image = args.image;
+        if (args.images !== undefined) animal.images = args.images;
+        animal.video = args.video;
+        if (args.status) animal.status = args.status as typeof animal.status;
+        if (args.size !== undefined) animal.size = args.size as typeof animal.size;
+        if (args.temperament !== undefined) animal.temperament = args.temperament;
+        if (args.energyLevel !== undefined) animal.energyLevel = args.energyLevel as typeof animal.energyLevel;
+        if (args.houseTrained !== undefined) animal.houseTrained = args.houseTrained;
+        if (args.goodWithKids !== undefined) animal.goodWithKids = args.goodWithKids;
+        if (args.goodWithDogs !== undefined) animal.goodWithDogs = args.goodWithDogs;
+        if (args.goodWithCats !== undefined) animal.goodWithCats = args.goodWithCats;
+        if (args.personalityTraits !== undefined) animal.personalityTraits = args.personalityTraits;
+        if (args.specialNeeds !== undefined) animal.specialNeeds = args.specialNeeds;
+        if (args.microchipId !== undefined) animal.microchipId = args.microchipId;
+        if (args.intakeDate !== undefined) animal.intakeDate = args.intakeDate ? new Date(args.intakeDate) : undefined;
+        if (args.intakeSource !== undefined) animal.intakeSource = args.intakeSource;
+        if (args.adoptionFee !== undefined) animal.adoptionFee = args.adoptionFee;
         await animal.save();
         return animal;
       },
@@ -1298,7 +1362,22 @@ const mutation = new GraphQLObjectType({
             color: string;
             description: string;
             image?: string;
+            images?: string[];
             video?: string;
+            status?: string;
+            size?: string;
+            temperament?: string;
+            energyLevel?: string;
+            houseTrained?: boolean;
+            goodWithKids?: boolean;
+            goodWithDogs?: boolean;
+            goodWithCats?: boolean;
+            personalityTraits?: string[];
+            specialNeeds?: string;
+            microchipId?: string;
+            intakeDate?: string;
+            intakeSource?: string;
+            adoptionFee?: number;
           }>;
           shelterId?: string;
         },
@@ -1312,18 +1391,32 @@ const mutation = new GraphQLObjectType({
         }
 
         const created = [];
-        for (const animalData of args.animals) {
+        for (const d of args.animals) {
           const newAnimal = new Animal({
-            name: animalData.name,
-            type: animalData.type,
-            breed: animalData.breed || '',
-            age: animalData.age,
-            sex: animalData.sex,
-            color: animalData.color,
-            description: animalData.description,
-            image: animalData.image || '',
-            video: animalData.video || '',
-            status: 'available',
+            name: d.name,
+            type: d.type,
+            breed: d.breed || '',
+            age: d.age,
+            sex: d.sex,
+            color: d.color,
+            description: d.description,
+            image: d.image || '',
+            images: d.images || [],
+            video: d.video || '',
+            status: d.status || 'available',
+            size: d.size,
+            temperament: d.temperament || '',
+            energyLevel: d.energyLevel,
+            houseTrained: d.houseTrained,
+            goodWithKids: d.goodWithKids,
+            goodWithDogs: d.goodWithDogs,
+            goodWithCats: d.goodWithCats,
+            personalityTraits: d.personalityTraits || [],
+            specialNeeds: d.specialNeeds || '',
+            microchipId: d.microchipId || '',
+            intakeDate: d.intakeDate ? new Date(d.intakeDate) : undefined,
+            intakeSource: d.intakeSource || '',
+            adoptionFee: d.adoptionFee,
           });
           await newAnimal.save();
           created.push(newAnimal);

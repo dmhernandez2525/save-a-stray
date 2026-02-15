@@ -50,7 +50,9 @@ export interface UserAuthPayload {
 }
 
 // Animal Types
-export type AnimalStatus = 'available' | 'pending' | 'adopted';
+export type AnimalStatus = 'available' | 'pending' | 'adopted' | 'hold' | 'fostered' | 'transferred' | 'deceased';
+export type AnimalSize = 'small' | 'medium' | 'large' | 'extra-large';
+export type EnergyLevel = 'low' | 'moderate' | 'high';
 
 export interface IMedicalRecord {
   _id?: Types.ObjectId | string;
@@ -73,6 +75,19 @@ export interface IAnimal {
   images: string[];
   video: string;
   status: AnimalStatus;
+  size?: AnimalSize;
+  temperament?: string;
+  energyLevel?: EnergyLevel;
+  houseTrained?: boolean;
+  goodWithKids?: boolean;
+  goodWithDogs?: boolean;
+  goodWithCats?: boolean;
+  personalityTraits?: string[];
+  specialNeeds?: string;
+  microchipId?: string;
+  intakeDate?: Date;
+  intakeSource?: string;
+  adoptionFee?: number;
   medicalRecords: IMedicalRecord[];
   applications: (Types.ObjectId | string)[];
 }
