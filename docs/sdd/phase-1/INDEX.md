@@ -1,7 +1,7 @@
 # Phase 1 Software Design Documents
 
 **Version:** 1.0.0
-**Last Updated:** January 22, 2026
+**Last Updated:** February 15, 2026
 **Phase Status:** In Planning
 
 ---
@@ -19,6 +19,7 @@ Phase 1 focuses on building the Foundation & MVP that solves the two biggest pai
 
 | Document | Status | Description |
 |----------|--------|-------------|
+| [FRONTEND_MIGRATION_SDD.md](./FRONTEND_MIGRATION_SDD.md) | In Progress | Vite 7 config hardening, alias coverage, env handling, CRA cleanup |
 | [REAL_TIME_SYNC_SDD.md](./REAL_TIME_SYNC_SDD.md) | Draft | Real-time listing synchronization with Petfinder/Adopt-a-Pet |
 | [COMMUNICATION_SYSTEM_SDD.md](./COMMUNICATION_SYSTEM_SDD.md) | Draft | Communication accountability and auto-acknowledgment |
 | [STYLING_MODERNIZATION_SDD.md](./STYLING_MODERNIZATION_SDD.md) | In Progress | Tailwind v4 upgrade, shadcn alignment, and dark mode |

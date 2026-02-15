@@ -1,89 +1,24 @@
-import React, { Component } from "react";
-import { graphql } from "@apollo/client/react/hoc";
-import { gql, MutationFunction } from "@apollo/client";
-import { Button } from "./ui/button";
+import { gql, useMutation } from '@apollo/client'
+import { useCallback, useEffect, useMemo } from 'react'
+import type { JSX, MouseEvent } from 'react'
 
-interface FacebookSignInProps {
-  mutate: MutationFunction;
+import { Button } from './ui/button'
+
+interface FacebookSignInResponse {
+  facebookSignIn: {
+    session?: {
+      token: string
+    } | null
+    user?: {
+      id: string
+      email: string
+      name: string
+    } | null
+  }
 }
 
-interface FacebookSignInState {
-  loading: boolean;
-}
-
-class FacebookSignIn extends Component<FacebookSignInProps, FacebookSignInState> {
-  private appId: string;
-  private redirectUrl: string;
-  private code?: string;
-
-  constructor(props: FacebookSignInProps) {
-    super(props);
-    this.onFacebookLogin = this.onFacebookLogin.bind(this);
-    this.appId = "515957642529597";
-    this.redirectUrl = `${document.location.protocol}//${document.location.host}/facebook-callback`;
-
-    if (document.location.pathname === "/") {
-      const params = new URLSearchParams(document.location.search);
-      this.code = params.get("code") || undefined;
-    }
-
-    this.state = {
-      loading: false,
-    };
-  }
-
-  componentDidMount() {
-    if (!this.code) {
-      return;
-    }
-
-    this.setState({ loading: true });
-
-    this.props
-      .mutate({
-        variables: { code: this.code },
-      })
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .then((response: any) => {
-        this.setState({ loading: false });
-        const { error, user, session } = response.data.facebookSignIn;
-        if (error) {
-          console.error("Sign in error:", error);
-        } else {
-          console.log("Sign in success, your token:", session.token);
-        }
-      })
-      .catch((e: Error) => {
-        console.error("Backend error:", e.toString());
-        this.setState({ loading: false });
-      });
-  }
-
-  onFacebookLogin(event: React.MouseEvent<HTMLAnchorElement>) {
-    event.preventDefault();
-    window.location.href = `https://save-a-stray.herokuapp.com/facebooklogin`;
-  }
-
-  render() {
-    const { loading } = this.state;
-
-    return (
-      <Button
-        asChild
-        variant="default"
-        className="bg-[rgb(66,103,178)] hover:bg-[rgb(124,152,207)] w-full"
-      >
-        <a href="/facebooklogin" onClick={this.onFacebookLogin}>
-          {loading ? (
-            <span className="animate-spin mr-2">...</span>
-          ) : (
-            <span className="mr-2">f</span>
-          )}
-          Sign in with Facebook
-        </a>
-      </Button>
-    );
-  }
+interface FacebookSignInVariables {
+  code: string
 }
 
 const FACEBOOK_SIGN_IN = gql`
@@ -99,7 +34,68 @@ const FACEBOOK_SIGN_IN = gql`
       }
     }
   }
-`;
+`
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export default graphql(FACEBOOK_SIGN_IN)(FacebookSignIn as any);
+function FacebookSignIn(): JSX.Element {
+  const [facebookSignIn, { loading }] = useMutation<
+    FacebookSignInResponse,
+    FacebookSignInVariables
+  >(FACEBOOK_SIGN_IN)
+
+  const code = useMemo(() => {
+    if (window.location.pathname !== '/') {
+      return null
+    }
+
+    const params = new URLSearchParams(window.location.search)
+    return params.get('code')
+  }, [])
+
+  useEffect(() => {
+    if (!code) {
+      return
+    }
+
+    const signInWithFacebook = async (): Promise<void> => {
+      try {
+        const response = await facebookSignIn({
+          variables: { code },
+        })
+
+        const receivedToken = response.data?.facebookSignIn?.session?.token
+
+        if (!receivedToken) {
+          localStorage.removeItem('auth-token')
+          return
+        }
+
+        localStorage.setItem('auth-token', receivedToken)
+        window.location.replace('/')
+      } catch {
+        localStorage.removeItem('auth-token')
+      }
+    }
+
+    void signInWithFacebook()
+  }, [code, facebookSignIn])
+
+  const onFacebookLogin = useCallback((event: MouseEvent<HTMLAnchorElement>): void => {
+    event.preventDefault()
+    window.location.href = '/facebooklogin'
+  }, [])
+
+  return (
+    <Button
+      asChild
+      variant='default'
+      className='w-full bg-[rgb(66,103,178)] hover:bg-[rgb(124,152,207)]'
+    >
+      <a href='/facebooklogin' onClick={onFacebookLogin}>
+        {loading ? <span className='mr-2 animate-spin'>...</span> : <span className='mr-2'>f</span>}
+        Sign in with Facebook
+      </a>
+    </Button>
+  )
+}
+
+export default FacebookSignIn

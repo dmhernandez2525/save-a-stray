@@ -1,3 +1,5 @@
+import tailwindcssAnimate from 'tailwindcss-animate'
+
 /** @type {import('tailwindcss').Config} */
 export default {
   darkMode: ["class"],
@@ -39,6 +41,8 @@ export default {
           500: 'hsl(17, 100%, 54%)',
           600: 'hsl(17, 100%, 44%)',
           700: 'hsl(17, 100%, 34%)',
+          800: 'hsl(17, 100%, 24%)',
+          900: 'hsl(17, 100%, 14%)',
           DEFAULT: 'lightsalmon',
         },
         // Accent - Warm Gold (highlights, favorites, stars)
@@ -60,6 +64,9 @@ export default {
           400: 'hsl(142, 50%, 50%)',
           500: 'hsl(142, 45%, 40%)',
           600: 'hsl(142, 40%, 30%)',
+          700: 'hsl(142, 38%, 24%)',
+          800: 'hsl(142, 36%, 18%)',
+          900: 'hsl(142, 34%, 12%)',
           DEFAULT: 'hsl(142, 55%, 65%)',
         },
         // Warning - Amber
@@ -70,6 +77,10 @@ export default {
           300: 'hsl(38, 90%, 65%)',
           400: 'hsl(38, 85%, 50%)',
           500: 'hsl(38, 80%, 42%)',
+          600: 'hsl(38, 78%, 36%)',
+          700: 'hsl(38, 76%, 30%)',
+          800: 'hsl(38, 74%, 24%)',
+          900: 'hsl(38, 72%, 18%)',
           DEFAULT: 'hsl(38, 90%, 65%)',
         },
         // Neutral - Warm Gray
@@ -266,5 +277,5 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [tailwindcssAnimate],
 }
