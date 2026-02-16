@@ -86,6 +86,10 @@ import { NotificationPreferenceDocument } from '../../models/NotificationPrefere
 import { ScheduledNotificationDocument } from '../../models/ScheduledNotification';
 import { ShareEventDocument } from '../../models/ShareEvent';
 import { AuthSessionDocument } from '../../models/AuthSession';
+import {
+  WebhookModel, IntegrationConfigModel, WebhookDeliveryModel,
+  WEBHOOK_EVENTS, PLATFORM_CONFIGS,
+} from '../../services/integrations';
 import { paginationQueryFields } from './pagination_queries';
 import { GraphQLContext } from '../../graphql/context';
 import { requireAuth } from '../../graphql/authorization';
@@ -5637,6 +5641,168 @@ const RootQueryType = new GraphQLObjectType({
           projectedOccupancy,
           daysUntilCapacity: daysUntilCapacity < 0 ? 999 : daysUntilCapacity,
           recommendation,
+        };
+      },
+    },
+
+    // ── F10.2 Third-Party Integrations ──────────────────────────
+
+    shelterWebhooks: {
+      type: new GraphQLList(new GraphQLObjectType({
+        name: 'Webhook',
+        fields: {
+          _id: { type: GraphQLID },
+          shelterId: { type: GraphQLString },
+          url: { type: GraphQLString },
+          events: { type: new GraphQLList(GraphQLString) },
+          enabled: { type: GraphQLBoolean },
+          failureCount: { type: GraphQLInt },
+          lastDeliveredAt: { type: GraphQLString },
+          lastFailedAt: { type: GraphQLString },
+          createdAt: { type: GraphQLString },
+        },
+      })),
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      async resolve(_root: unknown, args: Record<string, unknown>, context: unknown) {
+        const ctx = context as GraphQLContext;
+        requireAuth(ctx);
+        return WebhookModel.find({ shelterId: args.shelterId as string }).lean();
+      },
+    },
+
+    webhookDeliveries: {
+      type: new GraphQLList(new GraphQLObjectType({
+        name: 'WebhookDelivery',
+        fields: {
+          _id: { type: GraphQLID },
+          webhookId: { type: GraphQLString },
+          event: { type: GraphQLString },
+          statusCode: { type: GraphQLInt },
+          success: { type: GraphQLBoolean },
+          responseTime: { type: GraphQLInt },
+          attempt: { type: GraphQLInt },
+          deliveredAt: { type: GraphQLString },
+        },
+      })),
+      args: {
+        webhookId: { type: new GraphQLNonNull(GraphQLID) },
+        limit: { type: GraphQLInt },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>, context: unknown) {
+        const ctx = context as GraphQLContext;
+        requireAuth(ctx);
+        const limit = Math.min((args.limit as number) || 20, 100);
+        return WebhookDeliveryModel.find({ webhookId: args.webhookId as string })
+          .sort({ deliveredAt: -1 })
+          .limit(limit)
+          .lean();
+      },
+    },
+
+    webhookEvents: {
+      type: new GraphQLList(GraphQLString),
+      resolve() {
+        return [...WEBHOOK_EVENTS];
+      },
+    },
+
+    shelterIntegrations: {
+      type: new GraphQLList(new GraphQLObjectType({
+        name: 'IntegrationConfig',
+        fields: {
+          _id: { type: GraphQLID },
+          shelterId: { type: GraphQLString },
+          platform: { type: GraphQLString },
+          enabled: { type: GraphQLBoolean },
+          lastSyncAt: { type: GraphQLString },
+          lastSyncStatus: { type: GraphQLString },
+          syncIntervalMinutes: { type: GraphQLInt },
+          errorCount: { type: GraphQLInt },
+          lastError: { type: GraphQLString },
+          createdAt: { type: GraphQLString },
+        },
+      })),
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      async resolve(_root: unknown, args: Record<string, unknown>, context: unknown) {
+        const ctx = context as GraphQLContext;
+        requireAuth(ctx);
+        return IntegrationConfigModel.find({ shelterId: args.shelterId as string }).lean();
+      },
+    },
+
+    availableIntegrations: {
+      type: new GraphQLList(new GraphQLObjectType({
+        name: 'AvailableIntegration',
+        fields: {
+          id: { type: GraphQLString },
+          name: { type: GraphQLString },
+          description: { type: GraphQLString },
+          requiredFields: { type: new GraphQLList(GraphQLString) },
+          syncCapabilities: { type: new GraphQLList(GraphQLString) },
+        },
+      })),
+      resolve() {
+        return Object.entries(PLATFORM_CONFIGS).map(([id, config]) => ({
+          id,
+          ...config,
+        }));
+      },
+    },
+
+    integrationHealth: {
+      type: new GraphQLObjectType({
+        name: 'IntegrationHealth',
+        fields: {
+          shelterId: { type: GraphQLString },
+          totalIntegrations: { type: GraphQLInt },
+          activeIntegrations: { type: GraphQLInt },
+          failedIntegrations: { type: GraphQLInt },
+          totalWebhooks: { type: GraphQLInt },
+          activeWebhooks: { type: GraphQLInt },
+          recentDeliveries: { type: GraphQLInt },
+          successRate: { type: GraphQLFloat },
+        },
+      }),
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      async resolve(_root: unknown, args: Record<string, unknown>, context: unknown) {
+        const ctx = context as GraphQLContext;
+        requireAuth(ctx);
+        const shelterId = args.shelterId as string;
+
+        const [integrations, webhooks] = await Promise.all([
+          IntegrationConfigModel.find({ shelterId }).lean(),
+          WebhookModel.find({ shelterId }).lean(),
+        ]);
+
+        const active = integrations.filter(i => i.enabled);
+        const failed = integrations.filter(i => i.lastSyncStatus === 'failed');
+        const activeWebhooks = webhooks.filter(w => w.enabled);
+
+        const oneDayAgo = new Date();
+        oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+        const webhookIds = webhooks.map(w => w._id.toString());
+
+        let recentDeliveries = 0;
+        let successfulDeliveries = 0;
+
+        if (webhookIds.length > 0) {
+          const deliveries = await WebhookDeliveryModel.find({
+            webhookId: { $in: webhookIds },
+            deliveredAt: { $gte: oneDayAgo },
+          }).lean();
+          recentDeliveries = deliveries.length;
+          successfulDeliveries = deliveries.filter(d => d.success).length;
+        }
+
+        return {
+          shelterId,
+          totalIntegrations: integrations.length,
+          activeIntegrations: active.length,
+          failedIntegrations: failed.length,
+          totalWebhooks: webhooks.length,
+          activeWebhooks: activeWebhooks.length,
+          recentDeliveries,
+          successRate: recentDeliveries > 0 ? Math.round((successfulDeliveries / recentDeliveries) * 1000) / 1000 : 1,
         };
       },
     },
