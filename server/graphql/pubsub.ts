@@ -1,12 +1,13 @@
 import { PubSub } from 'graphql-subscriptions';
 import { logger } from '../services/logger';
 
-type SubscriptionEvent = 'APPLICATION_STATUS_CHANGED' | 'NEW_APPLICATION' | 'ANIMAL_STATUS_CHANGED';
+type SubscriptionEvent = 'APPLICATION_STATUS_CHANGED' | 'NEW_APPLICATION' | 'ANIMAL_STATUS_CHANGED' | 'NEW_MESSAGE';
 
 export const SUBSCRIPTION_EVENTS: Record<SubscriptionEvent, SubscriptionEvent> = {
   APPLICATION_STATUS_CHANGED: 'APPLICATION_STATUS_CHANGED',
   NEW_APPLICATION: 'NEW_APPLICATION',
   ANIMAL_STATUS_CHANGED: 'ANIMAL_STATUS_CHANGED',
+  NEW_MESSAGE: 'NEW_MESSAGE',
 };
 
 // WARNING: In-memory PubSub does NOT work in multi-instance deployments.
