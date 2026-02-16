@@ -121,6 +121,10 @@ import { MessageThreadDocument } from '../models/MessageThread';
 import MessageThreadType from './types/message_thread_type';
 import { MessageTemplateDocument } from '../models/MessageTemplate';
 import MessageTemplateType from './types/message_template_type';
+import { EmailPreferenceDocument } from '../models/EmailPreference';
+import EmailPreferenceType from './types/email_preference_type';
+import { EmailLogDocument } from '../models/EmailLog';
+import EmailLogType from './types/email_log_type';
 import { ShelterSettingsDocument } from '../models/ShelterSettings';
 import ShelterSettingsType, {
   DayScheduleInput,
@@ -185,6 +189,8 @@ const FosterPlacementModel = mongoose.model<FosterPlacementDocument>('fosterPlac
 const FosterUpdateModel = mongoose.model<FosterUpdateDocument>('fosterUpdate');
 const MessageThreadModel = mongoose.model<MessageThreadDocument>('messageThread');
 const MessageTemplateModel = mongoose.model<MessageTemplateDocument>('messageTemplate');
+const EmailPreferenceModel = mongoose.model<EmailPreferenceDocument>('emailPreference');
+const EmailLogModel = mongoose.model<EmailLogDocument>('emailLog');
 
 interface RegisterArgs {
   name: string;
@@ -4774,6 +4780,109 @@ const mutation = new GraphQLObjectType({
           { status: 'archived' },
         );
         return result.modifiedCount;
+      },
+    },
+
+    // F6.2 - Email Notifications
+    updateEmailPreferences: {
+      type: EmailPreferenceType,
+      args: {
+        applicationUpdates: { type: GraphQLBoolean },
+        statusChanges: { type: GraphQLBoolean },
+        newListings: { type: GraphQLBoolean },
+        eventReminders: { type: GraphQLBoolean },
+        marketingEmails: { type: GraphQLBoolean },
+        digestFrequency: { type: GraphQLString },
+        matchingPreferences: { type: GraphQLBoolean },
+        fosterUpdates: { type: GraphQLBoolean },
+        shelterNews: { type: GraphQLBoolean },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        const updates: Record<string, unknown> = {};
+        const boolFields = [
+          'applicationUpdates', 'statusChanges', 'newListings', 'eventReminders',
+          'marketingEmails', 'matchingPreferences', 'fosterUpdates', 'shelterNews',
+        ];
+        for (const field of boolFields) {
+          if (args[field] !== undefined) updates[field] = args[field];
+        }
+        if (args.digestFrequency !== undefined) updates.digestFrequency = args.digestFrequency;
+        return EmailPreferenceModel.findOneAndUpdate(
+          { userId },
+          { $set: updates, $setOnInsert: { userId } },
+          { upsert: true, new: true },
+        );
+      },
+    },
+    unsubscribeAllEmails: {
+      type: GraphQLBoolean,
+      args: { unsubscribeToken: { type: GraphQLString } },
+      async resolve(_parent: unknown, args: Record<string, unknown>) {
+        if (!args.unsubscribeToken) throw new Error('Token required');
+        const pref = await EmailPreferenceModel.findOne({
+          unsubscribeToken: args.unsubscribeToken,
+        });
+        if (!pref) throw new Error('Invalid unsubscribe token');
+        pref.unsubscribedAll = true;
+        pref.applicationUpdates = false;
+        pref.statusChanges = false;
+        pref.newListings = false;
+        pref.eventReminders = false;
+        pref.marketingEmails = false;
+        pref.matchingPreferences = false;
+        pref.fosterUpdates = false;
+        pref.shelterNews = false;
+        await pref.save();
+        return true;
+      },
+    },
+    logEmailSent: {
+      type: EmailLogType,
+      args: {
+        userId: { type: GraphQLString },
+        shelterId: { type: GraphQLString },
+        templateName: { type: GraphQLString },
+        subject: { type: GraphQLString },
+        recipientEmail: { type: GraphQLString },
+        category: { type: GraphQLString },
+        status: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const log = new EmailLogModel({
+          userId: args.userId ?? '',
+          shelterId: args.shelterId ?? '',
+          templateName: args.templateName ?? '',
+          subject: args.subject ?? '',
+          recipientEmail: args.recipientEmail ?? '',
+          category: args.category ?? 'transactional',
+          status: args.status ?? 'sent',
+          sentAt: new Date(),
+        });
+        await log.save();
+        return log;
+      },
+    },
+    updateEmailLogStatus: {
+      type: EmailLogType,
+      args: {
+        logId: { type: GraphQLString },
+        status: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>) {
+        const log = await EmailLogModel.findById(args.logId);
+        if (!log) throw new Error('Email log not found');
+        const status = args.status as string;
+        const valid = ['queued', 'sent', 'delivered', 'opened', 'clicked', 'bounced', 'failed'];
+        if (!valid.includes(status)) throw new Error('Invalid status');
+        log.status = status as EmailLogDocument['status'];
+        const now = new Date();
+        if (status === 'opened') log.openedAt = now;
+        if (status === 'clicked') log.clickedAt = now;
+        if (status === 'bounced') log.bouncedAt = now;
+        await log.save();
+        return log;
       },
     },
   }),
