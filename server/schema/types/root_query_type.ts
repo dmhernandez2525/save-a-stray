@@ -86,6 +86,8 @@ import { NotificationPreferenceDocument } from '../../models/NotificationPrefere
 import { ScheduledNotificationDocument } from '../../models/ScheduledNotification';
 import { ShareEventDocument } from '../../models/ShareEvent';
 import { paginationQueryFields } from './pagination_queries';
+import { GraphQLContext } from '../../graphql/context';
+import { requireAuth } from '../../graphql/authorization';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
 import { FosterDocument } from '../../models/Foster';
@@ -3149,6 +3151,165 @@ const RootQueryType = new GraphQLObjectType({
             slug: s.slug || '',
             name: s.name,
           })),
+        };
+      },
+    },
+    // F7.2 - User Accounts
+    adopterDashboard: {
+      type: new GraphQLObjectType({
+        name: 'AdopterDashboardType',
+        fields: {
+          user: { type: UserType },
+          profile: { type: AdopterProfileType },
+          favoriteAnimals: { type: new GraphQLList(AnimalType) },
+          recentApplications: { type: new GraphQLList(ApplicationType) },
+          adoptionRecords: { type: new GraphQLList(AdoptionRecordType) },
+          recommendedAnimals: { type: new GraphQLList(AnimalType) },
+          profileCompletion: { type: GraphQLInt },
+        },
+      }),
+      async resolve(_parent, _args, context) {
+        const ctx = context as GraphQLContext;
+        const userId = requireAuth(ctx);
+        const user = await User.findById(userId);
+        if (!user) return null;
+        const profile = await AdopterProfileModel.findOne({ userId });
+        const favoriteIds = user.favorites?.map(id => id.toString()) ?? [];
+        const favoriteAnimals = favoriteIds.length > 0
+          ? await Animal.find({ _id: { $in: favoriteIds } })
+          : [];
+        const recentApplications = await Application.find({ userId })
+          .sort({ submittedAt: -1 }).limit(10);
+        const adoptionRecords = await AdoptionRecordModel.find({ adopterId: userId })
+          .sort({ adoptionDate: -1 });
+        let recommendedAnimals: typeof favoriteAnimals = [];
+        if (profile) {
+          const recFilter: Record<string, unknown> = { status: 'available' };
+          if (profile.preferredSpecies?.length > 0) {
+            recFilter.type = { $in: profile.preferredSpecies };
+          }
+          if (profile.preferredSize?.length > 0) {
+            recFilter.size = { $in: profile.preferredSize };
+          }
+          recommendedAnimals = await Animal.find(recFilter).limit(6);
+        }
+        const profileFields = [
+          user.name, user.email, user.bio, user.phone, user.avatar,
+        ];
+        const adopterFields = profile ? [
+          profile.housingType, profile.activityLevel,
+          profile.experienceLevel, profile.preferredSpecies?.length > 0,
+        ] : [];
+        const filledCount = profileFields.filter(Boolean).length + adopterFields.filter(Boolean).length;
+        const totalFields = profileFields.length + 4;
+        const profileCompletion = Math.round((filledCount / totalFields) * 100);
+        return {
+          user,
+          profile,
+          favoriteAnimals,
+          recentApplications,
+          adoptionRecords,
+          recommendedAnimals,
+          profileCompletion,
+        };
+      },
+    },
+    userAdoptionHistory: {
+      type: new GraphQLList(new GraphQLObjectType({
+        name: 'AdoptionHistoryEntryType',
+        fields: {
+          application: { type: ApplicationType },
+          animal: { type: AnimalType },
+          shelter: { type: ShelterType },
+          adoptionRecord: { type: AdoptionRecordType },
+          status: { type: GraphQLString },
+        },
+      })),
+      async resolve(_parent, _args, context) {
+        const ctx = context as GraphQLContext;
+        const userId = requireAuth(ctx);
+        const applications = await Application.find({ userId }).sort({ submittedAt: -1 });
+        const results = [];
+        for (const app of applications) {
+          const animal = await Animal.findById(app.animalId);
+          let shelter = null;
+          if (animal?.shelterId) {
+            shelter = await Shelter.findById(animal.shelterId);
+          } else if (animal) {
+            shelter = await Shelter.findOne({ animals: animal._id });
+          }
+          const adoptionRecord = await AdoptionRecordModel.findOne({
+            applicationId: app._id.toString(),
+          });
+          results.push({
+            application: app,
+            animal,
+            shelter,
+            adoptionRecord,
+            status: adoptionRecord ? 'adopted' : app.status,
+          });
+        }
+        return results;
+      },
+    },
+    myFavorites: {
+      type: new GraphQLObjectType({
+        name: 'MyFavoritesResultType',
+        fields: {
+          animals: { type: new GraphQLList(AnimalType) },
+          totalCount: { type: GraphQLInt },
+        },
+      }),
+      args: {
+        limit: { type: GraphQLInt },
+        offset: { type: GraphQLInt },
+      },
+      async resolve(_parent, args, context) {
+        const ctx = context as GraphQLContext;
+        const userId = requireAuth(ctx);
+        const user = await User.findById(userId);
+        if (!user) return { animals: [], totalCount: 0 };
+        const favoriteIds = user.favorites?.map(id => id.toString()) ?? [];
+        const totalCount = favoriteIds.length;
+        const offset = (args as Record<string, number>).offset ?? 0;
+        const limit = clampLimit((args as Record<string, number>).limit, 20, MAX_ANIMAL_LIMIT);
+        const pageIds = favoriteIds.slice(offset, offset + limit);
+        const animals = pageIds.length > 0
+          ? await Animal.find({ _id: { $in: pageIds } })
+          : [];
+        return { animals, totalCount };
+      },
+    },
+    profileCompletion: {
+      type: new GraphQLObjectType({
+        name: 'ProfileCompletionType',
+        fields: {
+          percentage: { type: GraphQLInt },
+          missingFields: { type: new GraphQLList(GraphQLString) },
+        },
+      }),
+      async resolve(_parent, _args, context) {
+        const ctx = context as GraphQLContext;
+        const userId = requireAuth(ctx);
+        const user = await User.findById(userId);
+        if (!user) return { percentage: 0, missingFields: [] };
+        const profile = await AdopterProfileModel.findOne({ userId });
+        const checks: Array<{ field: string; filled: boolean }> = [
+          { field: 'name', filled: Boolean(user.name) },
+          { field: 'email', filled: Boolean(user.email) },
+          { field: 'bio', filled: Boolean(user.bio) },
+          { field: 'phone', filled: Boolean(user.phone) },
+          { field: 'avatar', filled: Boolean(user.avatar) },
+          { field: 'housingType', filled: Boolean(profile?.housingType) },
+          { field: 'activityLevel', filled: Boolean(profile?.activityLevel) },
+          { field: 'experienceLevel', filled: Boolean(profile?.experienceLevel) },
+          { field: 'preferredSpecies', filled: (profile?.preferredSpecies?.length ?? 0) > 0 },
+        ];
+        const filled = checks.filter(c => c.filled).length;
+        const missing = checks.filter(c => !c.filled).map(c => c.field);
+        return {
+          percentage: Math.round((filled / checks.length) * 100),
+          missingFields: missing,
         };
       },
     },

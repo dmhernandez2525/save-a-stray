@@ -97,6 +97,31 @@ const UserSchema = new Schema<UserDocument>({
   lastLoginAt: {
     type: Date,
   },
+  bio: {
+    type: String,
+    default: '',
+  },
+  phone: {
+    type: String,
+    default: '',
+  },
+  avatar: {
+    type: String,
+    default: '',
+  },
+  profileVisibility: {
+    type: String,
+    enum: ['public', 'shelters_only', 'private'],
+    default: 'shelters_only',
+  },
+  showFavorites: {
+    type: Boolean,
+    default: false,
+  },
+  showAdoptionHistory: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 UserSchema.index({ emailVerificationTokenHash: 1 });

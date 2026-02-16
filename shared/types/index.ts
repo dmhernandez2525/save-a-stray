@@ -28,6 +28,12 @@ export interface IUser {
   failedLoginAttempts?: number;
   lockoutUntil?: Date;
   lastLoginAt?: Date;
+  bio?: string;
+  phone?: string;
+  avatar?: string;
+  profileVisibility?: 'public' | 'shelters_only' | 'private';
+  showFavorites?: boolean;
+  showAdoptionHistory?: boolean;
 }
 
 export interface IUserDocument extends IUser {

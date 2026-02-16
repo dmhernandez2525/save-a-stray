@@ -24,6 +24,12 @@ interface UserParentValue {
   twoFactorEnabled?: boolean;
   requiresTwoFactor?: boolean;
   twoFactorSetupPending?: boolean;
+  bio?: string;
+  phone?: string;
+  avatar?: string;
+  profileVisibility?: string;
+  showFavorites?: boolean;
+  showAdoptionHistory?: boolean;
 }
 
 const UserType: GraphQLObjectType = new GraphQLObjectType({
@@ -77,7 +83,13 @@ const UserType: GraphQLObjectType = new GraphQLObjectType({
     emailVerified: { type: GraphQLBoolean },
     twoFactorEnabled: { type: GraphQLBoolean },
     requiresTwoFactor: { type: GraphQLBoolean },
-    twoFactorSetupPending: { type: GraphQLBoolean }
+    twoFactorSetupPending: { type: GraphQLBoolean },
+    bio: { type: GraphQLString },
+    phone: { type: GraphQLString },
+    avatar: { type: GraphQLString },
+    profileVisibility: { type: GraphQLString },
+    showFavorites: { type: GraphQLBoolean },
+    showAdoptionHistory: { type: GraphQLBoolean },
   })
 });
 
