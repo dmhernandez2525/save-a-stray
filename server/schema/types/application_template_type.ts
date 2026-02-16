@@ -6,7 +6,9 @@ const TemplateFieldType = new GraphQLObjectType({
     label: { type: GraphQLString },
     fieldType: { type: GraphQLString },
     required: { type: GraphQLBoolean },
-    options: { type: new GraphQLList(GraphQLString) }
+    options: { type: new GraphQLList(GraphQLString) },
+    placeholder: { type: GraphQLString },
+    helpText: { type: GraphQLString },
   })
 });
 
@@ -16,8 +18,10 @@ const ApplicationTemplateType = new GraphQLObjectType({
     _id: { type: GraphQLID },
     shelterId: { type: GraphQLString },
     name: { type: GraphQLString },
+    animalType: { type: GraphQLString },
     fields: { type: new GraphQLList(TemplateFieldType) },
-    createdAt: { type: GraphQLString }
+    active: { type: GraphQLBoolean },
+    createdAt: { type: GraphQLString },
   })
 });
 

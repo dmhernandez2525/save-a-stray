@@ -109,7 +109,7 @@ describe('Mongoose Models Schema Tests', () => {
     it('should have status field with enum and default', () => {
       const appSchema = Application.schema.obj;
       expect(appSchema.status).toBeDefined();
-      expect(appSchema.status.enum).toEqual(['submitted', 'under_review', 'approved', 'rejected']);
+      expect(appSchema.status.enum).toEqual(['draft', 'submitted', 'under_review', 'approved', 'rejected', 'withdrawn']);
       expect(appSchema.status.default).toBe('submitted');
     });
 

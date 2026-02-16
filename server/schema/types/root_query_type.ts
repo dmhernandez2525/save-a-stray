@@ -1133,6 +1133,51 @@ const RootQueryType = new GraphQLObjectType({
           .sort((a, b) => b.count - a.count);
       }
     },
+    userApplicationDrafts: {
+      type: new GraphQLList(ApplicationType),
+      args: { userId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { userId: string }) {
+        return Application.find({ userId: args.userId, isDraft: true }).sort({ submittedAt: -1 });
+      }
+    },
+    userApplicationHistory: {
+      type: new GraphQLList(ApplicationType),
+      args: {
+        userId: { type: new GraphQLNonNull(GraphQLID) },
+        status: { type: GraphQLString },
+        limit: { type: GraphQLInt },
+      },
+      resolve(_, args: { userId: string; status?: string; limit?: number }) {
+        const filter: Record<string, unknown> = { userId: args.userId, isDraft: { $ne: true } };
+        if (args.status) filter.status = args.status;
+        const limit = clampLimit(args.limit, 50, MAX_ANIMAL_LIMIT);
+        return Application.find(filter).sort({ submittedAt: -1 }).limit(limit);
+      }
+    },
+    applicationTemplateForAnimal: {
+      type: require('./application_template_type').default,
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        animalType: { type: GraphQLString },
+      },
+      async resolve(_, args: { shelterId: string; animalType?: string }) {
+        // First try to find a template matching the animal type
+        if (args.animalType) {
+          const typeMatch = await ApplicationTemplateModel.findOne({
+            shelterId: args.shelterId,
+            animalType: args.animalType,
+            active: true,
+          });
+          if (typeMatch) return typeMatch;
+        }
+        // Fall back to a generic template (empty animalType)
+        return ApplicationTemplateModel.findOne({
+          shelterId: args.shelterId,
+          animalType: { $in: ['', null] },
+          active: true,
+        });
+      }
+    },
     shelterSettings: {
       type: ShelterSettingsType,
       args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
