@@ -40,6 +40,8 @@ import SpayNeuterType from './spay_neuter_type';
 import IntakeLogType from './intake_log_type';
 import OutcomeLogType from './outcome_log_type';
 import AnimalTimelineEntryType from './animal_timeline_type';
+import StatusHistoryType from './status_history_type';
+import { StatusHistoryDocument } from '../../models/StatusHistory';
 import { paginationQueryFields } from './pagination_queries';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
@@ -104,6 +106,7 @@ const AdoptionFeeModel = mongoose.model<AdoptionFeeDocument>('adoptionFee');
 const SpayNeuterModel = mongoose.model<SpayNeuterDocument>('spayNeuter');
 const IntakeLogModel = mongoose.model<IntakeLogDocument>('intakeLog');
 const OutcomeLogModel = mongoose.model<OutcomeLogDocument>('outcomeLog');
+const StatusHistoryModel = mongoose.model<StatusHistoryDocument>('statusHistory');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -732,6 +735,74 @@ const RootQueryType = new GraphQLObjectType({
       args: { animalId: { type: new GraphQLNonNull(GraphQLID) } },
       resolve(_, args: { animalId: string }) {
         return BehaviorNoteModel.find({ animalId: args.animalId }).sort({ createdAt: -1 });
+      }
+    },
+    animalStatusHistory: {
+      type: new GraphQLList(StatusHistoryType),
+      args: {
+        animalId: { type: new GraphQLNonNull(GraphQLID) },
+        limit: { type: GraphQLInt },
+      },
+      resolve(_, args: { animalId: string; limit?: number }) {
+        const limit = clampLimit(args.limit, 50, MAX_ANIMAL_LIMIT);
+        return StatusHistoryModel.find({ animalId: args.animalId })
+          .sort({ createdAt: -1 })
+          .limit(limit);
+      }
+    },
+    shelterStatusReport: {
+      type: new GraphQLObjectType({
+        name: 'ShelterStatusReportType',
+        fields: () => ({
+          available: { type: GraphQLInt },
+          pending: { type: GraphQLInt },
+          adopted: { type: GraphQLInt },
+          hold: { type: GraphQLInt },
+          fostered: { type: GraphQLInt },
+          transferred: { type: GraphQLInt },
+          deceased: { type: GraphQLInt },
+          total: { type: GraphQLInt },
+          averageLengthOfStay: { type: GraphQLFloat },
+          longStayCount: { type: GraphQLInt },
+        }),
+      }),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        longStayThresholdDays: { type: GraphQLInt },
+      },
+      async resolve(_, args: { shelterId: string; longStayThresholdDays?: number }) {
+        const shelter = await Shelter.findById(args.shelterId);
+        if (!shelter || !shelter.animals || shelter.animals.length === 0) {
+          return { available: 0, pending: 0, adopted: 0, hold: 0, fostered: 0, transferred: 0, deceased: 0, total: 0, averageLengthOfStay: 0, longStayCount: 0 };
+        }
+        const animalIds = shelter.animals.map(id => id.toString());
+        const animals = await Animal.find({ _id: { $in: animalIds } });
+        const counts: Record<string, number> = { available: 0, pending: 0, adopted: 0, hold: 0, fostered: 0, transferred: 0, deceased: 0 };
+        const now = new Date();
+        const threshold = args.longStayThresholdDays ?? 90;
+        let totalDays = 0;
+        let animalsWithIntake = 0;
+        let longStayCount = 0;
+
+        for (const animal of animals) {
+          const status = animal.status ?? 'available';
+          if (status in counts) counts[status]++;
+          if (animal.intakeDate) {
+            const days = Math.floor((now.getTime() - new Date(animal.intakeDate).getTime()) / (1000 * 60 * 60 * 24));
+            totalDays += days;
+            animalsWithIntake++;
+            if (days >= threshold && status !== 'adopted' && status !== 'transferred' && status !== 'deceased') {
+              longStayCount++;
+            }
+          }
+        }
+
+        return {
+          ...counts,
+          total: animals.length,
+          averageLengthOfStay: animalsWithIntake > 0 ? Math.round((totalDays / animalsWithIntake) * 10) / 10 : 0,
+          longStayCount,
+        };
       }
     },
     breedAutocomplete: {
