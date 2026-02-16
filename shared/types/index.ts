@@ -169,9 +169,24 @@ export interface ISuccessStory {
   userId: string;
   animalName: string;
   animalType: string;
+  animalId?: string;
+  shelterId?: string;
   title: string;
   story: string;
   image?: string;
+  images?: string[];
+  imageCaptions?: string[];
+  status?: 'pending' | 'approved' | 'rejected' | 'featured';
+  moderatedBy?: string;
+  moderatedAt?: Date;
+  rejectionReason?: string;
+  adoptionDate?: Date;
+  reactions?: { heart: number; celebrate: number; inspiring: number };
+  viewCount?: number;
+  shareCount?: number;
+  isFeatured?: boolean;
+  featuredAt?: Date;
+  slug?: string;
   createdAt: Date;
 }
 

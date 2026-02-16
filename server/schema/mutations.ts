@@ -5346,6 +5346,131 @@ const mutation = new GraphQLObjectType({
         return count;
       },
     },
+    // F7.3 - Success Stories
+    submitSuccessStory: {
+      type: SuccessStoryType,
+      args: {
+        animalName: { type: GraphQLString },
+        animalType: { type: GraphQLString },
+        animalId: { type: GraphQLString },
+        shelterId: { type: GraphQLString },
+        title: { type: GraphQLString },
+        story: { type: GraphQLString },
+        image: { type: GraphQLString },
+        images: { type: new GraphQLList(GraphQLString) },
+        imageCaptions: { type: new GraphQLList(GraphQLString) },
+        adoptionDate: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        const slug = `${(args.title as string ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60)}`;
+        const existing = await SuccessStoryModel.findOne({ slug });
+        const finalSlug = existing ? `${slug}-${Date.now().toString(36)}` : slug;
+        const storyDoc = new SuccessStoryModel({
+          userId,
+          animalName: args.animalName ?? '',
+          animalType: args.animalType ?? '',
+          animalId: args.animalId ?? '',
+          shelterId: args.shelterId ?? '',
+          title: args.title ?? '',
+          story: args.story ?? '',
+          image: args.image ?? '',
+          images: (args.images as string[]) ?? [],
+          imageCaptions: (args.imageCaptions as string[]) ?? [],
+          adoptionDate: args.adoptionDate ? new Date(args.adoptionDate as string) : undefined,
+          slug: finalSlug,
+          status: 'pending',
+        });
+        await storyDoc.save();
+        return storyDoc;
+      },
+    },
+    moderateSuccessStory: {
+      type: SuccessStoryType,
+      args: {
+        storyId: { type: GraphQLString },
+        action: { type: GraphQLString },
+        rejectionReason: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const story = await SuccessStoryModel.findById(args.storyId);
+        if (!story) throw new Error('Story not found');
+        const action = args.action as string;
+        const validActions = ['approve', 'reject', 'feature'];
+        if (!validActions.includes(action)) throw new Error('Invalid moderation action');
+        const statusMap: Record<string, string> = {
+          approve: 'approved',
+          reject: 'rejected',
+          feature: 'featured',
+        };
+        story.status = statusMap[action] as 'approved' | 'rejected' | 'featured';
+        story.moderatedBy = context.userId ?? '';
+        story.moderatedAt = new Date();
+        if (action === 'reject') {
+          story.rejectionReason = (args.rejectionReason as string) ?? '';
+        }
+        if (action === 'feature') {
+          story.isFeatured = true;
+          story.featuredAt = new Date();
+        }
+        await story.save();
+        return story;
+      },
+    },
+    reactToSuccessStory: {
+      type: SuccessStoryType,
+      args: {
+        storyId: { type: GraphQLString },
+        reaction: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>) {
+        const reaction = args.reaction as string;
+        const validReactions = ['heart', 'celebrate', 'inspiring'];
+        if (!validReactions.includes(reaction)) throw new Error('Invalid reaction type');
+        const story = await SuccessStoryModel.findByIdAndUpdate(
+          args.storyId,
+          { $inc: { [`reactions.${reaction}`]: 1 } },
+          { new: true },
+        );
+        if (!story) throw new Error('Story not found');
+        return story;
+      },
+    },
+    toggleFeaturedStory: {
+      type: SuccessStoryType,
+      args: {
+        storyId: { type: GraphQLString },
+        featured: { type: GraphQLBoolean },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const story = await SuccessStoryModel.findById(args.storyId);
+        if (!story) throw new Error('Story not found');
+        story.isFeatured = args.featured as boolean;
+        if (args.featured) {
+          story.featuredAt = new Date();
+          story.status = 'featured';
+        } else if (story.status === 'featured') {
+          story.status = 'approved';
+        }
+        await story.save();
+        return story;
+      },
+    },
+    incrementStoryShareCount: {
+      type: GraphQLBoolean,
+      args: {
+        storyId: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>) {
+        await SuccessStoryModel.findByIdAndUpdate(
+          args.storyId,
+          { $inc: { shareCount: 1 } },
+        );
+        return true;
+      },
+    },
   }),
 });
 

@@ -3313,6 +3313,146 @@ const RootQueryType = new GraphQLObjectType({
         };
       },
     },
+    // F7.3 - Success Stories
+    successStoryGallery: {
+      type: new GraphQLObjectType({
+        name: 'SuccessStoryGalleryType',
+        fields: {
+          stories: { type: new GraphQLList(SuccessStoryType) },
+          totalCount: { type: GraphQLInt },
+        },
+      }),
+      args: {
+        animalType: { type: GraphQLString },
+        shelterId: { type: GraphQLString },
+        search: { type: GraphQLString },
+        sortBy: { type: GraphQLString },
+        limit: { type: GraphQLInt },
+        offset: { type: GraphQLInt },
+      },
+      async resolve(_parent, args) {
+        const filter: Record<string, unknown> = {
+          status: { $in: ['approved', 'featured'] },
+        };
+        if (args.animalType) filter.animalType = args.animalType;
+        if (args.shelterId) filter.shelterId = args.shelterId;
+        if (args.search) filter.$text = { $search: args.search };
+        const sortOptions: Record<string, Record<string, 1 | -1>> = {
+          newest: { createdAt: -1 },
+          oldest: { createdAt: 1 },
+          most_viewed: { viewCount: -1 },
+          most_shared: { shareCount: -1 },
+        };
+        const sort = sortOptions[args.sortBy ?? ''] ?? { createdAt: -1 };
+        const limit = clampLimit(args.limit, 20, MAX_ANIMAL_LIMIT);
+        const offset = args.offset ?? 0;
+        const [stories, totalCount] = await Promise.all([
+          SuccessStoryModel.find(filter).sort(sort).skip(offset).limit(limit),
+          SuccessStoryModel.countDocuments(filter),
+        ]);
+        return { stories, totalCount };
+      },
+    },
+    successStoryDetail: {
+      type: SuccessStoryType,
+      args: {
+        id: { type: GraphQLString },
+        slug: { type: GraphQLString },
+      },
+      async resolve(_parent, args) {
+        let story = null;
+        if (args.id) {
+          story = await SuccessStoryModel.findById(args.id);
+        } else if (args.slug) {
+          story = await SuccessStoryModel.findOne({ slug: args.slug });
+        }
+        if (story && ['approved', 'featured'].includes(story.status ?? '')) {
+          await SuccessStoryModel.findByIdAndUpdate(story._id, { $inc: { viewCount: 1 } });
+        }
+        return story;
+      },
+    },
+    featuredSuccessStories: {
+      type: new GraphQLList(SuccessStoryType),
+      args: {
+        limit: { type: GraphQLInt },
+      },
+      async resolve(_parent, args) {
+        const limit = clampLimit(args.limit, 5, 20);
+        return SuccessStoryModel.find({ isFeatured: true, status: 'featured' })
+          .sort({ featuredAt: -1 })
+          .limit(limit);
+      },
+    },
+    storyModerationQueue: {
+      type: new GraphQLList(SuccessStoryType),
+      args: {
+        shelterId: { type: GraphQLString },
+        status: { type: GraphQLString },
+      },
+      async resolve(_parent, args, context) {
+        const ctx = context as GraphQLContext;
+        requireAuth(ctx);
+        const filter: Record<string, unknown> = {};
+        if (args.shelterId) filter.shelterId = args.shelterId;
+        filter.status = args.status ?? 'pending';
+        return SuccessStoryModel.find(filter).sort({ createdAt: -1 });
+      },
+    },
+    successStoryAnalytics: {
+      type: new GraphQLObjectType({
+        name: 'SuccessStoryAnalyticsType',
+        fields: {
+          totalStories: { type: GraphQLInt },
+          totalApproved: { type: GraphQLInt },
+          totalPending: { type: GraphQLInt },
+          totalViews: { type: GraphQLInt },
+          totalShares: { type: GraphQLInt },
+          totalReactions: { type: GraphQLInt },
+          averageViewsPerStory: { type: GraphQLFloat },
+          topAnimalType: { type: GraphQLString },
+        },
+      }),
+      args: {
+        shelterId: { type: GraphQLString },
+      },
+      async resolve(_parent, args) {
+        const filter: Record<string, unknown> = {};
+        if (args.shelterId) filter.shelterId = args.shelterId;
+        const stories = await SuccessStoryModel.find(filter).lean();
+        const approved = stories.filter(s => s.status === 'approved' || s.status === 'featured');
+        const pending = stories.filter(s => s.status === 'pending');
+        let totalViews = 0;
+        let totalShares = 0;
+        let totalReactions = 0;
+        const typeCounts = new Map<string, number>();
+        for (const s of stories) {
+          totalViews += s.viewCount ?? 0;
+          totalShares += s.shareCount ?? 0;
+          const r = s.reactions ?? { heart: 0, celebrate: 0, inspiring: 0 };
+          totalReactions += r.heart + r.celebrate + r.inspiring;
+          typeCounts.set(s.animalType, (typeCounts.get(s.animalType) ?? 0) + 1);
+        }
+        let topAnimalType = '';
+        let topCount = 0;
+        typeCounts.forEach((count, animalType) => {
+          if (count > topCount) {
+            topAnimalType = animalType;
+            topCount = count;
+          }
+        });
+        return {
+          totalStories: stories.length,
+          totalApproved: approved.length,
+          totalPending: pending.length,
+          totalViews,
+          totalShares,
+          totalReactions,
+          averageViewsPerStory: stories.length > 0 ? totalViews / stories.length : 0,
+          topAnimalType,
+        };
+      },
+    },
   })
 });
 
