@@ -56,6 +56,9 @@ import { KennelAssignmentDocument } from '../../models/KennelAssignment';
 import KennelAssignmentType from './kennel_assignment_type';
 import { ShelterSettingsDocument } from '../../models/ShelterSettings';
 import ShelterSettingsType from './shelter_settings_type';
+import { ApplicationReviewDocument } from '../../models/ApplicationReview';
+import ApplicationReviewType from './application_review_type';
+import { RejectionTemplateDocument } from '../../models/RejectionTemplate';
 import { paginationQueryFields } from './pagination_queries';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
@@ -128,6 +131,8 @@ const ShelterStaffRoleModel = mongoose.model<ShelterStaffRoleDocument>('shelterS
 const InternalNoteModel = mongoose.model<InternalNoteDocument>('internalNote');
 const KennelAssignmentModel = mongoose.model<KennelAssignmentDocument>('kennelAssignment');
 const ShelterSettingsModel = mongoose.model<ShelterSettingsDocument>('shelterSettings');
+const ApplicationReviewModel = mongoose.model<ApplicationReviewDocument>('applicationReview');
+const RejectionTemplateModel = mongoose.model<RejectionTemplateDocument>('rejectionTemplate');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -1131,6 +1136,151 @@ const RootQueryType = new GraphQLObjectType({
             percentage: total > 0 ? Math.round((count / total) * 1000) / 10 : 0,
           }))
           .sort((a, b) => b.count - a.count);
+      }
+    },
+    applicationReviews: {
+      type: new GraphQLList(ApplicationReviewType),
+      args: { applicationId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { applicationId: string }) {
+        return ApplicationReviewModel.find({ applicationId: args.applicationId }).sort({ createdAt: -1 });
+      }
+    },
+    applicationReviewSummary: {
+      type: new GraphQLObjectType({
+        name: 'ApplicationReviewSummaryType',
+        fields: () => ({
+          applicationId: { type: GraphQLString },
+          reviewCount: { type: GraphQLInt },
+          averageScore: { type: GraphQLFloat },
+          approveCount: { type: GraphQLInt },
+          rejectCount: { type: GraphQLInt },
+          needsInfoCount: { type: GraphQLInt },
+          consensusReached: { type: GraphQLBoolean },
+          consensusResult: { type: GraphQLString },
+        }),
+      }),
+      args: {
+        applicationId: { type: new GraphQLNonNull(GraphQLID) },
+        requiredReviews: { type: GraphQLInt },
+      },
+      async resolve(_, args: { applicationId: string; requiredReviews?: number }) {
+        const reviews = await ApplicationReviewModel.find({ applicationId: args.applicationId });
+        const required = args.requiredReviews ?? 2;
+        const reviewCount = reviews.length;
+        const totalScore = reviews.reduce((sum, r) => sum + (r.overallScore || 0), 0);
+        const averageScore = reviewCount > 0 ? Math.round((totalScore / reviewCount) * 10) / 10 : 0;
+
+        const approveCount = reviews.filter(r => r.recommendation === 'approve').length;
+        const rejectCount = reviews.filter(r => r.recommendation === 'reject').length;
+        const needsInfoCount = reviews.filter(r => r.recommendation === 'needs_info').length;
+
+        let consensusReached = false;
+        let consensusResult = 'pending';
+        if (reviewCount >= required) {
+          if (approveCount > reviewCount / 2) {
+            consensusReached = true;
+            consensusResult = 'approve';
+          } else if (rejectCount > reviewCount / 2) {
+            consensusReached = true;
+            consensusResult = 'reject';
+          }
+        }
+
+        return {
+          applicationId: args.applicationId,
+          reviewCount,
+          averageScore,
+          approveCount,
+          rejectCount,
+          needsInfoCount,
+          consensusReached,
+          consensusResult,
+        };
+      }
+    },
+    shelterReviewAnalytics: {
+      type: new GraphQLObjectType({
+        name: 'ShelterReviewAnalyticsType',
+        fields: () => ({
+          totalReviewed: { type: GraphQLInt },
+          averageReviewTime: { type: GraphQLFloat },
+          approvalRate: { type: GraphQLFloat },
+          rejectionRate: { type: GraphQLFloat },
+          averageScore: { type: GraphQLFloat },
+        }),
+      }),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        days: { type: GraphQLInt },
+      },
+      async resolve(_, args: { shelterId: string; days?: number }) {
+        const shelter = await Shelter.findById(args.shelterId);
+        if (!shelter || !shelter.animals || shelter.animals.length === 0) {
+          return { totalReviewed: 0, averageReviewTime: 0, approvalRate: 0, rejectionRate: 0, averageScore: 0 };
+        }
+        const animalIds = shelter.animals.map(id => id.toString());
+
+        const dateFilter: Record<string, unknown> = {};
+        if (args.days) {
+          const since = new Date();
+          since.setDate(since.getDate() - args.days);
+          dateFilter.submittedAt = { $gte: since };
+        }
+
+        const apps = await Application.find({
+          animalId: { $in: animalIds },
+          isDraft: { $ne: true },
+          ...dateFilter,
+        });
+
+        const reviewed = apps.filter(a => a.status === 'approved' || a.status === 'rejected');
+        const totalReviewed = reviewed.length;
+        const approved = reviewed.filter(a => a.status === 'approved').length;
+        const rejected = reviewed.filter(a => a.status === 'rejected').length;
+
+        // Average review time: time from submittedAt to reviewedAt
+        let totalReviewMs = 0;
+        let reviewedWithTime = 0;
+        for (const app of reviewed) {
+          if (app.reviewedAt && app.submittedAt) {
+            totalReviewMs += new Date(app.reviewedAt).getTime() - new Date(app.submittedAt).getTime();
+            reviewedWithTime++;
+          }
+        }
+        const avgReviewDays = reviewedWithTime > 0
+          ? Math.round((totalReviewMs / reviewedWithTime / (1000 * 60 * 60 * 24)) * 10) / 10
+          : 0;
+
+        // Average score from reviews
+        const appIds = apps.map(a => a._id.toString());
+        const reviews = await ApplicationReviewModel.find({ applicationId: { $in: appIds } });
+        const totalScore = reviews.reduce((sum, r) => sum + (r.overallScore || 0), 0);
+        const avgScore = reviews.length > 0 ? Math.round((totalScore / reviews.length) * 10) / 10 : 0;
+
+        return {
+          totalReviewed,
+          averageReviewTime: avgReviewDays,
+          approvalRate: totalReviewed > 0 ? Math.round((approved / totalReviewed) * 1000) / 10 : 0,
+          rejectionRate: totalReviewed > 0 ? Math.round((rejected / totalReviewed) * 1000) / 10 : 0,
+          averageScore: avgScore,
+        };
+      }
+    },
+    shelterRejectionTemplates: {
+      type: new GraphQLList(new GraphQLObjectType({
+        name: 'RejectionTemplateType',
+        fields: () => ({
+          _id: { type: GraphQLID },
+          shelterId: { type: GraphQLString },
+          name: { type: GraphQLString },
+          subject: { type: GraphQLString },
+          body: { type: GraphQLString },
+          createdAt: { type: GraphQLString },
+        }),
+      })),
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { shelterId: string }) {
+        return RejectionTemplateModel.find({ shelterId: args.shelterId }).sort({ createdAt: -1 });
       }
     },
     userApplicationDrafts: {

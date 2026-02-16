@@ -95,6 +95,9 @@ import { InternalNoteDocument } from '../models/InternalNote';
 import InternalNoteType from './types/internal_note_type';
 import { KennelAssignmentDocument } from '../models/KennelAssignment';
 import KennelAssignmentType from './types/kennel_assignment_type';
+import { ApplicationReviewDocument } from '../models/ApplicationReview';
+import ApplicationReviewType from './types/application_review_type';
+import { RejectionTemplateDocument } from '../models/RejectionTemplate';
 import { ShelterSettingsDocument } from '../models/ShelterSettings';
 import ShelterSettingsType, {
   DayScheduleInput,
@@ -147,6 +150,8 @@ const StaffInvitationModel = mongoose.model<StaffInvitationDocument>('staffInvit
 const ShelterStaffRoleModel = mongoose.model<ShelterStaffRoleDocument>('shelterStaffRole');
 const InternalNoteModel = mongoose.model<InternalNoteDocument>('internalNote');
 const KennelAssignmentModel = mongoose.model<KennelAssignmentDocument>('kennelAssignment');
+const ApplicationReviewModel = mongoose.model<ApplicationReviewDocument>('applicationReview');
+const RejectionTemplateModel = mongoose.model<RejectionTemplateDocument>('rejectionTemplate');
 const ShelterSettingsModel = mongoose.model<ShelterSettingsDocument>('shelterSettings');
 
 interface RegisterArgs {
@@ -236,6 +241,15 @@ const TemplateFieldInput = new GraphQLInputObjectType({
     options: { type: new GraphQLList(GraphQLString) },
     placeholder: { type: GraphQLString },
     helpText: { type: GraphQLString },
+  },
+});
+
+const CriterionScoreInput = new GraphQLInputObjectType({
+  name: 'CriterionScoreInput',
+  fields: {
+    criterion: { type: GraphQLString },
+    score: { type: GraphQLFloat },
+    comment: { type: GraphQLString },
   },
 });
 
@@ -3250,6 +3264,173 @@ const mutation = new GraphQLObjectType({
           },
           { upsert: true, new: true }
         );
+      },
+    },
+    submitApplicationReview: {
+      type: ApplicationReviewType,
+      args: {
+        applicationId: { type: GraphQLID },
+        scores: { type: new GraphQLList(CriterionScoreInput) },
+        overallScore: { type: GraphQLFloat },
+        recommendation: { type: GraphQLString },
+        notes: { type: GraphQLString },
+      },
+      async resolve(
+        _,
+        args: {
+          applicationId: string;
+          scores: Array<{ criterion: string; score: number; comment?: string }>;
+          overallScore: number;
+          recommendation: string;
+          notes?: string;
+        },
+        context: GraphQLContext
+      ) {
+        const reviewerId = requireAuth(context);
+
+        const application = await Application.findById(args.applicationId);
+        if (!application) throw new Error('Application not found');
+
+        // Verify reviewer has shelter access
+        const animal = await Animal.findById(application.animalId);
+        const shelter = animal ? await Shelter.findOne({ animals: animal._id }) : null;
+        if (shelter) {
+          await requireShelterStaff(context, shelter._id.toString());
+        } else {
+          requireAdmin(context);
+        }
+
+        const validRecs = ['approve', 'reject', 'needs_info', 'undecided'];
+        if (!validRecs.includes(args.recommendation)) {
+          throw new Error(`Invalid recommendation. Must be one of: ${validRecs.join(', ')}`);
+        }
+
+        if (args.overallScore < 0 || args.overallScore > 5) {
+          throw new Error('Overall score must be between 0 and 5');
+        }
+
+        const review = await ApplicationReviewModel.findOneAndUpdate(
+          { applicationId: args.applicationId, reviewerId },
+          {
+            scores: (args.scores || []).map(s => ({
+              criterion: s.criterion,
+              score: Math.min(5, Math.max(1, s.score)),
+              comment: s.comment ?? '',
+            })),
+            overallScore: args.overallScore,
+            recommendation: args.recommendation,
+            notes: args.notes ?? '',
+            updatedAt: new Date(),
+          },
+          { upsert: true, new: true }
+        );
+
+        // If application is still submitted, move to under_review
+        if (application.status === 'submitted') {
+          application.status = 'under_review';
+          await application.save();
+        }
+
+        return review;
+      },
+    },
+    finalizeApplicationDecision: {
+      type: ApplicationType,
+      args: {
+        applicationId: { type: GraphQLID },
+        decision: { type: GraphQLString },
+        reviewNotes: { type: GraphQLString },
+      },
+      async resolve(
+        _,
+        args: { applicationId: string; decision: string; reviewNotes?: string },
+        context: GraphQLContext
+      ) {
+        const reviewerId = requireAuth(context);
+
+        const application = await Application.findById(args.applicationId);
+        if (!application) throw new Error('Application not found');
+
+        const animal = await Animal.findById(application.animalId);
+        const shelter = animal ? await Shelter.findOne({ animals: animal._id }) : null;
+        if (shelter) {
+          await requireShelterStaff(context, shelter._id.toString());
+        } else {
+          requireAdmin(context);
+        }
+
+        if (args.decision !== 'approved' && args.decision !== 'rejected') {
+          throw new Error('Decision must be "approved" or "rejected"');
+        }
+
+        application.status = args.decision as typeof application.status;
+        application.reviewNotes = args.reviewNotes ?? '';
+        application.reviewedBy = reviewerId;
+        application.reviewedAt = new Date();
+        await application.save();
+
+        // Auto-status rule: approved => animal pending
+        if (args.decision === 'approved' && animal && animal.status === 'available') {
+          const fromStatus = animal.status;
+          animal.status = 'pending';
+          await animal.save();
+          const historyEntry = new StatusHistoryModel({
+            animalId: animal._id.toString(),
+            fromStatus,
+            toStatus: 'pending',
+            changedBy: reviewerId,
+            reason: 'Application approved',
+          });
+          await historyEntry.save();
+          await pubsub.publish(SUBSCRIPTION_EVENTS.ANIMAL_STATUS_CHANGED, {
+            animalStatusChanged: animal,
+          });
+        }
+
+        await pubsub.publish(SUBSCRIPTION_EVENTS.APPLICATION_STATUS_CHANGED, {
+          applicationStatusChanged: application,
+        });
+        return application;
+      },
+    },
+    createRejectionTemplate: {
+      type: GraphQLString,
+      args: {
+        shelterId: { type: GraphQLID },
+        name: { type: GraphQLString },
+        subject: { type: GraphQLString },
+        body: { type: GraphQLString },
+      },
+      async resolve(
+        _,
+        args: { shelterId: string; name: string; subject?: string; body: string },
+        context: GraphQLContext
+      ) {
+        await requireShelterStaff(context, args.shelterId);
+
+        if (!args.body || args.body.length > 5000) {
+          throw new Error('Body is required and must be less than 5000 characters');
+        }
+
+        const template = new RejectionTemplateModel({
+          shelterId: args.shelterId,
+          name: args.name,
+          subject: args.subject ?? 'Application Update',
+          body: args.body,
+        });
+        await template.save();
+        return template._id.toString();
+      },
+    },
+    deleteRejectionTemplate: {
+      type: GraphQLBoolean,
+      args: { _id: { type: GraphQLID } },
+      async resolve(_, args: { _id: string }, context: GraphQLContext) {
+        const template = await RejectionTemplateModel.findById(args._id);
+        if (!template) return false;
+        await requireShelterStaff(context, template.shelterId);
+        await RejectionTemplateModel.deleteOne({ _id: args._id });
+        return true;
       },
     },
   }),
