@@ -5178,6 +5178,468 @@ const RootQueryType = new GraphQLObjectType({
         ];
       },
     },
+
+    // ── F9.4 Insights & Recommendations ──────────────────────────
+
+    shelterInsights: {
+      type: new GraphQLObjectType({
+        name: 'ShelterInsights',
+        fields: {
+          shelterId: { type: GraphQLString },
+          shelterName: { type: GraphQLString },
+          insights: { type: new GraphQLList(new GraphQLObjectType({
+            name: 'InsightCard',
+            fields: {
+              id: { type: GraphQLString },
+              category: { type: GraphQLString },
+              severity: { type: GraphQLString },
+              title: { type: GraphQLString },
+              description: { type: GraphQLString },
+              suggestedAction: { type: GraphQLString },
+              metric: { type: GraphQLString },
+              currentValue: { type: GraphQLFloat },
+              targetValue: { type: GraphQLFloat },
+              trend: { type: GraphQLString },
+            },
+          }))},
+          generatedAt: { type: GraphQLString },
+        },
+      }),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>) {
+        const shelterId = args.shelterId as string;
+        const shelter = await Shelter.findById(shelterId).lean();
+        const animalIds = (shelter?.animals ?? []).map(id => id.toString());
+
+        const now = new Date();
+        const thirtyDaysAgo = new Date(now);
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const sixtyDaysAgo = new Date(now);
+        sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
+        const animals = animalIds.length > 0 ? await Animal.find({ _id: { $in: animalIds } }).lean() : [];
+        const available = animals.filter(a => a.status === 'available');
+        const adopted = animals.filter(a => a.status === 'adopted');
+
+        const [recentApps, olderApps, recentIntakes, olderIntakes] = await Promise.all([
+          animalIds.length > 0
+            ? Application.countDocuments({ animalId: { $in: animalIds }, submittedAt: { $gte: thirtyDaysAgo } })
+            : 0,
+          animalIds.length > 0
+            ? Application.countDocuments({ animalId: { $in: animalIds }, submittedAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } })
+            : 0,
+          IntakeLogModel.countDocuments({ shelterId, intakeDate: { $gte: thirtyDaysAgo } }),
+          IntakeLogModel.countDocuments({ shelterId, intakeDate: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } }),
+        ]);
+
+        type InsightEntry = {
+          id: string;
+          category: string;
+          severity: string;
+          title: string;
+          description: string;
+          suggestedAction: string;
+          metric: string;
+          currentValue: number;
+          targetValue: number;
+          trend: string;
+        };
+        const insights: InsightEntry[] = [];
+        let insightIdx = 0;
+
+        // Capacity analysis
+        if (shelter?.maxCapacity && shelter.maxCapacity > 0) {
+          const utilization = animals.filter(a => a.status !== 'adopted' && a.status !== 'transferred' && a.status !== 'deceased').length / shelter.maxCapacity;
+          if (utilization > 0.9) {
+            insights.push({
+              id: `insight_${insightIdx++}`,
+              category: 'capacity',
+              severity: 'high',
+              title: 'Near capacity limit',
+              description: `Shelter is at ${Math.round(utilization * 100)}% capacity. Consider increasing transfer outreach or adoption promotions.`,
+              suggestedAction: 'Run an adoption event or contact partner shelters for transfers',
+              metric: 'capacity_utilization',
+              currentValue: Math.round(utilization * 1000) / 1000,
+              targetValue: 0.75,
+              trend: 'up',
+            });
+          } else if (utilization < 0.3) {
+            insights.push({
+              id: `insight_${insightIdx++}`,
+              category: 'capacity',
+              severity: 'info',
+              title: 'Low occupancy',
+              description: `Shelter is at ${Math.round(utilization * 100)}% capacity. There is room for additional intake or fostered animals to return.`,
+              suggestedAction: 'Consider accepting transfers from overcrowded shelters',
+              metric: 'capacity_utilization',
+              currentValue: Math.round(utilization * 1000) / 1000,
+              targetValue: 0.5,
+              trend: 'down',
+            });
+          }
+        }
+
+        // Application trend
+        if (olderApps > 0) {
+          const appChange = ((recentApps - olderApps) / olderApps);
+          if (appChange < -0.2) {
+            insights.push({
+              id: `insight_${insightIdx++}`,
+              category: 'applications',
+              severity: 'warning',
+              title: 'Application volume declining',
+              description: `Applications dropped ${Math.round(Math.abs(appChange) * 100)}% compared to the previous 30-day period.`,
+              suggestedAction: 'Improve animal photos and descriptions, or run social media campaigns',
+              metric: 'application_trend',
+              currentValue: recentApps,
+              targetValue: olderApps,
+              trend: 'down',
+            });
+          } else if (appChange > 0.3) {
+            insights.push({
+              id: `insight_${insightIdx++}`,
+              category: 'applications',
+              severity: 'info',
+              title: 'Application volume increasing',
+              description: `Applications grew ${Math.round(appChange * 100)}% compared to the previous 30-day period.`,
+              suggestedAction: 'Ensure adequate staffing to review applications promptly',
+              metric: 'application_trend',
+              currentValue: recentApps,
+              targetValue: olderApps,
+              trend: 'up',
+            });
+          }
+        }
+
+        // Intake trend
+        if (olderIntakes > 0) {
+          const intakeChange = ((recentIntakes - olderIntakes) / olderIntakes);
+          if (intakeChange > 0.3) {
+            insights.push({
+              id: `insight_${insightIdx++}`,
+              category: 'intake',
+              severity: 'warning',
+              title: 'Intake volume increasing',
+              description: `Intakes rose ${Math.round(intakeChange * 100)}% compared to the previous period. This may be seasonal.`,
+              suggestedAction: 'Prepare additional resources and consider expanding foster network',
+              metric: 'intake_trend',
+              currentValue: recentIntakes,
+              targetValue: olderIntakes,
+              trend: 'up',
+            });
+          }
+        }
+
+        // Long-stay animals
+        const longStay = available.filter(a => {
+          const daysSinceCreation = (now.getTime() - a._id.getTimestamp().getTime()) / (1000 * 60 * 60 * 24);
+          return daysSinceCreation > 90;
+        });
+        if (longStay.length > 0) {
+          insights.push({
+            id: `insight_${insightIdx++}`,
+            category: 'length_of_stay',
+            severity: longStay.length > 5 ? 'high' : 'warning',
+            title: `${longStay.length} animals with 90+ days in shelter`,
+            description: `These animals may benefit from profile updates, reduced fees, or featured placement.`,
+            suggestedAction: 'Update photos, enhance descriptions, and consider fee reductions for long-stay animals',
+            metric: 'long_stay_count',
+            currentValue: longStay.length,
+            targetValue: 0,
+            trend: 'stable',
+          });
+        }
+
+        // Adoption rate insight
+        const adoptionRate = animals.length > 0 ? adopted.length / animals.length : 0;
+        if (adoptionRate < 0.3 && animals.length >= 10) {
+          insights.push({
+            id: `insight_${insightIdx++}`,
+            category: 'adoption_rate',
+            severity: 'warning',
+            title: 'Below-average adoption rate',
+            description: `Current adoption rate is ${Math.round(adoptionRate * 100)}%. Consider improving animal profiles and outreach.`,
+            suggestedAction: 'Host adoption events, improve online listings with better photos',
+            metric: 'adoption_rate',
+            currentValue: Math.round(adoptionRate * 1000) / 1000,
+            targetValue: 0.5,
+            trend: 'stable',
+          });
+        }
+
+        return {
+          shelterId,
+          shelterName: shelter?.name || 'Unknown',
+          insights,
+          generatedAt: now.toISOString(),
+        };
+      },
+    },
+
+    shelterBenchmark: {
+      type: new GraphQLObjectType({
+        name: 'ShelterBenchmark',
+        fields: {
+          shelterId: { type: GraphQLString },
+          shelterName: { type: GraphQLString },
+          metrics: { type: new GraphQLList(new GraphQLObjectType({
+            name: 'BenchmarkMetric',
+            fields: {
+              name: { type: GraphQLString },
+              shelterValue: { type: GraphQLFloat },
+              platformAverage: { type: GraphQLFloat },
+              platformTop25: { type: GraphQLFloat },
+              percentile: { type: GraphQLFloat },
+            },
+          }))},
+          generatedAt: { type: GraphQLString },
+        },
+      }),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>) {
+        const shelterId = args.shelterId as string;
+        const shelter = await Shelter.findById(shelterId).lean();
+        const allShelters = await Shelter.find({}).lean();
+
+        type BenchmarkEntry = {
+          name: string;
+          shelterValue: number;
+          platformAverage: number;
+          platformTop25: number;
+          percentile: number;
+        };
+        const metrics: BenchmarkEntry[] = [];
+
+        // Calculate animal count per shelter
+        const shelterAnimalCounts: number[] = [];
+        let targetShelterCount = 0;
+
+        for (const s of allShelters) {
+          const count = s.animals?.length ?? 0;
+          shelterAnimalCounts.push(count);
+          if (s._id.toString() === shelterId) {
+            targetShelterCount = count;
+          }
+        }
+
+        const sortedCounts = [...shelterAnimalCounts].sort((a, b) => a - b);
+        const avg = sortedCounts.length > 0 ? sortedCounts.reduce((s, v) => s + v, 0) / sortedCounts.length : 0;
+        const top25Idx = Math.floor(sortedCounts.length * 0.75);
+        const top25 = sortedCounts[top25Idx] ?? 0;
+
+        const belowCount = sortedCounts.filter(v => v < targetShelterCount).length;
+        const percentile = sortedCounts.length > 0 ? Math.round((belowCount / sortedCounts.length) * 100) : 0;
+
+        metrics.push({
+          name: 'Animal Count',
+          shelterValue: targetShelterCount,
+          platformAverage: Math.round(avg * 10) / 10,
+          platformTop25: top25,
+          percentile,
+        });
+
+        // Adoption rate benchmark
+        const shelterAnimals = (shelter?.animals?.length ?? 0) > 0
+          ? await Animal.find({ _id: { $in: (shelter?.animals ?? []).map(id => id.toString()) } }).lean()
+          : [];
+        const shelterAdoptionRate = shelterAnimals.length > 0
+          ? shelterAnimals.filter(a => a.status === 'adopted').length / shelterAnimals.length
+          : 0;
+
+        const allAnimals = await Animal.find({}).lean();
+        const totalAdopted = allAnimals.filter(a => a.status === 'adopted').length;
+        const platformAdoptionRate = allAnimals.length > 0 ? totalAdopted / allAnimals.length : 0;
+
+        metrics.push({
+          name: 'Adoption Rate',
+          shelterValue: Math.round(shelterAdoptionRate * 1000) / 1000,
+          platformAverage: Math.round(platformAdoptionRate * 1000) / 1000,
+          platformTop25: Math.round(Math.min(platformAdoptionRate * 1.5, 1) * 1000) / 1000,
+          percentile: shelterAdoptionRate >= platformAdoptionRate ? 60 : 40,
+        });
+
+        return {
+          shelterId,
+          shelterName: shelter?.name || 'Unknown',
+          metrics,
+          generatedAt: new Date().toISOString(),
+        };
+      },
+    },
+
+    shelterSeasonalPatterns: {
+      type: new GraphQLObjectType({
+        name: 'ShelterSeasonalPatterns',
+        fields: {
+          shelterId: { type: GraphQLString },
+          patterns: { type: new GraphQLList(new GraphQLObjectType({
+            name: 'SeasonalPattern',
+            fields: {
+              month: { type: GraphQLInt },
+              monthName: { type: GraphQLString },
+              avgIntakes: { type: GraphQLFloat },
+              avgAdoptions: { type: GraphQLFloat },
+              isHighIntake: { type: GraphQLBoolean },
+              isHighAdoption: { type: GraphQLBoolean },
+              note: { type: GraphQLString },
+            },
+          }))},
+          generatedAt: { type: GraphQLString },
+        },
+      }),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>) {
+        const shelterId = args.shelterId as string;
+        const shelter = await Shelter.findById(shelterId).lean();
+        const animalIds = (shelter?.animals ?? []).map(id => id.toString());
+
+        const animals = animalIds.length > 0 ? await Animal.find({ _id: { $in: animalIds } }).lean() : [];
+
+        // Count animals created per month
+        const monthIntakes: Record<number, number[]> = {};
+        const monthAdoptions: Record<number, number[]> = {};
+
+        for (let m = 0; m < 12; m++) {
+          monthIntakes[m] = [];
+          monthAdoptions[m] = [];
+        }
+
+        for (const a of animals) {
+          const created = a._id.getTimestamp();
+          const m = created.getMonth();
+          const y = created.getFullYear();
+          // Track by year to calculate averages
+          const yearKey = y;
+          if (!monthIntakes[m].includes(yearKey)) {
+            monthIntakes[m].push(yearKey);
+          }
+        }
+
+        // Simplified: count animals created per month
+        const monthCounts = Array(12).fill(0);
+        const monthAdoptionCounts = Array(12).fill(0);
+        for (const a of animals) {
+          const m = a._id.getTimestamp().getMonth();
+          monthCounts[m]++;
+          if (a.status === 'adopted') monthAdoptionCounts[m]++;
+        }
+
+        const totalCount = monthCounts.reduce((s: number, v: number) => s + v, 0);
+        const avgPerMonth = totalCount / 12;
+        const totalAdoptions = monthAdoptionCounts.reduce((s: number, v: number) => s + v, 0);
+        const avgAdoptionsPerMonth = totalAdoptions / 12;
+
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+        const seasonalNotes: Record<number, string> = {
+          3: 'Spring kitten season typically begins',
+          4: 'Peak kitten season, expect increased intake',
+          5: 'High kitten intake continues',
+          6: 'Summer vacation may reduce adoption visits',
+          10: 'Post-summer pet surrenders may increase',
+          11: 'Holiday adoptions increase, but so do post-holiday returns',
+        };
+
+        const patterns = monthNames.map((name, i) => ({
+          month: i + 1,
+          monthName: name,
+          avgIntakes: Math.round((monthCounts[i] || 0) * 10) / 10,
+          avgAdoptions: Math.round((monthAdoptionCounts[i] || 0) * 10) / 10,
+          isHighIntake: (monthCounts[i] || 0) > avgPerMonth * 1.2,
+          isHighAdoption: (monthAdoptionCounts[i] || 0) > avgAdoptionsPerMonth * 1.2,
+          note: seasonalNotes[i] || '',
+        }));
+
+        return {
+          shelterId,
+          patterns,
+          generatedAt: new Date().toISOString(),
+        };
+      },
+    },
+
+    shelterWhatIf: {
+      type: new GraphQLObjectType({
+        name: 'ShelterWhatIf',
+        fields: {
+          shelterId: { type: GraphQLString },
+          scenario: { type: GraphQLString },
+          currentCapacity: { type: GraphQLInt },
+          maxCapacity: { type: GraphQLInt },
+          currentOccupancy: { type: GraphQLInt },
+          projectedOccupancy: { type: GraphQLInt },
+          daysUntilCapacity: { type: GraphQLInt },
+          recommendation: { type: GraphQLString },
+        },
+      }),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        intakeChangePercent: { type: GraphQLFloat },
+        adoptionChangePercent: { type: GraphQLFloat },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>) {
+        const shelterId = args.shelterId as string;
+        const intakeChange = (args.intakeChangePercent as number) || 0;
+        const adoptionChange = (args.adoptionChangePercent as number) || 0;
+
+        const shelter = await Shelter.findById(shelterId).lean();
+        const maxCapacity = shelter?.maxCapacity || 100;
+        const animalIds = (shelter?.animals ?? []).map(id => id.toString());
+
+        const currentAnimals = animalIds.length > 0
+          ? await Animal.countDocuments({ _id: { $in: animalIds }, status: { $nin: ['adopted', 'transferred', 'deceased'] } })
+          : 0;
+
+        // Estimate monthly rates from recent data
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const [monthlyIntakes, monthlyOutcomes] = await Promise.all([
+          IntakeLogModel.countDocuments({ shelterId, intakeDate: { $gte: thirtyDaysAgo } }),
+          OutcomeLogModel.countDocuments({ shelterId, outcomeDate: { $gte: thirtyDaysAgo } }),
+        ]);
+
+        const projectedIntakeRate = monthlyIntakes * (1 + intakeChange / 100);
+        const projectedOutcomeRate = monthlyOutcomes * (1 + adoptionChange / 100);
+        const netMonthlyChange = projectedIntakeRate - projectedOutcomeRate;
+
+        const projectedOccupancy = Math.max(0, Math.round(currentAnimals + netMonthlyChange));
+        const remaining = maxCapacity - currentAnimals;
+
+        let daysUntilCapacity = -1;
+        if (netMonthlyChange > 0) {
+          daysUntilCapacity = Math.ceil((remaining / netMonthlyChange) * 30);
+        }
+
+        let scenario = `${intakeChange >= 0 ? '+' : ''}${intakeChange}% intake, ${adoptionChange >= 0 ? '+' : ''}${adoptionChange}% adoptions`;
+
+        let recommendation = 'Current trajectory is sustainable.';
+        if (daysUntilCapacity > 0 && daysUntilCapacity < 60) {
+          recommendation = 'Capacity risk within 60 days. Consider increasing adoption events and transfer partnerships.';
+        } else if (daysUntilCapacity > 0 && daysUntilCapacity < 180) {
+          recommendation = 'Monitor capacity closely. Begin planning for increased transfers or foster placements.';
+        } else if (netMonthlyChange < 0) {
+          recommendation = 'Occupancy is projected to decrease. Consider accepting transfers from overcrowded shelters.';
+        }
+
+        return {
+          shelterId,
+          scenario,
+          currentCapacity: maxCapacity,
+          maxCapacity,
+          currentOccupancy: currentAnimals,
+          projectedOccupancy,
+          daysUntilCapacity: daysUntilCapacity < 0 ? 999 : daysUntilCapacity,
+          recommendation,
+        };
+      },
+    },
   })
 });
 
