@@ -95,6 +95,13 @@ import { InternalNoteDocument } from '../models/InternalNote';
 import InternalNoteType from './types/internal_note_type';
 import { KennelAssignmentDocument } from '../models/KennelAssignment';
 import KennelAssignmentType from './types/kennel_assignment_type';
+import { ShelterSettingsDocument } from '../models/ShelterSettings';
+import ShelterSettingsType, {
+  DayScheduleInput,
+  HolidayClosureInput,
+  AdoptionRequirementsInput,
+  NotificationPreferencesInput,
+} from './types/shelter_settings_type';
 import crypto from 'crypto';
 import MediaAssetType from './types/media_asset_type';
 import UploadSignatureType from './types/upload_signature_type';
@@ -140,6 +147,7 @@ const StaffInvitationModel = mongoose.model<StaffInvitationDocument>('staffInvit
 const ShelterStaffRoleModel = mongoose.model<ShelterStaffRoleDocument>('shelterStaffRole');
 const InternalNoteModel = mongoose.model<InternalNoteDocument>('internalNote');
 const KennelAssignmentModel = mongoose.model<KennelAssignmentDocument>('kennelAssignment');
+const ShelterSettingsModel = mongoose.model<ShelterSettingsDocument>('shelterSettings');
 
 interface RegisterArgs {
   name: string;
@@ -2905,6 +2913,200 @@ const mutation = new GraphQLObjectType({
         }
         await shelter.save();
         return shelter;
+      },
+    },
+    updateShelterBranding: {
+      type: ShelterSettingsType,
+      args: {
+        shelterId: { type: GraphQLID },
+        logo: { type: GraphQLString },
+        primaryColor: { type: GraphQLString },
+        customCertificateTemplate: { type: GraphQLString },
+      },
+      async resolve(
+        _,
+        args: { shelterId: string; logo?: string; primaryColor?: string; customCertificateTemplate?: string },
+        context: GraphQLContext
+      ) {
+        await requireShelterStaff(context, args.shelterId);
+
+        const update: Record<string, unknown> = { updatedAt: new Date() };
+        if (args.logo !== undefined) update.logo = args.logo;
+        if (args.primaryColor !== undefined) {
+          if (!/^#[0-9A-Fa-f]{6}$/.test(args.primaryColor)) {
+            throw new Error('Primary color must be a valid hex color (e.g. #4F46E5)');
+          }
+          update.primaryColor = args.primaryColor;
+        }
+        if (args.customCertificateTemplate !== undefined) {
+          update.customCertificateTemplate = args.customCertificateTemplate;
+        }
+
+        return ShelterSettingsModel.findOneAndUpdate(
+          { shelterId: args.shelterId },
+          { $set: update },
+          { upsert: true, new: true }
+        );
+      },
+    },
+    updateShelterSchedule: {
+      type: ShelterSettingsType,
+      args: {
+        shelterId: { type: GraphQLID },
+        timezone: { type: GraphQLString },
+        weeklySchedule: { type: new GraphQLList(DayScheduleInput) },
+        holidayClosures: { type: new GraphQLList(HolidayClosureInput) },
+      },
+      async resolve(
+        _,
+        args: {
+          shelterId: string;
+          timezone?: string;
+          weeklySchedule?: Array<{ day: string; open: string; close: string; closed: boolean }>;
+          holidayClosures?: Array<{ date: string; reason: string }>;
+        },
+        context: GraphQLContext
+      ) {
+        await requireShelterStaff(context, args.shelterId);
+
+        const update: Record<string, unknown> = { updatedAt: new Date() };
+        if (args.timezone !== undefined) update.timezone = args.timezone;
+        if (args.weeklySchedule !== undefined) update.weeklySchedule = args.weeklySchedule;
+        if (args.holidayClosures !== undefined) {
+          update.holidayClosures = args.holidayClosures.map(h => ({
+            date: new Date(h.date),
+            reason: h.reason || '',
+          }));
+        }
+
+        return ShelterSettingsModel.findOneAndUpdate(
+          { shelterId: args.shelterId },
+          { $set: update },
+          { upsert: true, new: true }
+        );
+      },
+    },
+    updateAdoptionPolicy: {
+      type: ShelterSettingsType,
+      args: {
+        shelterId: { type: GraphQLID },
+        adoptionPolicy: { type: GraphQLString },
+        adoptionRequirements: { type: AdoptionRequirementsInput },
+      },
+      async resolve(
+        _,
+        args: {
+          shelterId: string;
+          adoptionPolicy?: string;
+          adoptionRequirements?: {
+            minAdopterAge?: number;
+            homeVisitRequired?: boolean;
+            referencesRequired?: number;
+            fenceRequired?: boolean;
+            landlordApproval?: boolean;
+          };
+        },
+        context: GraphQLContext
+      ) {
+        await requireShelterStaff(context, args.shelterId);
+
+        const update: Record<string, unknown> = { updatedAt: new Date() };
+        if (args.adoptionPolicy !== undefined) update.adoptionPolicy = args.adoptionPolicy;
+        if (args.adoptionRequirements !== undefined) {
+          update.adoptionRequirements = args.adoptionRequirements;
+        }
+
+        return ShelterSettingsModel.findOneAndUpdate(
+          { shelterId: args.shelterId },
+          { $set: update },
+          { upsert: true, new: true }
+        );
+      },
+    },
+    updateNotificationPreferences: {
+      type: ShelterSettingsType,
+      args: {
+        shelterId: { type: GraphQLID },
+        preferences: { type: NotificationPreferencesInput },
+      },
+      async resolve(
+        _,
+        args: {
+          shelterId: string;
+          preferences: {
+            newApplication?: boolean;
+            statusChange?: boolean;
+            capacityAlert?: boolean;
+            newMessage?: boolean;
+            volunteerSignup?: boolean;
+            donationReceived?: boolean;
+          };
+        },
+        context: GraphQLContext
+      ) {
+        await requireShelterStaff(context, args.shelterId);
+
+        return ShelterSettingsModel.findOneAndUpdate(
+          { shelterId: args.shelterId },
+          { $set: { notificationPreferences: args.preferences, updatedAt: new Date() } },
+          { upsert: true, new: true }
+        );
+      },
+    },
+    updateShelterIntegration: {
+      type: ShelterSettingsType,
+      args: {
+        shelterId: { type: GraphQLID },
+        integrationName: { type: GraphQLString },
+        enabled: { type: GraphQLBoolean },
+        apiKey: { type: GraphQLString },
+      },
+      async resolve(
+        _,
+        args: { shelterId: string; integrationName: string; enabled: boolean; apiKey?: string },
+        context: GraphQLContext
+      ) {
+        await requireShelterStaff(context, args.shelterId);
+
+        const validIntegrations = ['petfinder', 'adoptapet', 'cloudinary'];
+        if (!validIntegrations.includes(args.integrationName)) {
+          throw new Error(`Invalid integration. Must be one of: ${validIntegrations.join(', ')}`);
+        }
+
+        return ShelterSettingsModel.findOneAndUpdate(
+          { shelterId: args.shelterId },
+          {
+            $set: {
+              [`integrations.${args.integrationName}`]: {
+                enabled: args.enabled,
+                apiKey: args.apiKey ?? '',
+              },
+              updatedAt: new Date(),
+            },
+          },
+          { upsert: true, new: true }
+        );
+      },
+    },
+    addVerificationDocument: {
+      type: ShelterSettingsType,
+      args: {
+        shelterId: { type: GraphQLID },
+        documentUrl: { type: GraphQLString },
+      },
+      async resolve(_, args: { shelterId: string; documentUrl: string }, context: GraphQLContext) {
+        await requireShelterStaff(context, args.shelterId);
+
+        if (!args.documentUrl) throw new Error('Document URL is required');
+
+        return ShelterSettingsModel.findOneAndUpdate(
+          { shelterId: args.shelterId },
+          {
+            $push: { verificationDocuments: args.documentUrl },
+            $set: { updatedAt: new Date() },
+          },
+          { upsert: true, new: true }
+        );
       },
     },
   }),
