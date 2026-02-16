@@ -46,6 +46,12 @@ import { MediaAssetDocument } from '../../models/MediaAsset';
 import MediaAssetType from './media_asset_type';
 import { DashboardLayoutDocument } from '../../models/DashboardLayout';
 import DashboardLayoutType from './dashboard_layout_type';
+import { StaffInvitationDocument } from '../../models/StaffInvitation';
+import StaffInvitationType from './staff_invitation_type';
+import { ShelterStaffRoleDocument } from '../../models/ShelterStaffRole';
+import ShelterStaffRoleType from './shelter_staff_role_type';
+import { InternalNoteDocument } from '../../models/InternalNote';
+import InternalNoteType from './internal_note_type';
 import { paginationQueryFields } from './pagination_queries';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
@@ -113,6 +119,9 @@ const OutcomeLogModel = mongoose.model<OutcomeLogDocument>('outcomeLog');
 const StatusHistoryModel = mongoose.model<StatusHistoryDocument>('statusHistory');
 const MediaAssetModel = mongoose.model<MediaAssetDocument>('mediaAsset');
 const DashboardLayoutModel = mongoose.model<DashboardLayoutDocument>('dashboardLayout');
+const StaffInvitationModel = mongoose.model<StaffInvitationDocument>('staffInvitation');
+const ShelterStaffRoleModel = mongoose.model<ShelterStaffRoleDocument>('shelterStaffRole');
+const InternalNoteModel = mongoose.model<InternalNoteDocument>('internalNote');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -948,6 +957,50 @@ const RootQueryType = new GraphQLObjectType({
           pendingApplications: allApps,
           newApplicationsToday: newAppsToday,
         };
+      }
+    },
+    shelterStaffRoles: {
+      type: new GraphQLList(ShelterStaffRoleType),
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { shelterId: string }) {
+        return ShelterStaffRoleModel.find({ shelterId: args.shelterId }).sort({ createdAt: 1 });
+      }
+    },
+    shelterInvitations: {
+      type: new GraphQLList(StaffInvitationType),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        status: { type: GraphQLString },
+      },
+      resolve(_, args: { shelterId: string; status?: string }) {
+        const filter: Record<string, unknown> = { shelterId: args.shelterId };
+        if (args.status) filter.status = args.status;
+        return StaffInvitationModel.find(filter).sort({ createdAt: -1 });
+      }
+    },
+    internalNotes: {
+      type: new GraphQLList(InternalNoteType),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        entityType: { type: GraphQLString },
+        entityId: { type: GraphQLString },
+      },
+      resolve(_, args: { shelterId: string; entityType?: string; entityId?: string }) {
+        const filter: Record<string, unknown> = { shelterId: args.shelterId };
+        if (args.entityType) filter.entityType = args.entityType;
+        if (args.entityId) filter.entityId = args.entityId;
+        return InternalNoteModel.find(filter).sort({ createdAt: -1 });
+      }
+    },
+    staffAssignedAnimals: {
+      type: new GraphQLList(GraphQLString),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        userId: { type: new GraphQLNonNull(GraphQLID) },
+      },
+      async resolve(_, args: { shelterId: string; userId: string }) {
+        const staffRole = await ShelterStaffRoleModel.findOne({ shelterId: args.shelterId, userId: args.userId });
+        return staffRole?.assignedAnimals ?? [];
       }
     },
     dashboardLayout: {
