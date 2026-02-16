@@ -13,6 +13,8 @@ import { onError } from '@apollo/client/link/error'
 import App from './components/App'
 import Mutations from './graphql/mutations'
 import { getApiUrl } from './config/env'
+import { registerServiceWorker, captureInstallPrompt } from './lib/pwa'
+import { initPwaAnalytics } from './lib/pwa-analytics'
 import './index.css'
 
 const { VERIFY_USER } = Mutations
@@ -99,6 +101,10 @@ if (!container) {
 }
 
 const root = createRoot(container)
+
+registerServiceWorker()
+captureInstallPrompt()
+initPwaAnalytics()
 
 verifyUser().then(() => {
   root.render(<Root />)
