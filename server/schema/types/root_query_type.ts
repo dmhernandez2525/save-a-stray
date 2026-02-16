@@ -4734,6 +4734,450 @@ const RootQueryType = new GraphQLObjectType({
         };
       },
     },
+
+    // ── F9.3 Reporting System ──────────────────────────────────
+
+    reportMonthlySummary: {
+      type: new GraphQLObjectType({
+        name: 'ReportMonthlySummary',
+        fields: {
+          month: { type: GraphQLString },
+          shelterId: { type: GraphQLString },
+          shelterName: { type: GraphQLString },
+          totalAnimals: { type: GraphQLInt },
+          newIntakes: { type: GraphQLInt },
+          totalAdoptions: { type: GraphQLInt },
+          totalReturns: { type: GraphQLInt },
+          totalTransfers: { type: GraphQLInt },
+          applicationsReceived: { type: GraphQLInt },
+          applicationsApproved: { type: GraphQLInt },
+          applicationsRejected: { type: GraphQLInt },
+          availableAtEnd: { type: GraphQLInt },
+          adoptionRate: { type: GraphQLFloat },
+          generatedAt: { type: GraphQLString },
+        },
+      }),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        month: { type: GraphQLString },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>) {
+        const shelterId = args.shelterId as string;
+        const now = new Date();
+        const monthStr = (args.month as string) || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const [year, mon] = monthStr.split('-').map(Number);
+        const monthStart = new Date(year, mon - 1, 1);
+        const monthEnd = new Date(year, mon, 0, 23, 59, 59);
+
+        const shelter = await Shelter.findById(shelterId).lean();
+        const animalIds = (shelter?.animals ?? []).map(id => id.toString());
+
+        const [intakes, outcomes, apps, animals] = await Promise.all([
+          IntakeLogModel.countDocuments({ shelterId, intakeDate: { $gte: monthStart, $lte: monthEnd } }),
+          OutcomeLogModel.find({ shelterId, outcomeDate: { $gte: monthStart, $lte: monthEnd } }).lean(),
+          animalIds.length > 0
+            ? Application.find({ animalId: { $in: animalIds }, submittedAt: { $gte: monthStart, $lte: monthEnd } }).lean()
+            : [],
+          animalIds.length > 0 ? Animal.find({ _id: { $in: animalIds } }).lean() : [],
+        ]);
+
+        const adoptions = outcomes.filter(o => o.outcomeType === 'adoption').length;
+        const returns = outcomes.filter(o => o.outcomeType === 'return_to_owner').length;
+        const transfers = outcomes.filter(o => o.outcomeType === 'transfer').length;
+        const approved = (apps as Array<{ status?: string }>).filter(a => a.status === 'approved').length;
+        const rejected = (apps as Array<{ status?: string }>).filter(a => a.status === 'rejected').length;
+        const available = animals.filter(a => a.status === 'available').length;
+
+        return {
+          month: monthStr,
+          shelterId,
+          shelterName: shelter?.name || 'Unknown',
+          totalAnimals: animals.length,
+          newIntakes: intakes,
+          totalAdoptions: adoptions,
+          totalReturns: returns,
+          totalTransfers: transfers,
+          applicationsReceived: (apps as unknown[]).length,
+          applicationsApproved: approved,
+          applicationsRejected: rejected,
+          availableAtEnd: available,
+          adoptionRate: animals.length > 0 ? Math.round((adoptions / animals.length) * 1000) / 1000 : 0,
+          generatedAt: now.toISOString(),
+        };
+      },
+    },
+
+    reportSACExport: {
+      type: new GraphQLObjectType({
+        name: 'ReportSACExport',
+        fields: {
+          shelterId: { type: GraphQLString },
+          shelterName: { type: GraphQLString },
+          year: { type: GraphQLInt },
+          format: { type: GraphQLString },
+          categories: { type: new GraphQLList(new GraphQLObjectType({
+            name: 'SACCategory',
+            fields: {
+              animalType: { type: GraphQLString },
+              beginningCount: { type: GraphQLInt },
+              intakes: { type: GraphQLInt },
+              adoptions: { type: GraphQLInt },
+              transfers: { type: GraphQLInt },
+              returnToOwner: { type: GraphQLInt },
+              euthanasia: { type: GraphQLInt },
+              died: { type: GraphQLInt },
+              endingCount: { type: GraphQLInt },
+            },
+          }))},
+          totalBeginning: { type: GraphQLInt },
+          totalEnding: { type: GraphQLInt },
+          generatedAt: { type: GraphQLString },
+        },
+      }),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        year: { type: GraphQLInt },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>) {
+        const shelterId = args.shelterId as string;
+        const year = (args.year as number) || new Date().getFullYear();
+        const yearStart = new Date(year, 0, 1);
+        const yearEnd = new Date(year, 11, 31, 23, 59, 59);
+
+        const shelter = await Shelter.findById(shelterId).lean();
+        const animalIds = (shelter?.animals ?? []).map(id => id.toString());
+
+        const allAnimals = animalIds.length > 0 ? await Animal.find({ _id: { $in: animalIds } }).lean() : [];
+        const [outcomes, intakeCount] = await Promise.all([
+          OutcomeLogModel.find({ shelterId, outcomeDate: { $gte: yearStart, $lte: yearEnd } }).lean(),
+          IntakeLogModel.countDocuments({ shelterId, intakeDate: { $gte: yearStart, $lte: yearEnd } }),
+        ]);
+
+        // Group by animal type (SAC standard categories: dog, cat, other)
+        const typeGroups: Record<string, Array<(typeof allAnimals)[number]>> = {};
+        for (const a of allAnimals) {
+          const t = (a.type || 'other').toLowerCase();
+          const sacType = t === 'dog' || t === 'cat' ? t : 'other';
+          if (!typeGroups[sacType]) typeGroups[sacType] = [];
+          typeGroups[sacType].push(a);
+        }
+
+        const outcomesByType: Record<string, typeof outcomes> = {};
+        for (const o of outcomes) {
+          // Match outcome to animal type
+          const animal = allAnimals.find(a => a._id.toString() === o.animalId);
+          const t = animal ? (animal.type || 'other').toLowerCase() : 'other';
+          const sacType = t === 'dog' || t === 'cat' ? t : 'other';
+          if (!outcomesByType[sacType]) outcomesByType[sacType] = [];
+          outcomesByType[sacType].push(o);
+        }
+
+        let totalBeginning = 0;
+        let totalEnding = 0;
+
+        const categories = ['dog', 'cat', 'other'].map(animalType => {
+          const animals = typeGroups[animalType] || [];
+          const typeOutcomes = outcomesByType[animalType] || [];
+
+          const adoptions = typeOutcomes.filter(o => o.outcomeType === 'adoption').length;
+          const transfers = typeOutcomes.filter(o => o.outcomeType === 'transfer').length;
+          const returnToOwner = typeOutcomes.filter(o => o.outcomeType === 'return_to_owner').length;
+          const euthanasia = typeOutcomes.filter(o => o.outcomeType === 'euthanasia').length;
+          const died = typeOutcomes.filter(o => o.outcomeType === 'died').length;
+
+          // Estimate beginning count from animals that existed before the year
+          const preExisting = animals.filter(a => a._id.getTimestamp() < yearStart).length;
+          const newIntakes = animals.filter(a => {
+            const ts = a._id.getTimestamp();
+            return ts >= yearStart && ts <= yearEnd;
+          }).length;
+
+          const endingCount = preExisting + newIntakes - adoptions - transfers - returnToOwner - euthanasia - died;
+          totalBeginning += preExisting;
+          totalEnding += Math.max(endingCount, 0);
+
+          return {
+            animalType,
+            beginningCount: preExisting,
+            intakes: newIntakes,
+            adoptions,
+            transfers,
+            returnToOwner,
+            euthanasia,
+            died,
+            endingCount: Math.max(endingCount, 0),
+          };
+        });
+
+        return {
+          shelterId,
+          shelterName: shelter?.name || 'Unknown',
+          year,
+          format: 'SAC',
+          categories,
+          totalBeginning,
+          totalEnding,
+          generatedAt: new Date().toISOString(),
+        };
+      },
+    },
+
+    reportAsilomar: {
+      type: new GraphQLObjectType({
+        name: 'ReportAsilomar',
+        fields: {
+          shelterId: { type: GraphQLString },
+          shelterName: { type: GraphQLString },
+          year: { type: GraphQLInt },
+          format: { type: GraphQLString },
+          categories: { type: new GraphQLList(new GraphQLObjectType({
+            name: 'AsilomarCategory',
+            fields: {
+              classification: { type: GraphQLString },
+              beginningCount: { type: GraphQLInt },
+              intake: { type: GraphQLInt },
+              adopted: { type: GraphQLInt },
+              transferred: { type: GraphQLInt },
+              returnedToOwner: { type: GraphQLInt },
+              euthanized: { type: GraphQLInt },
+              endingCount: { type: GraphQLInt },
+            },
+          }))},
+          generatedAt: { type: GraphQLString },
+        },
+      }),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        year: { type: GraphQLInt },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>) {
+        const shelterId = args.shelterId as string;
+        const year = (args.year as number) || new Date().getFullYear();
+        const yearStart = new Date(year, 0, 1);
+        const yearEnd = new Date(year, 11, 31, 23, 59, 59);
+
+        const shelter = await Shelter.findById(shelterId).lean();
+        const animalIds = (shelter?.animals ?? []).map(id => id.toString());
+
+        const allAnimals = animalIds.length > 0 ? await Animal.find({ _id: { $in: animalIds } }).lean() : [];
+        const outcomes = await OutcomeLogModel.find({ shelterId, outcomeDate: { $gte: yearStart, $lte: yearEnd } }).lean();
+
+        // Asilomar classifies animals as: healthy, treatable-rehabilitatable, treatable-manageable, unhealthy-untreatable
+        const classifyAnimal = (a: { specialNeeds?: string; status?: string }): string => {
+          if (a.specialNeeds && a.specialNeeds.length > 0) return 'treatable-rehabilitatable';
+          if (a.status === 'deceased') return 'unhealthy-untreatable';
+          return 'healthy';
+        };
+
+        const classifications = ['healthy', 'treatable-rehabilitatable', 'treatable-manageable', 'unhealthy-untreatable'];
+        const classGroups: Record<string, Array<(typeof allAnimals)[number]>> = {};
+        for (const a of allAnimals) {
+          const cls = classifyAnimal(a);
+          if (!classGroups[cls]) classGroups[cls] = [];
+          classGroups[cls].push(a);
+        }
+
+        const categories = classifications.map(classification => {
+          const animals = classGroups[classification] || [];
+          const anIds = new Set(animals.map(a => a._id.toString()));
+          const classOutcomes = outcomes.filter(o => anIds.has(o.animalId));
+
+          const preExisting = animals.filter(a => a._id.getTimestamp() < yearStart).length;
+          const newIntake = animals.filter(a => {
+            const ts = a._id.getTimestamp();
+            return ts >= yearStart && ts <= yearEnd;
+          }).length;
+          const adopted = classOutcomes.filter(o => o.outcomeType === 'adoption').length;
+          const transferred = classOutcomes.filter(o => o.outcomeType === 'transfer').length;
+          const returnedToOwner = classOutcomes.filter(o => o.outcomeType === 'return_to_owner').length;
+          const euthanized = classOutcomes.filter(o => o.outcomeType === 'euthanasia').length;
+
+          return {
+            classification,
+            beginningCount: preExisting,
+            intake: newIntake,
+            adopted,
+            transferred,
+            returnedToOwner,
+            euthanized,
+            endingCount: Math.max(preExisting + newIntake - adopted - transferred - returnedToOwner - euthanized, 0),
+          };
+        });
+
+        return {
+          shelterId,
+          shelterName: shelter?.name || 'Unknown',
+          year,
+          format: 'Asilomar',
+          categories,
+          generatedAt: new Date().toISOString(),
+        };
+      },
+    },
+
+    reportCustom: {
+      type: new GraphQLObjectType({
+        name: 'ReportCustom',
+        fields: {
+          title: { type: GraphQLString },
+          periodStart: { type: GraphQLString },
+          periodEnd: { type: GraphQLString },
+          metrics: { type: new GraphQLList(new GraphQLObjectType({
+            name: 'CustomReportMetric',
+            fields: {
+              name: { type: GraphQLString },
+              value: { type: GraphQLFloat },
+              unit: { type: GraphQLString },
+            },
+          }))},
+          data: { type: GraphQLString },
+          generatedAt: { type: GraphQLString },
+        },
+      }),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        title: { type: GraphQLString },
+        metricNames: { type: new GraphQLList(GraphQLString) },
+        startDate: { type: GraphQLString },
+        endDate: { type: GraphQLString },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>, context: unknown) {
+        const ctx = context as GraphQLContext;
+        requireAuth(ctx);
+
+        const shelterId = args.shelterId as string;
+        const title = (args.title as string) || 'Custom Report';
+        const requestedMetrics = (args.metricNames as string[]) || ['animals', 'adoptions', 'applications'];
+        const now = new Date();
+        const startDate = args.startDate ? new Date(args.startDate as string) : new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const endDate = args.endDate ? new Date(args.endDate as string) : now;
+
+        const shelter = await Shelter.findById(shelterId).lean();
+        const animalIds = (shelter?.animals ?? []).map(id => id.toString());
+
+        type MetricEntry = { name: string; value: number; unit: string };
+        const metrics: MetricEntry[] = [];
+
+        const metricHandlers: Record<string, () => Promise<MetricEntry>> = {
+          animals: async () => ({
+            name: 'Total Animals',
+            value: animalIds.length > 0 ? await Animal.countDocuments({ _id: { $in: animalIds } }) : 0,
+            unit: 'count',
+          }),
+          adoptions: async () => ({
+            name: 'Adoptions',
+            value: animalIds.length > 0 ? await Animal.countDocuments({ _id: { $in: animalIds }, status: 'adopted' }) : 0,
+            unit: 'count',
+          }),
+          applications: async () => ({
+            name: 'Applications',
+            value: animalIds.length > 0
+              ? await Application.countDocuments({ animalId: { $in: animalIds }, submittedAt: { $gte: startDate, $lte: endDate } })
+              : 0,
+            unit: 'count',
+          }),
+          intakes: async () => ({
+            name: 'Intakes',
+            value: await IntakeLogModel.countDocuments({ shelterId, intakeDate: { $gte: startDate, $lte: endDate } }),
+            unit: 'count',
+          }),
+          outcomes: async () => ({
+            name: 'Outcomes',
+            value: await OutcomeLogModel.countDocuments({ shelterId, outcomeDate: { $gte: startDate, $lte: endDate } }),
+            unit: 'count',
+          }),
+          capacity: async () => ({
+            name: 'Capacity Utilization',
+            value: shelter?.maxCapacity && shelter.maxCapacity > 0
+              ? Math.round((animalIds.length / shelter.maxCapacity) * 1000) / 1000
+              : 0,
+            unit: 'ratio',
+          }),
+        };
+
+        for (const name of requestedMetrics) {
+          const handler = metricHandlers[name];
+          if (handler) {
+            metrics.push(await handler());
+          }
+        }
+
+        return {
+          title,
+          periodStart: startDate.toISOString(),
+          periodEnd: endDate.toISOString(),
+          metrics,
+          data: JSON.stringify({ shelterId, shelterName: shelter?.name || 'Unknown', metricCount: metrics.length }),
+          generatedAt: now.toISOString(),
+        };
+      },
+    },
+
+    reportTemplates: {
+      type: new GraphQLList(new GraphQLObjectType({
+        name: 'ReportTemplate',
+        fields: {
+          id: { type: GraphQLString },
+          name: { type: GraphQLString },
+          description: { type: GraphQLString },
+          metrics: { type: new GraphQLList(GraphQLString) },
+          frequency: { type: GraphQLString },
+          category: { type: GraphQLString },
+        },
+      })),
+      resolve() {
+        return [
+          {
+            id: 'monthly-summary',
+            name: 'Monthly Summary',
+            description: 'Overview of shelter operations for the month including intakes, outcomes, and applications',
+            metrics: ['animals', 'adoptions', 'applications', 'intakes', 'outcomes'],
+            frequency: 'monthly',
+            category: 'operations',
+          },
+          {
+            id: 'grant-report',
+            name: 'Grant Reporting',
+            description: 'Metrics and outcomes formatted for grant reporting requirements',
+            metrics: ['animals', 'adoptions', 'intakes', 'outcomes', 'capacity'],
+            frequency: 'quarterly',
+            category: 'compliance',
+          },
+          {
+            id: 'board-update',
+            name: 'Board Update',
+            description: 'High-level metrics for board of directors meetings',
+            metrics: ['animals', 'adoptions', 'applications', 'capacity'],
+            frequency: 'monthly',
+            category: 'governance',
+          },
+          {
+            id: 'sac-annual',
+            name: 'Shelter Animals Count (Annual)',
+            description: 'Annual statistics formatted per the Shelter Animals Count national database',
+            metrics: ['animals', 'adoptions', 'intakes', 'outcomes'],
+            frequency: 'annually',
+            category: 'compliance',
+          },
+          {
+            id: 'asilomar-annual',
+            name: 'Asilomar Accords (Annual)',
+            description: 'Annual report following the Asilomar Accords classification system',
+            metrics: ['animals', 'adoptions', 'outcomes'],
+            frequency: 'annually',
+            category: 'compliance',
+          },
+          {
+            id: 'adoption-funnel',
+            name: 'Adoption Funnel Analysis',
+            description: 'Conversion metrics from application to completed adoption',
+            metrics: ['applications', 'adoptions'],
+            frequency: 'weekly',
+            category: 'analytics',
+          },
+        ];
+      },
+    },
   })
 });
 
