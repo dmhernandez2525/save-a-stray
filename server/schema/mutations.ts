@@ -5471,6 +5471,243 @@ const mutation = new GraphQLObjectType({
         return true;
       },
     },
+    // F7.4 - Events & Calendar
+    createFullEvent: {
+      type: EventType,
+      args: {
+        shelterId: { type: GraphQLString },
+        title: { type: GraphQLString },
+        description: { type: GraphQLString },
+        date: { type: GraphQLString },
+        endDate: { type: GraphQLString },
+        location: { type: GraphQLString },
+        eventType: { type: GraphQLString },
+        capacity: { type: GraphQLInt },
+        isVirtual: { type: GraphQLBoolean },
+        virtualLink: { type: GraphQLString },
+        virtualPlatform: { type: GraphQLString },
+        featuredAnimalIds: { type: new GraphQLList(GraphQLString) },
+        tags: { type: new GraphQLList(GraphQLString) },
+        isRecurring: { type: GraphQLBoolean },
+        recurringPattern: { type: GraphQLString },
+        recurringEndDate: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        await requireShelterStaff(context, args.shelterId as string);
+        const slug = `${(args.title as string ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60)}`;
+        const existing = await EventModel.findOne({ slug });
+        const finalSlug = existing ? `${slug}-${Date.now().toString(36)}` : slug;
+        const eventDate = new Date(args.date as string);
+        const reminders = [
+          { type: '1_week', scheduledFor: new Date(eventDate.getTime() - 7 * 24 * 60 * 60 * 1000), sent: false },
+          { type: '1_day', scheduledFor: new Date(eventDate.getTime() - 24 * 60 * 60 * 1000), sent: false },
+          { type: '1_hour', scheduledFor: new Date(eventDate.getTime() - 60 * 60 * 1000), sent: false },
+        ];
+        const event = new EventModel({
+          shelterId: args.shelterId,
+          title: args.title,
+          description: args.description ?? '',
+          date: eventDate,
+          endDate: args.endDate ? new Date(args.endDate as string) : undefined,
+          location: args.location ?? '',
+          eventType: args.eventType ?? 'other',
+          capacity: (args.capacity as number) ?? 0,
+          isVirtual: args.isVirtual ?? false,
+          virtualLink: args.virtualLink ?? '',
+          virtualPlatform: args.virtualPlatform ?? '',
+          featuredAnimalIds: (args.featuredAnimalIds as string[]) ?? [],
+          tags: (args.tags as string[]) ?? [],
+          isRecurring: args.isRecurring ?? false,
+          recurringPattern: args.recurringPattern ?? '',
+          recurringEndDate: args.recurringEndDate ? new Date(args.recurringEndDate as string) : undefined,
+          reminders,
+          slug: finalSlug,
+          status: 'draft',
+        });
+        await event.save();
+        return event;
+      },
+    },
+    updateEvent: {
+      type: EventType,
+      args: {
+        eventId: { type: GraphQLString },
+        title: { type: GraphQLString },
+        description: { type: GraphQLString },
+        date: { type: GraphQLString },
+        endDate: { type: GraphQLString },
+        location: { type: GraphQLString },
+        capacity: { type: GraphQLInt },
+        isVirtual: { type: GraphQLBoolean },
+        virtualLink: { type: GraphQLString },
+        virtualPlatform: { type: GraphQLString },
+        featuredAnimalIds: { type: new GraphQLList(GraphQLString) },
+        tags: { type: new GraphQLList(GraphQLString) },
+        photos: { type: new GraphQLList(GraphQLString) },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const event = await EventModel.findById(args.eventId);
+        if (!event) throw new Error('Event not found');
+        await requireShelterStaff(context, event.shelterId);
+        if (args.title !== undefined) event.title = args.title as string;
+        if (args.description !== undefined) event.description = args.description as string;
+        if (args.date !== undefined) event.date = new Date(args.date as string);
+        if (args.endDate !== undefined) event.endDate = new Date(args.endDate as string);
+        if (args.location !== undefined) event.location = args.location as string;
+        if (args.capacity !== undefined) event.capacity = args.capacity as number;
+        if (args.isVirtual !== undefined) event.isVirtual = args.isVirtual as boolean;
+        if (args.virtualLink !== undefined) event.virtualLink = args.virtualLink as string;
+        if (args.virtualPlatform !== undefined) event.virtualPlatform = args.virtualPlatform as string;
+        if (args.featuredAnimalIds !== undefined) event.featuredAnimalIds = args.featuredAnimalIds as string[];
+        if (args.tags !== undefined) event.tags = args.tags as string[];
+        if (args.photos !== undefined) event.photos = args.photos as string[];
+        await event.save();
+        return event;
+      },
+    },
+    publishEvent: {
+      type: EventType,
+      args: {
+        eventId: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const event = await EventModel.findById(args.eventId);
+        if (!event) throw new Error('Event not found');
+        await requireShelterStaff(context, event.shelterId);
+        event.status = 'published';
+        await event.save();
+        return event;
+      },
+    },
+    cancelEvent: {
+      type: EventType,
+      args: {
+        eventId: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const event = await EventModel.findById(args.eventId);
+        if (!event) throw new Error('Event not found');
+        await requireShelterStaff(context, event.shelterId);
+        event.status = 'cancelled';
+        await event.save();
+        return event;
+      },
+    },
+    registerForEvent: {
+      type: EventType,
+      args: {
+        eventId: { type: GraphQLString },
+        name: { type: GraphQLString },
+        email: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        const event = await EventModel.findById(args.eventId);
+        if (!event) throw new Error('Event not found');
+        if (event.status !== 'published') throw new Error('Event is not open for registration');
+        const alreadyRegistered = event.registrations.some(
+          r => r.userId === userId && r.status === 'registered'
+        );
+        if (alreadyRegistered) throw new Error('Already registered for this event');
+        const registered = event.registrations.filter(r => r.status === 'registered').length;
+        const isFull = event.capacity > 0 && registered >= event.capacity;
+        const registration = {
+          userId,
+          name: args.name as string,
+          email: args.email as string,
+          registeredAt: new Date(),
+          status: isFull ? 'waitlisted' as const : 'registered' as const,
+        };
+        if (isFull) {
+          event.waitlist.push(registration);
+        } else {
+          event.registrations.push(registration);
+          event.registrationCount = (event.registrationCount ?? 0) + 1;
+        }
+        await event.save();
+        return event;
+      },
+    },
+    cancelEventRegistration: {
+      type: EventType,
+      args: {
+        eventId: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        const event = await EventModel.findById(args.eventId);
+        if (!event) throw new Error('Event not found');
+        const regIdx = event.registrations.findIndex(
+          r => r.userId === userId && r.status === 'registered'
+        );
+        if (regIdx >= 0) {
+          event.registrations[regIdx].status = 'cancelled';
+          event.registrationCount = Math.max(0, (event.registrationCount ?? 0) - 1);
+          if (event.waitlist.length > 0) {
+            const nextInLine = event.waitlist.shift();
+            if (nextInLine) {
+              nextInLine.status = 'registered';
+              event.registrations.push(nextInLine);
+              event.registrationCount = (event.registrationCount ?? 0) + 1;
+            }
+          }
+        } else {
+          const waitIdx = event.waitlist.findIndex(r => r.userId === userId);
+          if (waitIdx >= 0) {
+            event.waitlist.splice(waitIdx, 1);
+          }
+        }
+        await event.save();
+        return event;
+      },
+    },
+    recordEventAttendance: {
+      type: EventType,
+      args: {
+        eventId: { type: GraphQLString },
+        userIds: { type: new GraphQLList(GraphQLString) },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const event = await EventModel.findById(args.eventId);
+        if (!event) throw new Error('Event not found');
+        await requireShelterStaff(context, event.shelterId);
+        const attendeeIds = new Set(args.userIds as string[]);
+        let count = 0;
+        for (const reg of event.registrations) {
+          if (attendeeIds.has(reg.userId)) {
+            reg.status = 'attended';
+            count += 1;
+          }
+        }
+        event.attendanceCount = count;
+        event.status = 'completed';
+        await event.save();
+        return event;
+      },
+    },
+    completeEvent: {
+      type: EventType,
+      args: {
+        eventId: { type: GraphQLString },
+        applicationsGenerated: { type: GraphQLInt },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const event = await EventModel.findById(args.eventId);
+        if (!event) throw new Error('Event not found');
+        await requireShelterStaff(context, event.shelterId);
+        event.status = 'completed';
+        if (args.applicationsGenerated !== undefined) {
+          event.applicationsGenerated = args.applicationsGenerated as number;
+        }
+        await event.save();
+        return event;
+      },
+    },
   }),
 });
 
