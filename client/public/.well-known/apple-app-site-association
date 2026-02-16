@@ -1,0 +1,24 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "TEAMID.com.saveastray.app",
+        "paths": [
+          "/AnimalShow/*",
+          "/User",
+          "/profile",
+          "/settings",
+          "/quiz",
+          "/success-stories",
+          "/login",
+          "/register",
+          "/"
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["TEAMID.com.saveastray.app"]
+  }
+}
