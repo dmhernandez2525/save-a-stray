@@ -63,6 +63,9 @@ import { AdopterProfileDocument } from '../../models/AdopterProfile';
 import AdopterProfileType from './adopter_profile_type';
 import { MatchRecordDocument } from '../../models/MatchRecord';
 import { calculateMatchScore } from '../../services/matching';
+import { AdoptionRecordDocument } from '../../models/AdoptionRecord';
+import AdoptionRecordType from './adoption_record_type';
+import { PostAdoptionSurveyDocument } from '../../models/PostAdoptionSurvey';
 import { paginationQueryFields } from './pagination_queries';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
@@ -139,6 +142,8 @@ const ApplicationReviewModel = mongoose.model<ApplicationReviewDocument>('applic
 const RejectionTemplateModel = mongoose.model<RejectionTemplateDocument>('rejectionTemplate');
 const AdopterProfileModel = mongoose.model<AdopterProfileDocument>('adopterProfile');
 const MatchRecordModel = mongoose.model<MatchRecordDocument>('matchRecord');
+const AdoptionRecordModel = mongoose.model<AdoptionRecordDocument>('adoptionRecord');
+const PostAdoptionSurveyModel = mongoose.model<PostAdoptionSurveyDocument>('postAdoptionSurvey');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -1142,6 +1147,95 @@ const RootQueryType = new GraphQLObjectType({
             percentage: total > 0 ? Math.round((count / total) * 1000) / 10 : 0,
           }))
           .sort((a, b) => b.count - a.count);
+      }
+    },
+    adoptionRecord: {
+      type: AdoptionRecordType,
+      args: { _id: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { _id: string }) {
+        return AdoptionRecordModel.findById(args._id);
+      }
+    },
+    shelterAdoptionRecords: {
+      type: new GraphQLList(AdoptionRecordType),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        limit: { type: GraphQLInt },
+      },
+      resolve(_, args: { shelterId: string; limit?: number }) {
+        const limit = clampLimit(args.limit, 50, MAX_ANIMAL_LIMIT);
+        return AdoptionRecordModel.find({ shelterId: args.shelterId }).sort({ adoptionDate: -1 }).limit(limit);
+      }
+    },
+    userAdoptionRecords: {
+      type: new GraphQLList(AdoptionRecordType),
+      args: { userId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { userId: string }) {
+        return AdoptionRecordModel.find({ adopterId: args.userId }).sort({ adoptionDate: -1 });
+      }
+    },
+    pendingFollowUps: {
+      type: new GraphQLList(AdoptionRecordType),
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { shelterId: string }) {
+        return AdoptionRecordModel.find({
+          shelterId: args.shelterId,
+          'followUps.status': 'pending',
+          'followUps.scheduledDate': { $lte: new Date() },
+        }).sort({ 'followUps.scheduledDate': 1 });
+      }
+    },
+    adoptionAnalytics: {
+      type: new GraphQLObjectType({
+        name: 'AdoptionAnalyticsType',
+        fields: () => ({
+          totalAdoptions: { type: GraphQLInt },
+          averageTimeToAdopt: { type: GraphQLFloat },
+          returnRate: { type: GraphQLFloat },
+          totalFees: { type: GraphQLFloat },
+          averageSatisfaction: { type: GraphQLFloat },
+        }),
+      }),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        days: { type: GraphQLInt },
+      },
+      async resolve(_, args: { shelterId: string; days?: number }) {
+        const dateFilter: Record<string, unknown> = { shelterId: args.shelterId };
+        if (args.days) {
+          const since = new Date();
+          since.setDate(since.getDate() - args.days);
+          dateFilter.adoptionDate = { $gte: since };
+        }
+
+        const records = await AdoptionRecordModel.find(dateFilter);
+        const totalAdoptions = records.length;
+        const returns = records.filter(r => r.returnDate).length;
+        const returnRate = totalAdoptions > 0 ? Math.round((returns / totalAdoptions) * 1000) / 10 : 0;
+        const totalFees = records.reduce((sum, r) => sum + (r.feeAmount || 0), 0);
+
+        // Average time from application to adoption
+        let totalDays = 0;
+        let withApps = 0;
+        for (const record of records) {
+          if (record.applicationId) {
+            const app = await Application.findById(record.applicationId);
+            if (app?.submittedAt) {
+              const days = (record.adoptionDate.getTime() - new Date(app.submittedAt).getTime()) / (1000 * 60 * 60 * 24);
+              totalDays += days;
+              withApps++;
+            }
+          }
+        }
+        const averageTimeToAdopt = withApps > 0 ? Math.round((totalDays / withApps) * 10) / 10 : 0;
+
+        // Average satisfaction from surveys
+        const recordIds = records.map(r => r._id.toString());
+        const surveys = await PostAdoptionSurveyModel.find({ adoptionRecordId: { $in: recordIds } });
+        const totalSat = surveys.reduce((sum, s) => sum + (s.overallSatisfaction || 0), 0);
+        const averageSatisfaction = surveys.length > 0 ? Math.round((totalSat / surveys.length) * 10) / 10 : 0;
+
+        return { totalAdoptions, averageTimeToAdopt, returnRate, totalFees, averageSatisfaction };
       }
     },
     adopterProfile: {
