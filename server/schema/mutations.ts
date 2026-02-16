@@ -98,6 +98,9 @@ import KennelAssignmentType from './types/kennel_assignment_type';
 import { ApplicationReviewDocument } from '../models/ApplicationReview';
 import ApplicationReviewType from './types/application_review_type';
 import { RejectionTemplateDocument } from '../models/RejectionTemplate';
+import { AdopterProfileDocument } from '../models/AdopterProfile';
+import AdopterProfileType from './types/adopter_profile_type';
+import { MatchRecordDocument } from '../models/MatchRecord';
 import { ShelterSettingsDocument } from '../models/ShelterSettings';
 import ShelterSettingsType, {
   DayScheduleInput,
@@ -152,6 +155,8 @@ const InternalNoteModel = mongoose.model<InternalNoteDocument>('internalNote');
 const KennelAssignmentModel = mongoose.model<KennelAssignmentDocument>('kennelAssignment');
 const ApplicationReviewModel = mongoose.model<ApplicationReviewDocument>('applicationReview');
 const RejectionTemplateModel = mongoose.model<RejectionTemplateDocument>('rejectionTemplate');
+const AdopterProfileModel = mongoose.model<AdopterProfileDocument>('adopterProfile');
+const MatchRecordModel = mongoose.model<MatchRecordDocument>('matchRecord');
 const ShelterSettingsModel = mongoose.model<ShelterSettingsDocument>('shelterSettings');
 
 interface RegisterArgs {
@@ -3430,6 +3435,79 @@ const mutation = new GraphQLObjectType({
         if (!template) return false;
         await requireShelterStaff(context, template.shelterId);
         await RejectionTemplateModel.deleteOne({ _id: args._id });
+        return true;
+      },
+    },
+    saveAdopterProfile: {
+      type: AdopterProfileType,
+      args: {
+        housingType: { type: GraphQLString },
+        hasYard: { type: GraphQLBoolean },
+        yardSize: { type: GraphQLString },
+        activityLevel: { type: GraphQLString },
+        hoursAwayPerDay: { type: GraphQLInt },
+        hasChildren: { type: GraphQLBoolean },
+        childrenAges: { type: GraphQLString },
+        hasOtherPets: { type: GraphQLBoolean },
+        otherPetTypes: { type: new GraphQLList(GraphQLString) },
+        experienceLevel: { type: GraphQLString },
+        preferredSize: { type: new GraphQLList(GraphQLString) },
+        preferredEnergyLevel: { type: new GraphQLList(GraphQLString) },
+        preferredAge: { type: GraphQLString },
+        preferredSpecies: { type: new GraphQLList(GraphQLString) },
+        allergies: { type: GraphQLString },
+        specialConsiderations: { type: GraphQLString },
+      },
+      async resolve(
+        _,
+        args: Record<string, unknown>,
+        context: GraphQLContext
+      ) {
+        const userId = requireAuth(context);
+
+        const update: Record<string, unknown> = { updatedAt: new Date() };
+        const fields = [
+          'housingType', 'hasYard', 'yardSize', 'activityLevel', 'hoursAwayPerDay',
+          'hasChildren', 'childrenAges', 'hasOtherPets', 'otherPetTypes', 'experienceLevel',
+          'preferredSize', 'preferredEnergyLevel', 'preferredAge', 'preferredSpecies',
+          'allergies', 'specialConsiderations',
+        ];
+        for (const field of fields) {
+          if (args[field] !== undefined) update[field] = args[field];
+        }
+
+        return AdopterProfileModel.findOneAndUpdate(
+          { userId },
+          { $set: update, $setOnInsert: { completedAt: new Date() } },
+          { upsert: true, new: true }
+        );
+      },
+    },
+    recordMatchOutcome: {
+      type: GraphQLBoolean,
+      args: {
+        userId: { type: GraphQLID },
+        animalId: { type: GraphQLID },
+        score: { type: GraphQLInt },
+        outcome: { type: GraphQLString },
+      },
+      async resolve(
+        _,
+        args: { userId: string; animalId: string; score: number; outcome: string },
+        context: GraphQLContext
+      ) {
+        requireSelf(context, args.userId);
+
+        const validOutcomes = ['suggested', 'viewed', 'applied', 'adopted', 'dismissed'];
+        if (!validOutcomes.includes(args.outcome)) {
+          throw new Error(`Invalid outcome. Must be one of: ${validOutcomes.join(', ')}`);
+        }
+
+        await MatchRecordModel.findOneAndUpdate(
+          { userId: args.userId, animalId: args.animalId },
+          { score: args.score, outcome: args.outcome },
+          { upsert: true, new: true }
+        );
         return true;
       },
     },
