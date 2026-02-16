@@ -85,6 +85,7 @@ import { PushSubscriptionDocument } from '../../models/PushSubscription';
 import { NotificationPreferenceDocument } from '../../models/NotificationPreference';
 import { ScheduledNotificationDocument } from '../../models/ScheduledNotification';
 import { ShareEventDocument } from '../../models/ShareEvent';
+import { AuthSessionDocument } from '../../models/AuthSession';
 import { paginationQueryFields } from './pagination_queries';
 import { GraphQLContext } from '../../graphql/context';
 import { requireAuth } from '../../graphql/authorization';
@@ -176,6 +177,7 @@ const PushSubscriptionModel = mongoose.model<PushSubscriptionDocument>('pushSubs
 const NotificationPreferenceModel = mongoose.model<NotificationPreferenceDocument>('notificationPreference');
 const ScheduledNotificationModel = mongoose.model<ScheduledNotificationDocument>('scheduledNotification');
 const ShareEventModel = mongoose.model<ShareEventDocument>('shareEvent');
+const AuthSessionModel = mongoose.model<AuthSessionDocument>('authSession');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -4064,6 +4066,671 @@ const RootQueryType = new GraphQLObjectType({
           averageLengthOfStay: 0,
           animalsByType: JSON.stringify(typeCounts),
           animalsByStatus: JSON.stringify(statusCounts),
+        };
+      },
+    },
+
+    // ── F9.2 Platform Analytics ──────────────────────────────────
+
+    platformOverview: {
+      type: new GraphQLObjectType({
+        name: 'PlatformOverview',
+        fields: {
+          totalAnimals: { type: GraphQLInt },
+          totalAdoptions: { type: GraphQLInt },
+          totalUsers: { type: GraphQLInt },
+          totalShelters: { type: GraphQLInt },
+          totalApplications: { type: GraphQLInt },
+          activeUsersLast30Days: { type: GraphQLInt },
+          newUsersLast30Days: { type: GraphQLInt },
+          availableAnimals: { type: GraphQLInt },
+          averageApplicationsPerAnimal: { type: GraphQLFloat },
+          platformAdoptionRate: { type: GraphQLFloat },
+          generatedAt: { type: GraphQLString },
+        },
+      }),
+      async resolve() {
+        const now = new Date();
+        const thirtyDaysAgo = new Date(now);
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const [
+          totalAnimals,
+          adoptedAnimals,
+          availableAnimals,
+          totalUsers,
+          totalShelters,
+          totalApplications,
+          activeSessions,
+          newUsers,
+        ] = await Promise.all([
+          Animal.countDocuments({}),
+          Animal.countDocuments({ status: 'adopted' }),
+          Animal.countDocuments({ status: 'available' }),
+          User.countDocuments({}),
+          Shelter.countDocuments({}),
+          Application.countDocuments({}),
+          AuthSessionModel.countDocuments({ lastUsedAt: { $gte: thirtyDaysAgo }, revokedAt: { $exists: false } }),
+          User.countDocuments({ date: { $gte: thirtyDaysAgo } }),
+        ]);
+
+        const avgApps = totalAnimals > 0 ? totalApplications / totalAnimals : 0;
+        const adoptionRate = totalAnimals > 0 ? adoptedAnimals / totalAnimals : 0;
+
+        return {
+          totalAnimals,
+          totalAdoptions: adoptedAnimals,
+          totalUsers,
+          totalShelters,
+          totalApplications,
+          activeUsersLast30Days: activeSessions,
+          newUsersLast30Days: newUsers,
+          availableAnimals,
+          averageApplicationsPerAnimal: Math.round(avgApps * 100) / 100,
+          platformAdoptionRate: Math.round(adoptionRate * 1000) / 1000,
+          generatedAt: now.toISOString(),
+        };
+      },
+    },
+
+    platformConversionFunnel: {
+      type: new GraphQLObjectType({
+        name: 'PlatformConversionFunnel',
+        fields: {
+          periodStart: { type: GraphQLString },
+          periodEnd: { type: GraphQLString },
+          stages: { type: new GraphQLList(new GraphQLObjectType({
+            name: 'FunnelStage',
+            fields: {
+              name: { type: GraphQLString },
+              count: { type: GraphQLInt },
+              conversionRate: { type: GraphQLFloat },
+            },
+          }))},
+        },
+      }),
+      args: {
+        startDate: { type: GraphQLString },
+        endDate: { type: GraphQLString },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>) {
+        const now = new Date();
+        const startDate = args.startDate ? new Date(args.startDate as string) : new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const endDate = args.endDate ? new Date(args.endDate as string) : now;
+
+        const dateFilter = { $gte: startDate, $lte: endDate };
+
+        const [
+          totalUsers,
+          usersWithFavorites,
+          drafts,
+          submitted,
+          approved,
+          adopted,
+        ] = await Promise.all([
+          User.countDocuments({ date: dateFilter }),
+          User.countDocuments({ date: dateFilter, 'favorites.0': { $exists: true } }),
+          Application.countDocuments({ submittedAt: dateFilter, isDraft: true }),
+          Application.countDocuments({ submittedAt: dateFilter, status: { $in: ['submitted', 'under_review', 'approved', 'rejected'] } }),
+          Application.countDocuments({ submittedAt: dateFilter, status: 'approved' }),
+          Animal.countDocuments({ status: 'adopted' }),
+        ]);
+
+        const baseCount = totalUsers || 1;
+        const stages = [
+          { name: 'registered', count: totalUsers, conversionRate: 1.0 },
+          { name: 'favorited', count: usersWithFavorites, conversionRate: Math.round((usersWithFavorites / baseCount) * 1000) / 1000 },
+          { name: 'started_application', count: drafts + submitted, conversionRate: Math.round(((drafts + submitted) / baseCount) * 1000) / 1000 },
+          { name: 'submitted', count: submitted, conversionRate: Math.round((submitted / baseCount) * 1000) / 1000 },
+          { name: 'approved', count: approved, conversionRate: Math.round((approved / baseCount) * 1000) / 1000 },
+          { name: 'adopted', count: adopted, conversionRate: Math.round((adopted / baseCount) * 1000) / 1000 },
+        ];
+
+        return {
+          periodStart: startDate.toISOString(),
+          periodEnd: endDate.toISOString(),
+          stages,
+        };
+      },
+    },
+
+    platformEngagementMetrics: {
+      type: new GraphQLObjectType({
+        name: 'PlatformEngagementMetrics',
+        fields: {
+          periodStart: { type: GraphQLString },
+          periodEnd: { type: GraphQLString },
+          totalSessions: { type: GraphQLInt },
+          uniqueUsers: { type: GraphQLInt },
+          avgSessionsPerUser: { type: GraphQLFloat },
+          returningUsers: { type: GraphQLInt },
+          returningUserRate: { type: GraphQLFloat },
+          dailyActiveUsers: { type: new GraphQLList(new GraphQLObjectType({
+            name: 'DailyActiveUsers',
+            fields: {
+              date: { type: GraphQLString },
+              count: { type: GraphQLInt },
+            },
+          }))},
+        },
+      }),
+      args: {
+        startDate: { type: GraphQLString },
+        endDate: { type: GraphQLString },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>) {
+        const now = new Date();
+        const startDate = args.startDate ? new Date(args.startDate as string) : new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
+        const endDate = args.endDate ? new Date(args.endDate as string) : now;
+
+        const sessions = await AuthSessionModel.find({
+          createdAt: { $gte: startDate, $lte: endDate },
+          revokedAt: { $exists: false },
+        }).lean();
+
+        const userSessionCounts: Record<string, number> = {};
+        const dailyUsers: Record<string, Set<string>> = {};
+
+        for (const s of sessions) {
+          const uid = s.userId.toString();
+          userSessionCounts[uid] = (userSessionCounts[uid] || 0) + 1;
+
+          const dayKey = new Date(s.createdAt).toISOString().slice(0, 10);
+          if (!dailyUsers[dayKey]) dailyUsers[dayKey] = new Set();
+          dailyUsers[dayKey].add(uid);
+        }
+
+        const uniqueUsers = Object.keys(userSessionCounts).length;
+        const returningUsers = Object.values(userSessionCounts).filter(c => c > 1).length;
+
+        const dailyActiveUsers = Object.entries(dailyUsers)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([date, users]) => ({ date, count: users.size }));
+
+        return {
+          periodStart: startDate.toISOString(),
+          periodEnd: endDate.toISOString(),
+          totalSessions: sessions.length,
+          uniqueUsers,
+          avgSessionsPerUser: uniqueUsers > 0 ? Math.round((sessions.length / uniqueUsers) * 100) / 100 : 0,
+          returningUsers,
+          returningUserRate: uniqueUsers > 0 ? Math.round((returningUsers / uniqueUsers) * 1000) / 1000 : 0,
+          dailyActiveUsers,
+        };
+      },
+    },
+
+    platformGeographicActivity: {
+      type: new GraphQLObjectType({
+        name: 'PlatformGeographicActivity',
+        fields: {
+          regions: { type: new GraphQLList(new GraphQLObjectType({
+            name: 'GeographicRegion',
+            fields: {
+              location: { type: GraphQLString },
+              shelterCount: { type: GraphQLInt },
+              animalCount: { type: GraphQLInt },
+              adoptionCount: { type: GraphQLInt },
+              latitude: { type: GraphQLFloat },
+              longitude: { type: GraphQLFloat },
+            },
+          }))},
+          totalRegions: { type: GraphQLInt },
+        },
+      }),
+      async resolve() {
+        const shelters = await Shelter.find({}).lean();
+        const regionMap: Record<string, {
+          location: string;
+          shelterCount: number;
+          animalIds: string[];
+          lat: number;
+          lng: number;
+        }> = {};
+
+        for (const s of shelters) {
+          const loc = s.location || 'Unknown';
+          if (!regionMap[loc]) {
+            const coords = s.coordinates?.coordinates;
+            regionMap[loc] = {
+              location: loc,
+              shelterCount: 0,
+              animalIds: [],
+              lat: coords?.[1] ?? 0,
+              lng: coords?.[0] ?? 0,
+            };
+          }
+          regionMap[loc].shelterCount++;
+          const ids = (s.animals ?? []).map((id) => id.toString());
+          regionMap[loc].animalIds.push(...ids);
+        }
+
+        const regions = await Promise.all(
+          Object.values(regionMap).map(async (r) => {
+            const animalCount = r.animalIds.length;
+            let adoptionCount = 0;
+            if (r.animalIds.length > 0) {
+              adoptionCount = await Animal.countDocuments({
+                _id: { $in: r.animalIds },
+                status: 'adopted',
+              });
+            }
+            return {
+              location: r.location,
+              shelterCount: r.shelterCount,
+              animalCount,
+              adoptionCount,
+              latitude: r.lat,
+              longitude: r.lng,
+            };
+          })
+        );
+
+        return { regions, totalRegions: regions.length };
+      },
+    },
+
+    platformTrafficSources: {
+      type: new GraphQLObjectType({
+        name: 'PlatformTrafficSources',
+        fields: {
+          periodStart: { type: GraphQLString },
+          periodEnd: { type: GraphQLString },
+          sources: { type: new GraphQLList(new GraphQLObjectType({
+            name: 'TrafficSource',
+            fields: {
+              platform: { type: GraphQLString },
+              shares: { type: GraphQLInt },
+              clicks: { type: GraphQLInt },
+              applications: { type: GraphQLInt },
+              conversionRate: { type: GraphQLFloat },
+            },
+          }))},
+          totalShares: { type: GraphQLInt },
+          totalClicks: { type: GraphQLInt },
+        },
+      }),
+      args: {
+        startDate: { type: GraphQLString },
+        endDate: { type: GraphQLString },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>) {
+        const now = new Date();
+        const startDate = args.startDate ? new Date(args.startDate as string) : new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const endDate = args.endDate ? new Date(args.endDate as string) : now;
+
+        const shareEvents = await ShareEventModel.find({
+          createdAt: { $gte: startDate, $lte: endDate },
+        }).lean();
+
+        const platformMap: Record<string, { shares: number; clicks: number; applications: number }> = {};
+
+        for (const evt of shareEvents) {
+          if (!platformMap[evt.platform]) {
+            platformMap[evt.platform] = { shares: 0, clicks: 0, applications: 0 };
+          }
+          platformMap[evt.platform].shares++;
+          platformMap[evt.platform].clicks += evt.clickCount || 0;
+          platformMap[evt.platform].applications += evt.applicationCount || 0;
+        }
+
+        let totalShares = 0;
+        let totalClicks = 0;
+
+        const sources = Object.entries(platformMap).map(([platform, data]) => {
+          totalShares += data.shares;
+          totalClicks += data.clicks;
+          return {
+            platform,
+            ...data,
+            conversionRate: data.clicks > 0 ? Math.round((data.applications / data.clicks) * 1000) / 1000 : 0,
+          };
+        });
+
+        sources.sort((a, b) => b.clicks - a.clicks);
+
+        return {
+          periodStart: startDate.toISOString(),
+          periodEnd: endDate.toISOString(),
+          sources,
+          totalShares,
+          totalClicks,
+        };
+      },
+    },
+
+    platformCohortAnalysis: {
+      type: new GraphQLObjectType({
+        name: 'PlatformCohortAnalysis',
+        fields: {
+          cohorts: { type: new GraphQLList(new GraphQLObjectType({
+            name: 'UserCohort',
+            fields: {
+              cohortMonth: { type: GraphQLString },
+              usersRegistered: { type: GraphQLInt },
+              usersWithApplications: { type: GraphQLInt },
+              usersAdopted: { type: GraphQLInt },
+              retentionRate: { type: GraphQLFloat },
+              applicationRate: { type: GraphQLFloat },
+            },
+          }))},
+          totalCohorts: { type: GraphQLInt },
+        },
+      }),
+      args: {
+        months: { type: GraphQLInt },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>) {
+        const monthCount = Math.min((args.months as number) || 6, 24);
+        const now = new Date();
+        const cohorts: Array<{
+          cohortMonth: string;
+          usersRegistered: number;
+          usersWithApplications: number;
+          usersAdopted: number;
+          retentionRate: number;
+          applicationRate: number;
+        }> = [];
+
+        for (let i = monthCount - 1; i >= 0; i--) {
+          const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+          const key = `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, '0')}`;
+
+          const users = await User.find({ date: { $gte: monthStart, $lte: monthEnd } }).lean();
+          const userIds = users.map(u => u._id.toString());
+
+          let usersWithApps = 0;
+          let usersAdopted = 0;
+
+          if (userIds.length > 0) {
+            const appsForCohort = await Application.find({ userId: { $in: userIds } }).lean();
+            const userIdsWithApps = new Set(appsForCohort.map(a => a.userId));
+            usersWithApps = userIdsWithApps.size;
+
+            const approvedApps = appsForCohort.filter(a => a.status === 'approved');
+            const userIdsAdopted = new Set(approvedApps.map(a => a.userId));
+            usersAdopted = userIdsAdopted.size;
+          }
+
+          const activeSessions = userIds.length > 0
+            ? await AuthSessionModel.countDocuments({
+                userId: { $in: userIds },
+                lastUsedAt: { $gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) },
+                revokedAt: { $exists: false },
+              })
+            : 0;
+
+          const registered = users.length || 1;
+
+          cohorts.push({
+            cohortMonth: key,
+            usersRegistered: users.length,
+            usersWithApplications: usersWithApps,
+            usersAdopted,
+            retentionRate: Math.round((Math.min(activeSessions, users.length) / registered) * 1000) / 1000,
+            applicationRate: Math.round((usersWithApps / registered) * 1000) / 1000,
+          });
+        }
+
+        return { cohorts, totalCohorts: cohorts.length };
+      },
+    },
+
+    platformAnalyticsExport: {
+      type: new GraphQLObjectType({
+        name: 'PlatformAnalyticsExport',
+        fields: {
+          format: { type: GraphQLString },
+          data: { type: GraphQLString },
+          generatedAt: { type: GraphQLString },
+          recordCount: { type: GraphQLInt },
+        },
+      }),
+      args: {
+        format: { type: new GraphQLNonNull(GraphQLString) },
+        dataType: { type: new GraphQLNonNull(GraphQLString) },
+        startDate: { type: GraphQLString },
+        endDate: { type: GraphQLString },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>, context: unknown) {
+        const ctx = context as GraphQLContext;
+        requireAuth(ctx);
+
+        const format = args.format as string;
+        const dataType = args.dataType as string;
+        const now = new Date();
+        const startDate = args.startDate ? new Date(args.startDate as string) : new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const endDate = args.endDate ? new Date(args.endDate as string) : now;
+
+        type ExportRow = Record<string, string | number | boolean | null>;
+        let rows: ExportRow[] = [];
+
+        if (dataType === 'applications') {
+          const apps = await Application.find({
+            submittedAt: { $gte: startDate, $lte: endDate },
+          }).lean();
+          rows = apps.map(a => ({
+            id: a._id.toString(),
+            animalId: a.animalId,
+            userId: a.userId,
+            status: a.status ?? '',
+            submittedAt: a.submittedAt ? new Date(a.submittedAt).toISOString() : '',
+            isDraft: a.isDraft ?? false,
+          }));
+        } else if (dataType === 'animals') {
+          const animals = await Animal.find({}).lean();
+          const filtered = animals.filter(a => {
+            const ts = a._id.getTimestamp();
+            return ts >= startDate && ts <= endDate;
+          });
+          rows = filtered.map(a => ({
+            id: a._id.toString(),
+            name: a.name,
+            type: a.type,
+            breed: a.breed ?? '',
+            status: a.status ?? '',
+            age: a.age,
+          }));
+        } else if (dataType === 'users') {
+          const users = await User.find({
+            date: { $gte: startDate, $lte: endDate },
+          }).select('-password -twoFactorSecret -twoFactorTempSecret -twoFactorBackupCodes -emailVerificationTokenHash -passwordResetTokenHash').lean();
+          rows = users.map(u => ({
+            id: u._id.toString(),
+            name: u.name,
+            email: u.email,
+            role: u.userRole,
+            registeredAt: u.date ? new Date(u.date).toISOString() : '',
+            emailVerified: u.emailVerified ?? false,
+          }));
+        } else if (dataType === 'shares') {
+          const shares = await ShareEventModel.find({
+            createdAt: { $gte: startDate, $lte: endDate },
+          }).lean();
+          rows = shares.map(s => ({
+            id: s._id.toString(),
+            entityType: s.entityType,
+            entityId: s.entityId,
+            platform: s.platform,
+            clicks: s.clickCount,
+            applications: s.applicationCount,
+            createdAt: new Date(s.createdAt).toISOString(),
+          }));
+        }
+
+        let data: string;
+        if (format === 'csv') {
+          if (rows.length === 0) {
+            data = '';
+          } else {
+            const headers = Object.keys(rows[0]);
+            const csvRows = rows.map(row =>
+              headers.map(h => {
+                const val = row[h];
+                const str = val === null || val === undefined ? '' : String(val);
+                return str.includes(',') || str.includes('"') ? `"${str.replace(/"/g, '""')}"` : str;
+              }).join(',')
+            );
+            data = [headers.join(','), ...csvRows].join('\n');
+          }
+        } else {
+          data = JSON.stringify(rows);
+        }
+
+        return {
+          format,
+          data,
+          generatedAt: now.toISOString(),
+          recordCount: rows.length,
+        };
+      },
+    },
+
+    platformUserGrowth: {
+      type: new GraphQLObjectType({
+        name: 'PlatformUserGrowth',
+        fields: {
+          months: { type: new GraphQLList(new GraphQLObjectType({
+            name: 'UserGrowthMonth',
+            fields: {
+              month: { type: GraphQLString },
+              newUsers: { type: GraphQLInt },
+              totalUsers: { type: GraphQLInt },
+              newShelters: { type: GraphQLInt },
+              totalShelters: { type: GraphQLInt },
+            },
+          }))},
+          growthRate: { type: GraphQLFloat },
+        },
+      }),
+      args: {
+        months: { type: GraphQLInt },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>) {
+        const monthCount = Math.min((args.months as number) || 12, 24);
+        const now = new Date();
+        const monthData: Array<{
+          month: string;
+          newUsers: number;
+          totalUsers: number;
+          newShelters: number;
+          totalShelters: number;
+        }> = [];
+
+        for (let i = monthCount - 1; i >= 0; i--) {
+          const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+          const key = `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, '0')}`;
+
+          const [newUsers, totalUsers, totalShelters] = await Promise.all([
+            User.countDocuments({ date: { $gte: monthStart, $lte: monthEnd } }),
+            User.countDocuments({ date: { $lte: monthEnd } }),
+            Shelter.countDocuments({}),
+          ]);
+
+          // Shelters don't have a timestamp field, estimate new shelters from users with shelterId in this period
+          const newShelterUsers = await User.countDocuments({
+            date: { $gte: monthStart, $lte: monthEnd },
+            shelterId: { $exists: true, $ne: null },
+          });
+
+          monthData.push({
+            month: key,
+            newUsers,
+            totalUsers,
+            newShelters: newShelterUsers,
+            totalShelters,
+          });
+        }
+
+        const first = monthData[0]?.totalUsers || 1;
+        const last = monthData[monthData.length - 1]?.totalUsers || 0;
+        const growthRate = Math.round(((last - first) / first) * 1000) / 1000;
+
+        return { months: monthData, growthRate };
+      },
+    },
+
+    platformApplicationTrends: {
+      type: new GraphQLObjectType({
+        name: 'PlatformApplicationTrends',
+        fields: {
+          periodStart: { type: GraphQLString },
+          periodEnd: { type: GraphQLString },
+          totalSubmitted: { type: GraphQLInt },
+          totalApproved: { type: GraphQLInt },
+          totalRejected: { type: GraphQLInt },
+          totalWithdrawn: { type: GraphQLInt },
+          approvalRate: { type: GraphQLFloat },
+          avgTimeToReviewDays: { type: GraphQLFloat },
+          weeklyTrends: { type: new GraphQLList(new GraphQLObjectType({
+            name: 'WeeklyApplicationTrend',
+            fields: {
+              week: { type: GraphQLString },
+              submitted: { type: GraphQLInt },
+              approved: { type: GraphQLInt },
+              rejected: { type: GraphQLInt },
+            },
+          }))},
+        },
+      }),
+      args: {
+        startDate: { type: GraphQLString },
+        endDate: { type: GraphQLString },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>) {
+        const now = new Date();
+        const startDate = args.startDate ? new Date(args.startDate as string) : new Date(now.getFullYear(), now.getMonth() - 3, 1);
+        const endDate = args.endDate ? new Date(args.endDate as string) : now;
+
+        const apps = await Application.find({
+          submittedAt: { $gte: startDate, $lte: endDate },
+        }).lean();
+
+        const submitted = apps.filter(a => !a.isDraft);
+        const approved = submitted.filter(a => a.status === 'approved');
+        const rejected = submitted.filter(a => a.status === 'rejected');
+        const withdrawn = submitted.filter(a => a.status === 'withdrawn');
+
+        // Calculate average review time for reviewed applications
+        const reviewed = submitted.filter(a => a.reviewedAt && a.submittedAt);
+        let avgReviewDays = 0;
+        if (reviewed.length > 0) {
+          const totalDays = reviewed.reduce((sum, a) => {
+            const diff = new Date(a.reviewedAt as Date).getTime() - new Date(a.submittedAt as Date).getTime();
+            return sum + diff / (1000 * 60 * 60 * 24);
+          }, 0);
+          avgReviewDays = Math.round((totalDays / reviewed.length) * 10) / 10;
+        }
+
+        // Build weekly trends
+        const weekMap: Record<string, { submitted: number; approved: number; rejected: number }> = {};
+        for (const a of submitted) {
+          const d = new Date(a.submittedAt as Date);
+          const weekStart = new Date(d);
+          weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+          const key = weekStart.toISOString().slice(0, 10);
+          if (!weekMap[key]) weekMap[key] = { submitted: 0, approved: 0, rejected: 0 };
+          weekMap[key].submitted++;
+          if (a.status === 'approved') weekMap[key].approved++;
+          if (a.status === 'rejected') weekMap[key].rejected++;
+        }
+
+        const weeklyTrends = Object.entries(weekMap)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([week, data]) => ({ week, ...data }));
+
+        return {
+          periodStart: startDate.toISOString(),
+          periodEnd: endDate.toISOString(),
+          totalSubmitted: submitted.length,
+          totalApproved: approved.length,
+          totalRejected: rejected.length,
+          totalWithdrawn: withdrawn.length,
+          approvalRate: submitted.length > 0 ? Math.round((approved.length / submitted.length) * 1000) / 1000 : 0,
+          avgTimeToReviewDays: avgReviewDays,
+          weeklyTrends,
         };
       },
     },
