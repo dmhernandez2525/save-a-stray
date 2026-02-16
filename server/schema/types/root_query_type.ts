@@ -42,6 +42,8 @@ import OutcomeLogType from './outcome_log_type';
 import AnimalTimelineEntryType from './animal_timeline_type';
 import StatusHistoryType from './status_history_type';
 import { StatusHistoryDocument } from '../../models/StatusHistory';
+import { MediaAssetDocument } from '../../models/MediaAsset';
+import MediaAssetType from './media_asset_type';
 import { paginationQueryFields } from './pagination_queries';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
@@ -107,6 +109,7 @@ const SpayNeuterModel = mongoose.model<SpayNeuterDocument>('spayNeuter');
 const IntakeLogModel = mongoose.model<IntakeLogDocument>('intakeLog');
 const OutcomeLogModel = mongoose.model<OutcomeLogDocument>('outcomeLog');
 const StatusHistoryModel = mongoose.model<StatusHistoryDocument>('statusHistory');
+const MediaAssetModel = mongoose.model<MediaAssetDocument>('mediaAsset');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -844,6 +847,31 @@ const RootQueryType = new GraphQLObjectType({
             },
           },
         }).limit(limit);
+      }
+    },
+    animalMedia: {
+      type: new GraphQLList(MediaAssetType),
+      args: { animalId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { animalId: string }) {
+        return MediaAssetModel.find({ animalId: args.animalId }).sort({ sortOrder: 1 });
+      }
+    },
+    animalMediaStats: {
+      type: new GraphQLObjectType({
+        name: 'AnimalMediaStatsType',
+        fields: () => ({
+          totalAssets: { type: GraphQLInt },
+          totalViews: { type: GraphQLInt },
+          mostViewedUrl: { type: GraphQLString },
+        }),
+      }),
+      args: { animalId: { type: new GraphQLNonNull(GraphQLID) } },
+      async resolve(_, args: { animalId: string }) {
+        const assets = await MediaAssetModel.find({ animalId: args.animalId }).sort({ viewCount: -1 });
+        const totalAssets = assets.length;
+        const totalViews = assets.reduce((sum, a) => sum + (a.viewCount || 0), 0);
+        const mostViewedUrl = assets.length > 0 ? assets[0].url : null;
+        return { totalAssets, totalViews, mostViewedUrl };
       }
     },
     findNearbyAnimals: {
