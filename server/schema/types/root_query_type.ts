@@ -90,6 +90,12 @@ import {
   WebhookModel, IntegrationConfigModel, WebhookDeliveryModel,
   WEBHOOK_EVENTS, PLATFORM_CONFIGS,
 } from '../../services/integrations';
+import {
+  ImportJobModel, ExportJobModel,
+  ANIMAL_EXPORT_FIELDS, EXPORT_FORMATS,
+  generateCsvFromRecords, generateJsonFromRecords,
+  validateCsvImport, validateJsonImport,
+} from '../../services/import-export';
 import { paginationQueryFields } from './pagination_queries';
 import { GraphQLContext } from '../../graphql/context';
 import { requireAuth } from '../../graphql/authorization';
@@ -5804,6 +5810,226 @@ const RootQueryType = new GraphQLObjectType({
           recentDeliveries,
           successRate: recentDeliveries > 0 ? Math.round((successfulDeliveries / recentDeliveries) * 1000) / 1000 : 1,
         };
+      },
+    },
+
+    // ── F10.3: Import/Export ─────────────────────────────────
+
+    exportAnimals: {
+      type: new GraphQLObjectType({
+        name: 'AnimalExportResult',
+        fields: {
+          format: { type: GraphQLString },
+          content: { type: GraphQLString },
+          recordCount: { type: GraphQLInt },
+          exportedAt: { type: GraphQLString },
+        },
+      }),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        format: { type: GraphQLString },
+        status: { type: GraphQLString },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>, context: unknown) {
+        const ctx = context as GraphQLContext;
+        requireAuth(ctx);
+        const shelterId = args.shelterId as string;
+        const format = (args.format as string) || 'csv';
+        const status = args.status as string | undefined;
+
+        const shelter = await mongoose.model<ShelterDocument>('shelter').findById(shelterId).lean();
+        if (!shelter) return null;
+
+        const query: Record<string, unknown> = { _id: { $in: shelter.animals } };
+        if (status) query.status = status;
+
+        const animals = await mongoose.model<AnimalDocument>('animal').find(query).lean();
+        const records = animals.map(a => {
+          const obj: Record<string, unknown> = {};
+          for (const field of ANIMAL_EXPORT_FIELDS) {
+            obj[field] = (a as Record<string, unknown>)[field] ?? null;
+          }
+          return obj;
+        });
+
+        const content = format === 'json'
+          ? generateJsonFromRecords(records, ANIMAL_EXPORT_FIELDS)
+          : generateCsvFromRecords(records, ANIMAL_EXPORT_FIELDS);
+
+        return {
+          format,
+          content,
+          recordCount: records.length,
+          exportedAt: new Date().toISOString(),
+        };
+      },
+    },
+
+    exportApplications: {
+      type: new GraphQLObjectType({
+        name: 'ApplicationExportResult',
+        fields: {
+          format: { type: GraphQLString },
+          content: { type: GraphQLString },
+          recordCount: { type: GraphQLInt },
+          exportedAt: { type: GraphQLString },
+        },
+      }),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        format: { type: GraphQLString },
+        status: { type: GraphQLString },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>, context: unknown) {
+        const ctx = context as GraphQLContext;
+        requireAuth(ctx);
+        const shelterId = args.shelterId as string;
+        const format = (args.format as string) || 'csv';
+        const status = args.status as string | undefined;
+
+        const query: Record<string, unknown> = { shelterId };
+        if (status) query.status = status;
+
+        const apps = await mongoose.model<ApplicationDocument>('application').find(query).lean();
+        const fields = ['status', 'submittedAt', 'reviewedAt', 'isDraft'] as const;
+        const records = apps.map(a => {
+          const obj: Record<string, unknown> = {};
+          for (const field of fields) {
+            obj[field] = (a as Record<string, unknown>)[field] ?? null;
+          }
+          obj._id = a._id.toString();
+          return obj;
+        });
+
+        const allFields = ['_id', ...fields];
+        const content = format === 'json'
+          ? generateJsonFromRecords(records, allFields)
+          : generateCsvFromRecords(records, allFields);
+
+        return {
+          format,
+          content,
+          recordCount: records.length,
+          exportedAt: new Date().toISOString(),
+        };
+      },
+    },
+
+    importHistory: {
+      type: new GraphQLList(new GraphQLObjectType({
+        name: 'ImportJob',
+        fields: {
+          _id: { type: GraphQLID },
+          shelterId: { type: GraphQLString },
+          userId: { type: GraphQLString },
+          filename: { type: GraphQLString },
+          format: { type: GraphQLString },
+          status: { type: GraphQLString },
+          totalRows: { type: GraphQLInt },
+          successCount: { type: GraphQLInt },
+          errorCount: { type: GraphQLInt },
+          importErrors: { type: new GraphQLList(GraphQLString) },
+          createdAt: { type: GraphQLString },
+          completedAt: { type: GraphQLString },
+        },
+      })),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        limit: { type: GraphQLInt },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>, context: unknown) {
+        const ctx = context as GraphQLContext;
+        requireAuth(ctx);
+        const shelterId = args.shelterId as string;
+        const limit = Math.min((args.limit as number) || 20, 100);
+
+        return ImportJobModel.find({ shelterId })
+          .sort({ createdAt: -1 })
+          .limit(limit)
+          .lean();
+      },
+    },
+
+    exportHistory: {
+      type: new GraphQLList(new GraphQLObjectType({
+        name: 'ExportJob',
+        fields: {
+          _id: { type: GraphQLID },
+          shelterId: { type: GraphQLString },
+          userId: { type: GraphQLString },
+          format: { type: GraphQLString },
+          entityType: { type: GraphQLString },
+          status: { type: GraphQLString },
+          recordCount: { type: GraphQLInt },
+          createdAt: { type: GraphQLString },
+          completedAt: { type: GraphQLString },
+        },
+      })),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        limit: { type: GraphQLInt },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>, context: unknown) {
+        const ctx = context as GraphQLContext;
+        requireAuth(ctx);
+        const shelterId = args.shelterId as string;
+        const limit = Math.min((args.limit as number) || 20, 100);
+
+        return ExportJobModel.find({ shelterId })
+          .sort({ createdAt: -1 })
+          .limit(limit)
+          .lean();
+      },
+    },
+
+    validateImportData: {
+      type: new GraphQLObjectType({
+        name: 'ImportValidation',
+        fields: {
+          valid: { type: GraphQLBoolean },
+          recordCount: { type: GraphQLInt },
+          errors: { type: new GraphQLList(GraphQLString) },
+          warnings: { type: new GraphQLList(GraphQLString) },
+        },
+      }),
+      args: {
+        content: { type: new GraphQLNonNull(GraphQLString) },
+        format: { type: GraphQLString },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>, context: unknown) {
+        const ctx = context as GraphQLContext;
+        requireAuth(ctx);
+        const content = args.content as string;
+        const format = (args.format as string) || 'csv';
+
+        const result = format === 'json'
+          ? validateJsonImport(content)
+          : validateCsvImport(content);
+
+        return {
+          valid: result.valid,
+          recordCount: result.records.length,
+          errors: result.errors,
+          warnings: result.warnings,
+        };
+      },
+    },
+
+    exportFormats: {
+      type: new GraphQLList(new GraphQLObjectType({
+        name: 'ExportFormat',
+        fields: {
+          key: { type: GraphQLString },
+          name: { type: GraphQLString },
+          extension: { type: GraphQLString },
+          mimeType: { type: GraphQLString },
+        },
+      })),
+      resolve() {
+        return Object.entries(EXPORT_FORMATS).map(([key, config]) => ({
+          key,
+          ...config,
+        }));
       },
     },
   })
