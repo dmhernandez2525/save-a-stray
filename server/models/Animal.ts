@@ -101,6 +101,24 @@ const AnimalSchema = new Schema<AnimalDocument>({
   adoptionFee: {
     type: Number,
   },
+  slug: {
+    type: String,
+    default: '',
+    index: true,
+  },
+  metaTitle: {
+    type: String,
+    default: '',
+  },
+  metaDescription: {
+    type: String,
+    default: '',
+  },
+  shelterId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'shelter',
+    index: true,
+  },
   medicalRecords: [{
     date: { type: String, required: true },
     recordType: { type: String, required: true },
@@ -116,6 +134,7 @@ const AnimalSchema = new Schema<AnimalDocument>({
 AnimalSchema.index({ type: 1, status: 1 });
 AnimalSchema.index({ breed: 1 });
 AnimalSchema.index({ intakeDate: 1 });
+AnimalSchema.index({ name: 'text', breed: 'text', description: 'text' });
 
 const Animal: Model<AnimalDocument> = mongoose.model<AnimalDocument>('animal', AnimalSchema);
 

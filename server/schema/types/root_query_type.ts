@@ -2730,6 +2730,428 @@ const RootQueryType = new GraphQLObjectType({
         return ShareEventModel.find(filter).sort({ createdAt: -1 });
       },
     },
+    // F7.1 - Public Pet Listings
+    publicAnimalSearch: {
+      type: new GraphQLObjectType({
+        name: 'PublicAnimalSearchResultType',
+        fields: {
+          animals: { type: new GraphQLList(AnimalType) },
+          totalCount: { type: GraphQLInt },
+          facets: {
+            type: new GraphQLObjectType({
+              name: 'SearchFacetsType',
+              fields: {
+                types: { type: new GraphQLList(new GraphQLObjectType({
+                  name: 'FacetBucketType',
+                  fields: {
+                    value: { type: GraphQLString },
+                    count: { type: GraphQLInt },
+                  },
+                })) },
+                breeds: { type: new GraphQLList(new GraphQLObjectType({
+                  name: 'BreedFacetBucketType',
+                  fields: {
+                    value: { type: GraphQLString },
+                    count: { type: GraphQLInt },
+                  },
+                })) },
+                sizes: { type: new GraphQLList(new GraphQLObjectType({
+                  name: 'SizeFacetBucketType',
+                  fields: {
+                    value: { type: GraphQLString },
+                    count: { type: GraphQLInt },
+                  },
+                })) },
+                sexes: { type: new GraphQLList(new GraphQLObjectType({
+                  name: 'SexFacetBucketType',
+                  fields: {
+                    value: { type: GraphQLString },
+                    count: { type: GraphQLInt },
+                  },
+                })) },
+              },
+            }),
+          },
+        },
+      }),
+      args: {
+        query: { type: GraphQLString },
+        type: { type: GraphQLString },
+        breed: { type: GraphQLString },
+        sex: { type: GraphQLString },
+        size: { type: GraphQLString },
+        color: { type: GraphQLString },
+        energyLevel: { type: GraphQLString },
+        goodWithKids: { type: GraphQLBoolean },
+        goodWithDogs: { type: GraphQLBoolean },
+        goodWithCats: { type: GraphQLBoolean },
+        houseTrained: { type: GraphQLBoolean },
+        minAge: { type: GraphQLInt },
+        maxAge: { type: GraphQLInt },
+        shelterId: { type: GraphQLString },
+        sortBy: { type: GraphQLString },
+        limit: { type: GraphQLInt },
+        offset: { type: GraphQLInt },
+      },
+      async resolve(_parent, args) {
+        const filter: Record<string, unknown> = { status: 'available' };
+        if (args.query) {
+          filter.$text = { $search: args.query };
+        }
+        if (args.type) filter.type = args.type;
+        if (args.breed) filter.breed = { $regex: args.breed, $options: 'i' };
+        if (args.sex) filter.sex = args.sex;
+        if (args.size) filter.size = args.size;
+        if (args.color) filter.color = { $regex: args.color, $options: 'i' };
+        if (args.energyLevel) filter.energyLevel = args.energyLevel;
+        if (args.goodWithKids !== undefined) filter.goodWithKids = args.goodWithKids;
+        if (args.goodWithDogs !== undefined) filter.goodWithDogs = args.goodWithDogs;
+        if (args.goodWithCats !== undefined) filter.goodWithCats = args.goodWithCats;
+        if (args.houseTrained !== undefined) filter.houseTrained = args.houseTrained;
+        if (args.minAge !== undefined || args.maxAge !== undefined) {
+          const ageFilter: Record<string, number> = {};
+          if (args.minAge !== undefined) ageFilter.$gte = args.minAge;
+          if (args.maxAge !== undefined) ageFilter.$lte = args.maxAge;
+          filter.age = ageFilter;
+        }
+        if (args.shelterId) filter.shelterId = args.shelterId;
+        const sortOptions: Record<string, Record<string, 1 | -1>> = {
+          newest: { _id: -1 },
+          oldest: { _id: 1 },
+          name_asc: { name: 1 },
+          name_desc: { name: -1 },
+          age_asc: { age: 1 },
+          age_desc: { age: -1 },
+        };
+        const sort = sortOptions[args.sortBy ?? ''] ?? { _id: -1 };
+        const limit = clampLimit(args.limit, DEFAULT_ANIMAL_LIMIT, MAX_ANIMAL_LIMIT);
+        const offset = args.offset ?? 0;
+        const [animals, totalCount] = await Promise.all([
+          Animal.find(filter).sort(sort).skip(offset).limit(limit),
+          Animal.countDocuments(filter),
+        ]);
+        const facetFilter: Record<string, unknown> = { status: 'available' };
+        const allAvailable = await Animal.find(facetFilter).select('type breed size sex').lean();
+        const typeCounts = new Map<string, number>();
+        const breedCounts = new Map<string, number>();
+        const sizeCounts = new Map<string, number>();
+        const sexCounts = new Map<string, number>();
+        for (const a of allAvailable) {
+          if (a.type) typeCounts.set(a.type, (typeCounts.get(a.type) ?? 0) + 1);
+          if (a.breed) breedCounts.set(a.breed, (breedCounts.get(a.breed) ?? 0) + 1);
+          if (a.size) sizeCounts.set(a.size, (sizeCounts.get(a.size) ?? 0) + 1);
+          if (a.sex) sexCounts.set(a.sex, (sexCounts.get(a.sex) ?? 0) + 1);
+        }
+        const toFacetArray = (map: Map<string, number>) =>
+          Array.from(map.entries()).map(([value, count]) => ({ value, count })).sort((a, b) => b.count - a.count);
+        return {
+          animals,
+          totalCount,
+          facets: {
+            types: toFacetArray(typeCounts),
+            breeds: toFacetArray(breedCounts).slice(0, 20),
+            sizes: toFacetArray(sizeCounts),
+            sexes: toFacetArray(sexCounts),
+          },
+        };
+      },
+    },
+    publicAnimalDetail: {
+      type: new GraphQLObjectType({
+        name: 'PublicAnimalDetailType',
+        fields: {
+          animal: { type: AnimalType },
+          shelter: { type: ShelterType },
+          structuredData: { type: GraphQLString },
+          breadcrumbs: { type: new GraphQLList(new GraphQLObjectType({
+            name: 'BreadcrumbType',
+            fields: {
+              label: { type: GraphQLString },
+              url: { type: GraphQLString },
+            },
+          })) },
+        },
+      }),
+      args: {
+        id: { type: GraphQLString },
+        slug: { type: GraphQLString },
+      },
+      async resolve(_parent, args) {
+        let animal = null;
+        if (args.id) {
+          animal = await Animal.findById(args.id);
+        } else if (args.slug) {
+          animal = await Animal.findOne({ slug: args.slug });
+        }
+        if (!animal) return null;
+        let shelter = null;
+        if (animal.shelterId) {
+          shelter = await Shelter.findById(animal.shelterId);
+        } else {
+          shelter = await Shelter.findOne({ animals: animal._id });
+        }
+        const structuredData = JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'Product',
+          name: animal.name,
+          description: animal.metaDescription || animal.description,
+          image: animal.image,
+          brand: shelter ? { '@type': 'Organization', name: shelter.name } : undefined,
+          offers: animal.adoptionFee ? {
+            '@type': 'Offer',
+            price: animal.adoptionFee,
+            priceCurrency: 'USD',
+            availability: animal.status === 'available'
+              ? 'https://schema.org/InStock'
+              : 'https://schema.org/OutOfStock',
+          } : undefined,
+        });
+        const breadcrumbs = [
+          { label: 'Home', url: '/' },
+          { label: 'Pets', url: '/pets' },
+        ];
+        if (animal.type) {
+          breadcrumbs.push({ label: animal.type, url: `/pets?type=${animal.type}` });
+        }
+        breadcrumbs.push({ label: animal.name, url: `/pets/${animal.slug || animal._id}` });
+        return { animal, shelter, structuredData, breadcrumbs };
+      },
+    },
+    publicShelterProfile: {
+      type: new GraphQLObjectType({
+        name: 'PublicShelterProfileType',
+        fields: {
+          shelter: { type: ShelterType },
+          availableAnimals: { type: new GraphQLList(AnimalType) },
+          totalAvailable: { type: GraphQLInt },
+          structuredData: { type: GraphQLString },
+        },
+      }),
+      args: {
+        id: { type: GraphQLString },
+        slug: { type: GraphQLString },
+      },
+      async resolve(_parent, args) {
+        let shelter = null;
+        if (args.id) {
+          shelter = await Shelter.findById(args.id);
+        } else if (args.slug) {
+          shelter = await Shelter.findOne({ slug: args.slug });
+        }
+        if (!shelter) return null;
+        const availableAnimals = await Animal.find({
+          _id: { $in: shelter.animals },
+          status: 'available',
+        }).limit(50);
+        const totalAvailable = await Animal.countDocuments({
+          _id: { $in: shelter.animals },
+          status: 'available',
+        });
+        const structuredData = JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'Organization',
+          name: shelter.name,
+          description: shelter.description || '',
+          address: shelter.location,
+          telephone: shelter.phone || undefined,
+          email: shelter.email || undefined,
+          url: shelter.website || undefined,
+          logo: shelter.logo || undefined,
+        });
+        return { shelter, availableAnimals, totalAvailable, structuredData };
+      },
+    },
+    nearbyAnimals: {
+      type: new GraphQLList(new GraphQLObjectType({
+        name: 'NearbyAnimalResultType',
+        fields: {
+          animal: { type: AnimalType },
+          shelterName: { type: GraphQLString },
+          shelterLocation: { type: GraphQLString },
+          distanceMiles: { type: GraphQLFloat },
+        },
+      })),
+      args: {
+        latitude: { type: new GraphQLNonNull(GraphQLFloat) },
+        longitude: { type: new GraphQLNonNull(GraphQLFloat) },
+        radiusMiles: { type: GraphQLFloat },
+        type: { type: GraphQLString },
+        limit: { type: GraphQLInt },
+      },
+      async resolve(_parent, args) {
+        const radiusMiles = args.radiusMiles ?? 25;
+        const radiusMeters = radiusMiles * 1609.34;
+        const nearbyShelters = await Shelter.find({
+          coordinates: {
+            $nearSphere: {
+              $geometry: {
+                type: 'Point',
+                coordinates: [args.longitude, args.latitude],
+              },
+              $maxDistance: radiusMeters,
+            },
+          },
+        }).limit(50);
+        if (nearbyShelters.length === 0) return [];
+        const shelterMap = new Map<string, typeof nearbyShelters[0]>();
+        for (const s of nearbyShelters) {
+          shelterMap.set(s._id.toString(), s);
+        }
+        const allAnimalIds = nearbyShelters.flatMap(s => s.animals);
+        const animalFilter: Record<string, unknown> = {
+          _id: { $in: allAnimalIds },
+          status: 'available',
+        };
+        if (args.type) animalFilter.type = args.type;
+        const limit = clampLimit(args.limit, 20, MAX_ANIMAL_LIMIT);
+        const animals = await Animal.find(animalFilter).limit(limit);
+        const toRad = (deg: number) => deg * (Math.PI / 180);
+        const haversine = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+          const R = 3958.8;
+          const dLat = toRad(lat2 - lat1);
+          const dLon = toRad(lon2 - lon1);
+          const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+          return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        };
+        const results = [];
+        for (const animal of animals) {
+          let ownerShelter = null;
+          if (animal.shelterId) {
+            ownerShelter = shelterMap.get(animal.shelterId.toString());
+          }
+          if (!ownerShelter) {
+            for (const s of nearbyShelters) {
+              if (s.animals.some(aId => aId.toString() === animal._id.toString())) {
+                ownerShelter = s;
+                break;
+              }
+            }
+          }
+          if (!ownerShelter) continue;
+          const coords = ownerShelter.coordinates?.coordinates;
+          const dist = coords
+            ? haversine(args.latitude, args.longitude, coords[1], coords[0])
+            : 0;
+          results.push({
+            animal,
+            shelterName: ownerShelter.name,
+            shelterLocation: ownerShelter.location,
+            distanceMiles: Math.round(dist * 10) / 10,
+          });
+        }
+        results.sort((a, b) => a.distanceMiles - b.distanceMiles);
+        return results;
+      },
+    },
+    relatedAnimals: {
+      type: new GraphQLList(AnimalType),
+      args: {
+        animalId: { type: new GraphQLNonNull(GraphQLID) },
+        limit: { type: GraphQLInt },
+      },
+      async resolve(_parent, args) {
+        const animal = await Animal.findById(args.animalId);
+        if (!animal) return [];
+        const limit = clampLimit(args.limit, 6, 20);
+        const related = await Animal.find({
+          _id: { $ne: animal._id },
+          status: 'available',
+          type: animal.type,
+        }).limit(limit * 3);
+        const scored = related.map(r => {
+          let score = 0;
+          if (r.breed === animal.breed) score += 3;
+          if (r.size === animal.size) score += 2;
+          if (r.energyLevel === animal.energyLevel) score += 1;
+          if (r.sex === animal.sex) score += 1;
+          const ageDiff = Math.abs(r.age - animal.age);
+          if (ageDiff <= 1) score += 2;
+          else if (ageDiff <= 3) score += 1;
+          return { animal: r, score };
+        });
+        scored.sort((a, b) => b.score - a.score);
+        return scored.slice(0, limit).map(s => s.animal);
+      },
+    },
+    publicSearchFacets: {
+      type: new GraphQLObjectType({
+        name: 'PublicSearchFacetsType',
+        fields: {
+          types: { type: new GraphQLList(GraphQLString) },
+          breeds: { type: new GraphQLList(GraphQLString) },
+          sizes: { type: new GraphQLList(GraphQLString) },
+          colors: { type: new GraphQLList(GraphQLString) },
+          energyLevels: { type: new GraphQLList(GraphQLString) },
+        },
+      }),
+      async resolve() {
+        const animals = await Animal.find({ status: 'available' })
+          .select('type breed size color energyLevel').lean();
+        const types = new Set<string>();
+        const breeds = new Set<string>();
+        const sizes = new Set<string>();
+        const colors = new Set<string>();
+        const energyLevels = new Set<string>();
+        for (const a of animals) {
+          if (a.type) types.add(a.type);
+          if (a.breed) breeds.add(a.breed);
+          if (a.size) sizes.add(a.size);
+          if (a.color) colors.add(a.color);
+          if (a.energyLevel) energyLevels.add(a.energyLevel);
+        }
+        return {
+          types: Array.from(types).sort(),
+          breeds: Array.from(breeds).sort(),
+          sizes: Array.from(sizes).sort(),
+          colors: Array.from(colors).sort(),
+          energyLevels: Array.from(energyLevels).sort(),
+        };
+      },
+    },
+    sitemapData: {
+      type: new GraphQLObjectType({
+        name: 'SitemapDataType',
+        fields: {
+          animals: { type: new GraphQLList(new GraphQLObjectType({
+            name: 'SitemapAnimalEntryType',
+            fields: {
+              id: { type: GraphQLID },
+              slug: { type: GraphQLString },
+              name: { type: GraphQLString },
+              type: { type: GraphQLString },
+              updatedAt: { type: GraphQLString },
+            },
+          })) },
+          shelters: { type: new GraphQLList(new GraphQLObjectType({
+            name: 'SitemapShelterEntryType',
+            fields: {
+              id: { type: GraphQLID },
+              slug: { type: GraphQLString },
+              name: { type: GraphQLString },
+            },
+          })) },
+        },
+      }),
+      async resolve() {
+        const animals = await Animal.find({ status: 'available' })
+          .select('_id slug name type').lean();
+        const shelters = await Shelter.find({}).select('_id slug name').lean();
+        return {
+          animals: animals.map(a => ({
+            id: a._id.toString(),
+            slug: a.slug || '',
+            name: a.name,
+            type: a.type,
+            updatedAt: new Date().toISOString(),
+          })),
+          shelters: shelters.map(s => ({
+            id: s._id.toString(),
+            slug: s.slug || '',
+            name: s.name,
+          })),
+        };
+      },
+    },
   })
 });
 

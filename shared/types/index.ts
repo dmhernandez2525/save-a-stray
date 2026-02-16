@@ -88,6 +88,10 @@ export interface IAnimal {
   intakeDate?: Date;
   intakeSource?: string;
   adoptionFee?: number;
+  slug?: string;
+  metaTitle?: string;
+  metaDescription?: string;
+  shelterId?: Types.ObjectId | string;
   medicalRecords: IMedicalRecord[];
   applications: (Types.ObjectId | string)[];
 }
@@ -119,6 +123,8 @@ export interface IShelter {
   nextAnimalIdSequence?: number;
   verified?: boolean;
   verifiedAt?: Date;
+  slug?: string;
+  logo?: string;
   animals: (Types.ObjectId | string)[];
 }
 
