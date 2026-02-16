@@ -97,10 +97,16 @@ export interface IAnimalDocument extends IAnimal {
 }
 
 // Shelter Types
+export interface IShelterCoordinates {
+  type: 'Point';
+  coordinates: [number, number]; // [longitude, latitude]
+}
+
 export interface IShelter {
   _id: Types.ObjectId | string;
   name: string;
   location: string;
+  coordinates?: IShelterCoordinates;
   users: (Types.ObjectId | string)[];
   paymentEmail: string;
   phone?: string;

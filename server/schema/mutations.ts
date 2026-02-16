@@ -182,6 +182,8 @@ interface ShelterArgs {
   _id?: string;
   name: string;
   location: string;
+  latitude?: number;
+  longitude?: number;
   users?: string;
   paymentEmail: string;
   phone?: string;
@@ -860,6 +862,8 @@ const mutation = new GraphQLObjectType({
       args: {
         name: { type: GraphQLString },
         location: { type: GraphQLString },
+        latitude: { type: GraphQLFloat },
+        longitude: { type: GraphQLFloat },
         paymentEmail: { type: EmailScalar },
         phone: { type: GraphQLString },
         email: { type: EmailScalar },
@@ -871,17 +875,23 @@ const mutation = new GraphQLObjectType({
         // Only authenticated users can create shelters
         requireAuth(context);
 
-        const { name, location, paymentEmail, phone, email, website, hours, description } = args;
-        const newShelter = new Shelter({
-          name,
-          location,
-          paymentEmail,
-          phone,
-          email,
-          website,
-          hours,
-          description,
-        });
+        const shelterData: Record<string, unknown> = {
+          name: args.name,
+          location: args.location,
+          paymentEmail: args.paymentEmail,
+          phone: args.phone,
+          email: args.email,
+          website: args.website,
+          hours: args.hours,
+          description: args.description,
+        };
+        if (args.latitude !== undefined && args.longitude !== undefined) {
+          shelterData.coordinates = {
+            type: 'Point',
+            coordinates: [args.longitude, args.latitude],
+          };
+        }
+        const newShelter = new Shelter(shelterData);
         await newShelter.save();
         return newShelter;
       },
@@ -903,6 +913,8 @@ const mutation = new GraphQLObjectType({
         _id: { type: GraphQLID },
         name: { type: GraphQLString },
         location: { type: GraphQLString },
+        latitude: { type: GraphQLFloat },
+        longitude: { type: GraphQLFloat },
         users: { type: GraphQLString },
         paymentEmail: { type: EmailScalar },
         phone: { type: GraphQLString },
@@ -916,31 +928,24 @@ const mutation = new GraphQLObjectType({
         // Only shelter staff can edit their shelter
         await requireShelterStaff(context, args._id);
 
-        const {
-          _id,
-          name,
-          location,
-          users,
-          paymentEmail,
-          phone,
-          email,
-          website,
-          hours,
-          description,
-          animals,
-        } = args;
-        const shelter = await Shelter.findById(_id);
+        const shelter = await Shelter.findById(args._id);
         if (shelter) {
-          shelter.name = name;
-          shelter.location = location;
-          if (users) shelter.users = users as unknown as typeof shelter.users;
-          shelter.paymentEmail = paymentEmail;
-          if (phone !== undefined) shelter.phone = phone;
-          if (email !== undefined) shelter.email = email;
-          if (website !== undefined) shelter.website = website;
-          if (hours !== undefined) shelter.hours = hours;
-          if (description !== undefined) shelter.description = description;
-          if (animals) shelter.animals = animals as unknown as typeof shelter.animals;
+          shelter.name = args.name;
+          shelter.location = args.location;
+          if (args.latitude !== undefined && args.longitude !== undefined) {
+            shelter.coordinates = {
+              type: 'Point',
+              coordinates: [args.longitude, args.latitude],
+            };
+          }
+          if (args.users) shelter.users = args.users as unknown as typeof shelter.users;
+          shelter.paymentEmail = args.paymentEmail;
+          if (args.phone !== undefined) shelter.phone = args.phone;
+          if (args.email !== undefined) shelter.email = args.email;
+          if (args.website !== undefined) shelter.website = args.website;
+          if (args.hours !== undefined) shelter.hours = args.hours;
+          if (args.description !== undefined) shelter.description = args.description;
+          if (args.animals) shelter.animals = args.animals as unknown as typeof shelter.animals;
           await shelter.save();
           return shelter;
         }
@@ -1188,8 +1193,15 @@ const mutation = new GraphQLObjectType({
         sex: { type: GraphQLString },
         color: { type: GraphQLString },
         status: { type: GraphQLString },
+        size: { type: GraphQLString },
+        energyLevel: { type: GraphQLString },
+        goodWithKids: { type: GraphQLBoolean },
+        goodWithDogs: { type: GraphQLBoolean },
+        goodWithCats: { type: GraphQLBoolean },
+        houseTrained: { type: GraphQLBoolean },
         minAge: { type: GraphQLInt },
         maxAge: { type: GraphQLInt },
+        alertsEnabled: { type: GraphQLBoolean },
       },
       async resolve(
         _,
@@ -1201,8 +1213,15 @@ const mutation = new GraphQLObjectType({
           sex?: string;
           color?: string;
           status?: string;
+          size?: string;
+          energyLevel?: string;
+          goodWithKids?: boolean;
+          goodWithDogs?: boolean;
+          goodWithCats?: boolean;
+          houseTrained?: boolean;
           minAge?: number;
           maxAge?: number;
+          alertsEnabled?: boolean;
         },
         context: GraphQLContext
       ) {
@@ -1215,13 +1234,35 @@ const mutation = new GraphQLObjectType({
         if (args.sex) filters.sex = args.sex;
         if (args.color) filters.color = args.color;
         if (args.status) filters.status = args.status;
+        if (args.size) filters.size = args.size;
+        if (args.energyLevel) filters.energyLevel = args.energyLevel;
+        if (args.goodWithKids !== undefined) filters.goodWithKids = args.goodWithKids;
+        if (args.goodWithDogs !== undefined) filters.goodWithDogs = args.goodWithDogs;
+        if (args.goodWithCats !== undefined) filters.goodWithCats = args.goodWithCats;
+        if (args.houseTrained !== undefined) filters.houseTrained = args.houseTrained;
         if (args.minAge !== undefined) filters.minAge = args.minAge;
         if (args.maxAge !== undefined) filters.maxAge = args.maxAge;
         const savedSearch = new SavedSearchModel({
           userId: args.userId,
           name: args.name,
           filters,
+          alertsEnabled: args.alertsEnabled ?? false,
         });
+        await savedSearch.save();
+        return savedSearch;
+      },
+    },
+    toggleSearchAlerts: {
+      type: SavedSearchType,
+      args: {
+        _id: { type: GraphQLID },
+        alertsEnabled: { type: GraphQLBoolean },
+      },
+      async resolve(_, args: { _id: string; alertsEnabled: boolean }, context: GraphQLContext) {
+        const savedSearch = await SavedSearchModel.findById(args._id);
+        if (!savedSearch) return null;
+        requireSelf(context, savedSearch.userId.toString());
+        savedSearch.alertsEnabled = args.alertsEnabled;
         await savedSearch.save();
         return savedSearch;
       },

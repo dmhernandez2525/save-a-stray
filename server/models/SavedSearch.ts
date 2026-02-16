@@ -9,9 +9,16 @@ export interface SavedSearchDocument extends Document {
     sex?: string;
     color?: string;
     status?: string;
+    size?: string;
+    energyLevel?: string;
+    goodWithKids?: boolean;
+    goodWithDogs?: boolean;
+    goodWithCats?: boolean;
+    houseTrained?: boolean;
     minAge?: number;
     maxAge?: number;
   };
+  alertsEnabled: boolean;
   createdAt: Date;
 }
 
@@ -30,8 +37,18 @@ const SavedSearchSchema = new Schema<SavedSearchDocument>({
     sex: { type: String },
     color: { type: String },
     status: { type: String },
+    size: { type: String },
+    energyLevel: { type: String },
+    goodWithKids: { type: Boolean },
+    goodWithDogs: { type: Boolean },
+    goodWithCats: { type: Boolean },
+    houseTrained: { type: Boolean },
     minAge: { type: Number },
     maxAge: { type: Number }
+  },
+  alertsEnabled: {
+    type: Boolean,
+    default: false
   },
   createdAt: {
     type: Date,

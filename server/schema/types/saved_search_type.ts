@@ -1,4 +1,4 @@
-import { GraphQLObjectType, GraphQLString, GraphQLID, GraphQLInt } from 'graphql';
+import { GraphQLObjectType, GraphQLString, GraphQLID, GraphQLInt, GraphQLBoolean } from 'graphql';
 
 const SavedSearchFiltersType = new GraphQLObjectType({
   name: 'SavedSearchFiltersType',
@@ -8,6 +8,12 @@ const SavedSearchFiltersType = new GraphQLObjectType({
     sex: { type: GraphQLString },
     color: { type: GraphQLString },
     status: { type: GraphQLString },
+    size: { type: GraphQLString },
+    energyLevel: { type: GraphQLString },
+    goodWithKids: { type: GraphQLBoolean },
+    goodWithDogs: { type: GraphQLBoolean },
+    goodWithCats: { type: GraphQLBoolean },
+    houseTrained: { type: GraphQLBoolean },
     minAge: { type: GraphQLInt },
     maxAge: { type: GraphQLInt }
   })
@@ -20,6 +26,7 @@ const SavedSearchType = new GraphQLObjectType({
     userId: { type: GraphQLString },
     name: { type: GraphQLString },
     filters: { type: SavedSearchFiltersType },
+    alertsEnabled: { type: GraphQLBoolean },
     createdAt: { type: GraphQLString }
   })
 });
