@@ -68,6 +68,9 @@ import AdoptionRecordType from './adoption_record_type';
 import { PostAdoptionSurveyDocument } from '../../models/PostAdoptionSurvey';
 import { FosterProfileDocument } from '../../models/FosterProfile';
 import FosterProfileType from './foster_profile_type';
+import { FosterPlacementDocument } from '../../models/FosterPlacement';
+import FosterPlacementType from './foster_placement_type';
+import { calculateFosterMatchScore, isAvailable } from '../../services/foster-matching';
 import { paginationQueryFields } from './pagination_queries';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
@@ -147,6 +150,7 @@ const MatchRecordModel = mongoose.model<MatchRecordDocument>('matchRecord');
 const AdoptionRecordModel = mongoose.model<AdoptionRecordDocument>('adoptionRecord');
 const PostAdoptionSurveyModel = mongoose.model<PostAdoptionSurveyDocument>('postAdoptionSurvey');
 const FosterProfileModel = mongoose.model<FosterProfileDocument>('fosterProfile');
+const FosterPlacementModel = mongoose.model<FosterPlacementDocument>('fosterPlacement');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -1689,6 +1693,153 @@ const RootQueryType = new GraphQLObjectType({
           requiredModules: required.length,
           requiredCompleted,
           isComplete: requiredCompleted >= required.length,
+        };
+      },
+    },
+
+    // F5.2 - Foster Matching
+    matchedFostersForAnimal: {
+      type: new GraphQLList(new GraphQLObjectType({
+        name: 'FosterMatchResultType',
+        fields: {
+          fosterProfileId: { type: GraphQLString },
+          userId: { type: GraphQLString },
+          score: { type: GraphQLInt },
+          factors: {
+            type: new GraphQLList(new GraphQLObjectType({
+              name: 'FosterMatchFactorType',
+              fields: {
+                key: { type: GraphQLString },
+                value: { type: GraphQLFloat },
+              },
+            })),
+          },
+        },
+      })),
+      args: { animalId: { type: GraphQLString }, shelterId: { type: GraphQLString } },
+      async resolve(_parent, args) {
+        if (!args.animalId || !args.shelterId) return [];
+        const animal = await Animal.findById(args.animalId);
+        if (!animal) return [];
+        const profiles = await FosterProfileModel.find({
+          shelterId: args.shelterId,
+          status: 'active',
+        });
+        const available = profiles.filter(p => isAvailable(p));
+        const results = available
+          .map(p => {
+            const match = calculateFosterMatchScore(p, animal);
+            return {
+              ...match,
+              factors: Object.entries(match.factors).map(([key, value]) => ({ key, value })),
+            };
+          })
+          .sort((a, b) => b.score - a.score);
+        return results;
+      },
+    },
+    fosterAvailabilityCalendar: {
+      type: new GraphQLList(new GraphQLObjectType({
+        name: 'FosterAvailabilityEntryType',
+        fields: {
+          fosterProfileId: { type: GraphQLString },
+          userId: { type: GraphQLString },
+          isAvailable: { type: GraphQLBoolean },
+          currentAnimalCount: { type: GraphQLInt },
+          maxAnimals: { type: GraphQLInt },
+          blackoutDates: {
+            type: new GraphQLList(new GraphQLObjectType({
+              name: 'BlackoutDateEntryType',
+              fields: {
+                start: { type: GraphQLString },
+                end: { type: GraphQLString },
+                reason: { type: GraphQLString },
+              },
+            })),
+          },
+        },
+      })),
+      args: { shelterId: { type: GraphQLString }, date: { type: GraphQLString } },
+      async resolve(_parent, args) {
+        if (!args.shelterId) return [];
+        const profiles = await FosterProfileModel.find({
+          shelterId: args.shelterId,
+          status: 'active',
+        });
+        const checkDate = args.date ? new Date(args.date) : new Date();
+        return profiles.map(p => ({
+          fosterProfileId: p._id.toString(),
+          userId: p.userId,
+          isAvailable: isAvailable(p, checkDate),
+          currentAnimalCount: p.currentAnimalCount,
+          maxAnimals: p.maxAnimals,
+          blackoutDates: p.blackoutDates.map(bd => ({
+            start: bd.start.toISOString(),
+            end: bd.end.toISOString(),
+            reason: bd.reason,
+          })),
+        }));
+      },
+    },
+    fosterPlacementHistory: {
+      type: new GraphQLList(FosterPlacementType),
+      args: {
+        fosterProfileId: { type: GraphQLString },
+        userId: { type: GraphQLString },
+        shelterId: { type: GraphQLString },
+        status: { type: GraphQLString },
+      },
+      async resolve(_parent, args) {
+        const filter: Record<string, unknown> = {};
+        if (args.fosterProfileId) filter.fosterProfileId = args.fosterProfileId;
+        if (args.userId) filter.userId = args.userId;
+        if (args.shelterId) filter.shelterId = args.shelterId;
+        if (args.status) filter.status = args.status;
+        return FosterPlacementModel.find(filter).sort({ createdAt: -1 });
+      },
+    },
+    fosterPlacementAnalytics: {
+      type: new GraphQLObjectType({
+        name: 'FosterPlacementAnalyticsType',
+        fields: {
+          totalPlacements: { type: GraphQLInt },
+          activePlacements: { type: GraphQLInt },
+          completedPlacements: { type: GraphQLInt },
+          averageDurationDays: { type: GraphQLFloat },
+          emergencyPlacements: { type: GraphQLInt },
+          averageMatchScore: { type: GraphQLFloat },
+          utilizationRate: { type: GraphQLFloat },
+        },
+      }),
+      args: { shelterId: { type: GraphQLString } },
+      async resolve(_parent, args) {
+        if (!args.shelterId) return null;
+        const placements = await FosterPlacementModel.find({ shelterId: args.shelterId });
+        const active = placements.filter(p => p.status === 'active');
+        const completed = placements.filter(p => p.status === 'completed');
+        const emergency = placements.filter(p => p.isEmergency);
+        const durations = completed
+          .filter(p => p.startDate && p.endDate)
+          .map(p => (p.endDate!.getTime() - p.startDate!.getTime()) / (1000 * 60 * 60 * 24));
+        const avgDuration = durations.length > 0
+          ? durations.reduce((s, d) => s + d, 0) / durations.length
+          : 0;
+        const totalScore = placements.reduce((s, p) => s + p.matchScore, 0);
+        const avgScore = placements.length > 0 ? totalScore / placements.length : 0;
+        const profiles = await FosterProfileModel.find({
+          shelterId: args.shelterId,
+          status: 'active',
+        });
+        const totalCapacity = profiles.reduce((s, p) => s + p.maxAnimals, 0);
+        const utilizationRate = totalCapacity > 0 ? active.length / totalCapacity : 0;
+        return {
+          totalPlacements: placements.length,
+          activePlacements: active.length,
+          completedPlacements: completed.length,
+          averageDurationDays: Math.round(avgDuration * 10) / 10,
+          emergencyPlacements: emergency.length,
+          averageMatchScore: Math.round(avgScore * 10) / 10,
+          utilizationRate: Math.round(utilizationRate * 100) / 100,
         };
       },
     },
