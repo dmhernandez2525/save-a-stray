@@ -114,6 +114,9 @@ export interface IShelter {
   website?: string;
   hours?: string;
   description?: string;
+  maxCapacity?: number;
+  animalIdPrefix?: string;
+  nextAnimalIdSequence?: number;
   verified?: boolean;
   verifiedAt?: Date;
   animals: (Types.ObjectId | string)[];

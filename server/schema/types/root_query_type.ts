@@ -52,6 +52,8 @@ import { ShelterStaffRoleDocument } from '../../models/ShelterStaffRole';
 import ShelterStaffRoleType from './shelter_staff_role_type';
 import { InternalNoteDocument } from '../../models/InternalNote';
 import InternalNoteType from './internal_note_type';
+import { KennelAssignmentDocument } from '../../models/KennelAssignment';
+import KennelAssignmentType from './kennel_assignment_type';
 import { paginationQueryFields } from './pagination_queries';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
@@ -122,6 +124,7 @@ const DashboardLayoutModel = mongoose.model<DashboardLayoutDocument>('dashboardL
 const StaffInvitationModel = mongoose.model<StaffInvitationDocument>('staffInvitation');
 const ShelterStaffRoleModel = mongoose.model<ShelterStaffRoleDocument>('shelterStaffRole');
 const InternalNoteModel = mongoose.model<InternalNoteDocument>('internalNote');
+const KennelAssignmentModel = mongoose.model<KennelAssignmentDocument>('kennelAssignment');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -1036,6 +1039,95 @@ const RootQueryType = new GraphQLObjectType({
         const totalViews = assets.reduce((sum, a) => sum + (a.viewCount || 0), 0);
         const mostViewedUrl = assets.length > 0 ? assets[0].url : null;
         return { totalAssets, totalViews, mostViewedUrl };
+      }
+    },
+    shelterKennels: {
+      type: new GraphQLList(KennelAssignmentType),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        status: { type: GraphQLString },
+      },
+      resolve(_, args: { shelterId: string; status?: string }) {
+        const filter: Record<string, unknown> = { shelterId: args.shelterId };
+        if (args.status) filter.status = args.status;
+        return KennelAssignmentModel.find(filter).sort({ kennelId: 1 });
+      }
+    },
+    shelterCapacity: {
+      type: new GraphQLObjectType({
+        name: 'ShelterCapacityType',
+        fields: () => ({
+          maxCapacity: { type: GraphQLInt },
+          currentOccupancy: { type: GraphQLInt },
+          availableKennels: { type: GraphQLInt },
+          maintenanceKennels: { type: GraphQLInt },
+          occupancyPercent: { type: GraphQLFloat },
+          atWarningThreshold: { type: GraphQLBoolean },
+          atCriticalThreshold: { type: GraphQLBoolean },
+        }),
+      }),
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      async resolve(_, args: { shelterId: string }) {
+        const shelter = await Shelter.findById(args.shelterId);
+        if (!shelter) return null;
+
+        const [occupied, maintenance, vacant] = await Promise.all([
+          KennelAssignmentModel.countDocuments({ shelterId: args.shelterId, status: 'occupied' }),
+          KennelAssignmentModel.countDocuments({ shelterId: args.shelterId, status: 'maintenance' }),
+          KennelAssignmentModel.countDocuments({ shelterId: args.shelterId, status: 'vacant' }),
+        ]);
+
+        const maxCapacity = shelter.maxCapacity || 0;
+        const occupancyPercent = maxCapacity > 0 ? Math.round((occupied / maxCapacity) * 1000) / 10 : 0;
+
+        return {
+          maxCapacity,
+          currentOccupancy: occupied,
+          availableKennels: vacant,
+          maintenanceKennels: maintenance,
+          occupancyPercent,
+          atWarningThreshold: maxCapacity > 0 && occupancyPercent >= 80,
+          atCriticalThreshold: maxCapacity > 0 && occupancyPercent >= 95,
+        };
+      }
+    },
+    intakeSourceAnalytics: {
+      type: new GraphQLList(new GraphQLObjectType({
+        name: 'IntakeSourceAnalyticsType',
+        fields: () => ({
+          source: { type: GraphQLString },
+          count: { type: GraphQLInt },
+          percentage: { type: GraphQLFloat },
+        }),
+      })),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        startDate: { type: GraphQLString },
+        endDate: { type: GraphQLString },
+      },
+      async resolve(_, args: { shelterId: string; startDate?: string; endDate?: string }) {
+        const filter: Record<string, unknown> = { shelterId: args.shelterId };
+        if (args.startDate || args.endDate) {
+          filter.intakeDate = {};
+          if (args.startDate) (filter.intakeDate as Record<string, Date>).$gte = new Date(args.startDate);
+          if (args.endDate) (filter.intakeDate as Record<string, Date>).$lte = new Date(args.endDate);
+        }
+
+        const logs = await IntakeLogModel.find(filter);
+        const sourceCounts: Record<string, number> = {};
+        for (const log of logs) {
+          const source = log.source || 'unknown';
+          sourceCounts[source] = (sourceCounts[source] || 0) + 1;
+        }
+
+        const total = logs.length;
+        return Object.entries(sourceCounts)
+          .map(([source, count]) => ({
+            source,
+            count,
+            percentage: total > 0 ? Math.round((count / total) * 1000) / 10 : 0,
+          }))
+          .sort((a, b) => b.count - a.count);
       }
     },
     findNearbyAnimals: {
