@@ -28,6 +28,9 @@ export interface LicenseRecord {
 }
 
 export function checkComplianceStatus(record: LicenseRecord): ComplianceStatus {
+  // Respect manually set non-compliant status
+  if (record.status === 'non-compliant') return 'non-compliant';
+
   const now = new Date();
   const expires = new Date(record.expiresAt);
   const daysUntilExpiry = Math.floor((expires.getTime() - now.getTime()) / 86400000);
@@ -450,6 +453,9 @@ export function createAuditEntry(
   details: Record<string, unknown>,
   ipAddress: string
 ): AuditEntry {
+  if (!userId) throw new Error('userId (performedBy) is required for audit entries');
+  if (!action) throw new Error('action is required for audit entries');
+  if (!entityType) throw new Error('entityType is required for audit entries');
   const timestamp = new Date().toISOString();
   const entry: Omit<AuditEntry, 'checksum'> = {
     id: `audit_${Date.now()}`,

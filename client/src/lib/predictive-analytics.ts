@@ -13,7 +13,7 @@ export interface AdoptionPrediction {
   recommendedActions: string[];
 }
 
-interface AnimalFeatures {
+export interface AnimalFeatures {
   id: string;
   species: string;
   breed?: string;
@@ -132,11 +132,11 @@ export function predictAdoption(animal: AnimalFeatures): AdoptionPrediction {
   const likelihood = Math.round(factors.reduce((sum, f) => sum + (f.score * f.weight), 0) / totalWeight);
   const confidence = Math.min(85, 40 + (animal.daysInShelter > 0 ? 15 : 0) + (animal.listingViews > 10 ? 15 : 0) + (animal.photoCount > 0 ? 15 : 0));
 
-  // Estimate days based on likelihood
-  const estimatedDays = likelihood >= 80 ? Math.round(7 + Math.random() * 7)
-    : likelihood >= 60 ? Math.round(14 + Math.random() * 21)
-    : likelihood >= 40 ? Math.round(30 + Math.random() * 30)
-    : Math.round(60 + Math.random() * 60);
+  // Estimate days based on likelihood (inversely proportional)
+  const estimatedDays = likelihood >= 80 ? Math.round(14 - (likelihood - 80) * 0.35)
+    : likelihood >= 60 ? Math.round(35 - (likelihood - 60) * 1.05)
+    : likelihood >= 40 ? Math.round(60 - (likelihood - 40) * 1.25)
+    : Math.round(120 - likelihood * 1.5);
 
   const riskLevel = likelihood >= 60 ? 'low' : likelihood >= 40 ? 'medium' : 'high';
 
@@ -282,7 +282,8 @@ export function forecastDemand(
   const expectedIntake = Math.round(historicalIntake * factor * (1 + growthRate));
   const expectedAdoptions = Math.round(historicalAdoptions * factor * (1 + growthRate));
   const netChange = expectedIntake - expectedAdoptions;
-  const confidence = 60 + Math.round(Math.random() * 20); // Simulated
+  // Confidence based on data quality: higher when using known seasonal factors
+  const confidence = factor !== 1.0 ? 75 : 65;
 
   return { period: month, expectedIntake, expectedAdoptions, netChange, seasonalFactor: factor, confidence };
 }

@@ -281,21 +281,31 @@ export function generateFlyerData(report: LostFoundReport, reward?: string): Fly
   };
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
 export function generateFlyerHtml(data: FlyerData): string {
+  const e = escapeHtml;
   return [
     `<div class="flyer">`,
-    `<h1>${data.title}</h1>`,
-    data.photoUrl ? `<img src="${data.photoUrl}" alt="${data.petName}" />` : '',
-    `<h2>${data.petName}</h2>`,
-    `<p><strong>Species:</strong> ${data.species}</p>`,
-    `<p><strong>Breed:</strong> ${data.breed}</p>`,
-    `<p><strong>Color:</strong> ${data.color}</p>`,
-    `<p><strong>Size:</strong> ${data.size}</p>`,
-    `<p><strong>Description:</strong> ${data.description}</p>`,
-    data.distinguishingFeatures ? `<p><strong>Distinguishing Features:</strong> ${data.distinguishingFeatures}</p>` : '',
-    `<p><strong>Last Seen:</strong> ${data.lastSeenDate} at ${data.lastSeenLocation}</p>`,
-    `<p><strong>Contact:</strong> ${data.contactName} - ${data.contactPhone}</p>`,
-    data.reward ? `<p class="reward"><strong>REWARD: ${data.reward}</strong></p>` : '',
+    `<h1>${e(data.title)}</h1>`,
+    data.photoUrl ? `<img src="${e(data.photoUrl)}" alt="${e(data.petName)}" />` : '',
+    `<h2>${e(data.petName)}</h2>`,
+    `<p><strong>Species:</strong> ${e(data.species)}</p>`,
+    `<p><strong>Breed:</strong> ${e(data.breed)}</p>`,
+    `<p><strong>Color:</strong> ${e(data.color)}</p>`,
+    `<p><strong>Size:</strong> ${e(data.size)}</p>`,
+    `<p><strong>Description:</strong> ${e(data.description)}</p>`,
+    data.distinguishingFeatures ? `<p><strong>Distinguishing Features:</strong> ${e(data.distinguishingFeatures)}</p>` : '',
+    `<p><strong>Last Seen:</strong> ${e(data.lastSeenDate)} at ${e(data.lastSeenLocation)}</p>`,
+    `<p><strong>Contact:</strong> ${e(data.contactName)} - ${e(data.contactPhone)}</p>`,
+    data.reward ? `<p class="reward"><strong>REWARD: ${e(data.reward)}</strong></p>` : '',
     `</div>`,
   ].filter(Boolean).join('\n');
 }

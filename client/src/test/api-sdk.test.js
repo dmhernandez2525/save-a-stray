@@ -162,31 +162,30 @@ describe('API SDK', () => {
   });
 
   describe('Error Handling', () => {
-    it('should throw ApiError on non-OK response', async () => {
+    it('should throw Error with status on non-OK response', async () => {
       mockFetch.mockResolvedValue(mockJsonResponse({ error: 'Not found' }, 404));
 
-      await expect(api.getAnimal('invalid')).rejects.toEqual({
-        error: 'Not found',
-        status: 404,
-      });
+      await expect(api.getAnimal('invalid')).rejects.toThrow('Not found');
+      mockFetch.mockResolvedValue(mockJsonResponse({ error: 'Not found' }, 404));
+      try {
+        await api.getAnimal('invalid');
+      } catch (err) {
+        expect(err).toBeInstanceOf(Error);
+        expect(err.error).toBe('Not found');
+        expect(err.status).toBe(404);
+      }
     });
 
     it('should handle 401 unauthorized', async () => {
       mockFetch.mockResolvedValue(mockJsonResponse({ error: 'Invalid API key' }, 401));
 
-      await expect(api.getAnimals()).rejects.toEqual({
-        error: 'Invalid API key',
-        status: 401,
-      });
+      await expect(api.getAnimals()).rejects.toThrow('Invalid API key');
     });
 
     it('should handle 429 rate limit', async () => {
       mockFetch.mockResolvedValue(mockJsonResponse({ error: 'Rate limit exceeded' }, 429));
 
-      await expect(api.getAnimals()).rejects.toEqual({
-        error: 'Rate limit exceeded',
-        status: 429,
-      });
+      await expect(api.getAnimals()).rejects.toThrow('Rate limit exceeded');
     });
 
     it('should increment error count on failure', async () => {

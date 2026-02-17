@@ -28,7 +28,7 @@ export const NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
   { id: 'shelter-app', type: 'shelter', title: 'New Application', body: 'A new adoption application has been submitted.', channels: ['email', 'push', 'in_app'], priority: 'high', category: 'shelter' },
   { id: 'event-reminder', type: 'event', title: 'Upcoming Event', body: 'You have an upcoming shelter event.', channels: ['email', 'push'], priority: 'medium', category: 'events' },
   { id: 'reengagement', type: 'reengagement', title: 'We Miss You!', body: 'New pets are waiting for their forever home.', channels: ['email'], priority: 'low', category: 'engagement' },
-  { id: 'weekly-digest', type: 'digest', title: 'Your Weekly Pet Digest', body: 'Here are this week\u2019s top matches and updates.', channels: ['email'], priority: 'low', category: 'digest' },
+  { id: 'weekly-digest', type: 'digest', title: 'Your Weekly Pet Digest', body: "Here are this week's top matches and updates.", channels: ['email'], priority: 'low', category: 'digest' },
 ];
 
 export function getTemplateById(id: string): NotificationTemplate | null {
@@ -108,6 +108,11 @@ export interface ChannelEngagement {
   responseTime: number;  // minutes
 }
 
+// Engagement scoring weights (must sum to 100)
+const OPEN_RATE_WEIGHT = 40;
+const CLICK_RATE_WEIGHT = 40;
+const RESPONSE_TIME_WEIGHT = 20;
+
 export function selectBestChannel(
   template: NotificationTemplate,
   prefs: NotificationPreferences,
@@ -116,11 +121,11 @@ export function selectBestChannel(
   const available = template.channels.filter(ch => prefs.channels[ch]);
   if (available.length === 0) return 'in_app'; // fallback
 
-  // Score channels by engagement
+  // Score channels by engagement using weighted formula
   const scored = available.map(channel => {
     const stats = engagement.find(e => e.channel === channel);
     if (!stats) return { channel, score: 50 };
-    const score = (stats.openRate * 40) + (stats.clickRate * 40) + ((100 - Math.min(stats.responseTime, 100)) * 20);
+    const score = (stats.openRate * OPEN_RATE_WEIGHT) + (stats.clickRate * CLICK_RATE_WEIGHT) + ((100 - Math.min(stats.responseTime, 100)) * RESPONSE_TIME_WEIGHT);
     return { channel, score: Math.round(score / 100) };
   });
 

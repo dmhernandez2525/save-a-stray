@@ -43,7 +43,7 @@ export interface PaymentIntent {
   id: string;
   amount: number;
   currency: string;
-  status: 'requires_payment' | 'processing' | 'succeeded' | 'failed';
+  status: 'requires_payment' | 'processing' | 'succeeded' | 'failed' | 'refunded';
   donorId: string;
   metadata: Record<string, string>;
 }
@@ -74,7 +74,7 @@ export function processPayment(intent: PaymentIntent): PaymentIntent {
 
 export function refundPayment(intent: PaymentIntent): PaymentIntent {
   if (intent.status !== 'succeeded') throw new Error('Can only refund succeeded payments');
-  return { ...intent, status: 'requires_payment' };
+  return { ...intent, status: 'refunded' };
 }
 
 export function formatAmount(cents: number, currency: string = 'usd'): string {

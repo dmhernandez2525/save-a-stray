@@ -33,6 +33,15 @@ describe('Government Integration', () => {
       expect(checkComplianceStatus(record)).toBe('warning');
     });
 
+    it('should respect manually set non-compliant status', () => {
+      const record = {
+        id: 'l1', requirementId: 'r1', shelterId: 's1', licenseNumber: 'LIC-001',
+        issuedAt: '2026-01-01', expiresAt: '2027-01-01', status: 'non-compliant',
+        documents: [], notes: '',
+      };
+      expect(checkComplianceStatus(record)).toBe('non-compliant');
+    });
+
     it('should detect expired license', () => {
       const record = {
         id: 'l1', requirementId: 'r1', shelterId: 's1', licenseNumber: 'LIC-001',
@@ -279,6 +288,10 @@ describe('Government Integration', () => {
       const entry = createAuditEntry('user1', 'update', 'license', 'l1', { field: 'status' }, '192.168.1.1');
       expect(entry.checksum).toBeTruthy();
       expect(entry.checksum.length).toBe(8);
+    });
+
+    it('should reject audit entry without userId', () => {
+      expect(() => createAuditEntry('', 'update', 'license', 'l1', {}, '10.0.0.1')).toThrow('userId');
     });
 
     it('should verify untampered entry', () => {

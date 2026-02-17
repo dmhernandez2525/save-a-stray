@@ -240,6 +240,26 @@ describe('Lost & Found', () => {
       expect(html).toContain('<img');
     });
 
+    it('should escape HTML in user-provided data', () => {
+      const xssData = {
+        title: 'LOST PET',
+        petName: '<script>alert("xss")</script>',
+        species: 'dog',
+        breed: 'Lab',
+        color: 'golden',
+        size: 'large',
+        description: 'Test <b>bold</b>',
+        distinguishingFeatures: '',
+        lastSeenDate: '2026-02-10',
+        lastSeenLocation: '123 Main St',
+        contactName: 'Jane',
+        contactPhone: '555-1234',
+      };
+      const html = generateFlyerHtml(xssData);
+      expect(html).not.toContain('<script>');
+      expect(html).toContain('&lt;script&gt;');
+    });
+
     it('should include reward when provided', () => {
       const report = createReport(baseLostReport);
       const flyer = generateFlyerData(report, '$200');

@@ -37,7 +37,7 @@ describe('Donation Platform', () => {
     it('should refund succeeded payment', () => {
       const pi = processPayment(createPaymentIntent(5000, 'usd', 'donor1'));
       const refund = refundPayment(pi);
-      expect(refund.status).toBe('requires_payment');
+      expect(refund.status).toBe('refunded');
     });
 
     it('should not refund non-succeeded payment', () => {
