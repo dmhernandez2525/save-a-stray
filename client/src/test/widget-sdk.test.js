@@ -89,12 +89,24 @@ describe('Widget SDK', () => {
       expect(lighter.startsWith('#')).toBe(true);
     });
 
+    it('should lighten 3-digit hex colors', () => {
+      const lighter = lightenColor('#000', 50);
+      expect(lighter).not.toBe('#000000');
+      expect(lighter.startsWith('#')).toBe(true);
+      expect(lighter).toHaveLength(7);
+    });
+
     it('should return white text for dark backgrounds', () => {
       expect(getContrastColor('#000000')).toBe('#FFFFFF');
     });
 
     it('should return black text for light backgrounds', () => {
       expect(getContrastColor('#FFFFFF')).toBe('#000000');
+    });
+
+    it('should handle 3-digit hex in contrast calculation', () => {
+      expect(getContrastColor('#000')).toBe('#FFFFFF');
+      expect(getContrastColor('#fff')).toBe('#000000');
     });
   });
 

@@ -319,8 +319,12 @@ export function completeInspection(
   const requiredResults = checklistResults.filter(r =>
     requiredItems.some(c => c.id === r.checklistItemId)
   );
-  const allRequiredPassed = requiredResults.every(r => r.passed);
-  const allPassed = checklistResults.every(r => r.passed);
+  // Ensure all required items have results; missing items count as failed
+  const allRequiredCovered = requiredItems.every(c =>
+    checklistResults.some(r => r.checklistItemId === c.id)
+  );
+  const allRequiredPassed = allRequiredCovered && requiredResults.every(r => r.passed);
+  const allPassed = checklistResults.length > 0 && checklistResults.every(r => r.passed);
 
   let result: InspectionResult;
   if (allPassed) result = 'pass';

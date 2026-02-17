@@ -106,7 +106,7 @@ export function checkSecurityHeaders(headers: Record<string, string>): SecurityH
   return REQUIRED_SECURITY_HEADERS.map(req => ({
     header: req.header,
     present: req.header in headers,
-    value: headers[req.header] || null,
+    value: headers[req.header] ?? null,
     recommendation: req.recommendation,
     severity: req.severity,
   }));
@@ -195,6 +195,6 @@ export function isSafeRedirectUrl(url: string, allowedHosts: string[]): boolean 
     const parsed = new URL(url);
     return allowedHosts.includes(parsed.hostname);
   } catch {
-    return url.startsWith('/') && !url.startsWith('//');
+    return url.startsWith('/') && !url.startsWith('//') && !url.startsWith('/\\');
   }
 }

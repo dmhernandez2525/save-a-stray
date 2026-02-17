@@ -72,7 +72,8 @@ describe('Volunteer Management', () => {
       });
       const result = signUpForShift(shift, 'v1');
       expect(result.success).toBe(true);
-      expect(shift.assignedVolunteers).toContain('v1');
+      expect(result.shift.assignedVolunteers).toContain('v1');
+      expect(shift.assignedVolunteers).toHaveLength(0); // original unchanged
     });
 
     it('should prevent double sign-up', () => {
@@ -80,8 +81,8 @@ describe('Volunteer Management', () => {
         id: 's1', date: '2026-03-01', startTime: '09:00', endTime: '12:00',
         taskCategory: 'walking', maxVolunteers: 3, location: 'Main', notes: '',
       });
-      signUpForShift(shift, 'v1');
-      const result = signUpForShift(shift, 'v1');
+      const first = signUpForShift(shift, 'v1');
+      const result = signUpForShift(first.shift, 'v1');
       expect(result.success).toBe(false);
       expect(result.reason).toContain('Already');
     });
@@ -91,8 +92,8 @@ describe('Volunteer Management', () => {
         id: 's1', date: '2026-03-01', startTime: '09:00', endTime: '12:00',
         taskCategory: 'walking', maxVolunteers: 1, location: 'Main', notes: '',
       });
-      signUpForShift(shift, 'v1');
-      const result = signUpForShift(shift, 'v2');
+      const first = signUpForShift(shift, 'v1');
+      const result = signUpForShift(first.shift, 'v2');
       expect(result.success).toBe(false);
       expect(result.reason).toContain('full');
     });
@@ -102,9 +103,10 @@ describe('Volunteer Management', () => {
         id: 's1', date: '2026-03-01', startTime: '09:00', endTime: '12:00',
         taskCategory: 'walking', maxVolunteers: 3, location: 'Main', notes: '',
       });
-      signUpForShift(shift, 'v1');
-      expect(removeFromShift(shift, 'v1')).toBe(true);
-      expect(shift.assignedVolunteers).not.toContain('v1');
+      const signed = signUpForShift(shift, 'v1');
+      const result = removeFromShift(signed.shift, 'v1');
+      expect(result.removed).toBe(true);
+      expect(result.shift.assignedVolunteers).not.toContain('v1');
     });
 
     it('should detect schedule conflicts', () => {

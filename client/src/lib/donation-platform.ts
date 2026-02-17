@@ -74,7 +74,7 @@ export function processPayment(intent: PaymentIntent): PaymentIntent {
 
 export function refundPayment(intent: PaymentIntent): PaymentIntent {
   if (intent.status !== 'succeeded') throw new Error('Can only refund succeeded payments');
-  return { ...intent, status: 'failed' };
+  return { ...intent, status: 'requires_payment' };
 }
 
 export function formatAmount(cents: number, currency: string = 'usd'): string {

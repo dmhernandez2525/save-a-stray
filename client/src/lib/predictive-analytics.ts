@@ -200,10 +200,10 @@ export function calculateLosStats(stays: { species: string; age: string; days: n
     byAge[key] = Math.round(byAge[key] / ageCounts[key]);
   }
 
-  // Simple trend calculation: compare first half to second half
-  const midpoint = Math.floor(sorted.length / 2);
-  const firstHalf = sorted.slice(0, midpoint);
-  const secondHalf = sorted.slice(midpoint);
+  // Simple trend calculation: compare first half to second half of input order (chronological)
+  const midpoint = Math.floor(stays.length / 2);
+  const firstHalf = stays.slice(0, midpoint);
+  const secondHalf = stays.slice(midpoint);
   const firstAvg = firstHalf.reduce((s, x) => s + x.days, 0) / (firstHalf.length || 1);
   const secondAvg = secondHalf.reduce((s, x) => s + x.days, 0) / (secondHalf.length || 1);
   const trend = secondAvg < firstAvg * 0.9 ? 'improving' : secondAvg > firstAvg * 1.1 ? 'worsening' : 'stable';
