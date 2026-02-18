@@ -4,8 +4,6 @@ import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { MockedProvider } from '@apollo/client/testing';
 
-vi.mock('../components/css/App.css', () => ({}));
-
 // Mock AnimalShow image gallery behavior
 const MockImageGallery = ({ image, images = [] }) => {
   const [selectedIndex, setSelectedIndex] = React.useState(0);

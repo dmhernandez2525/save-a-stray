@@ -5,8 +5,6 @@ import { MemoryRouter } from 'react-router-dom';
 import { MockedProvider } from '@apollo/client/testing';
 import { gql } from '@apollo/client';
 
-// Mock CSS imports
-vi.mock('../components/css/App.css', () => ({}));
 
 // GraphQL query for checking login status
 const IS_LOGGED_IN = gql`

@@ -243,8 +243,9 @@ const ShelterDashboardLayout: React.FC<ShelterDashboardLayoutProps> = ({
         {/* Collapse Toggle */}
         <button
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className="absolute left-[calc(16rem-12px)] top-20 w-6 h-6 rounded-full bg-background border shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground transition-all lg:flex hidden"
-          style={{ left: sidebarCollapsed ? "52px" : "244px" }}
+          className={`absolute top-20 w-6 h-6 rounded-full bg-background border shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground transition-all lg:flex hidden ${
+            sidebarCollapsed ? "left-[52px]" : "left-[244px]"
+          }`}
         >
           {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </button>

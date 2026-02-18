@@ -22,7 +22,7 @@ Phase 1 focuses on building the Foundation & MVP that solves the two biggest pai
 | [FRONTEND_MIGRATION_SDD.md](./FRONTEND_MIGRATION_SDD.md) | In Progress | Vite 7 config hardening, alias coverage, env handling, CRA cleanup |
 | [REAL_TIME_SYNC_SDD.md](./REAL_TIME_SYNC_SDD.md) | Draft | Real-time listing synchronization with Petfinder/Adopt-a-Pet |
 | [COMMUNICATION_SYSTEM_SDD.md](./COMMUNICATION_SYSTEM_SDD.md) | Draft | Communication accountability and auto-acknowledgment |
-| [STYLING_MODERNIZATION_SDD.md](./STYLING_MODERNIZATION_SDD.md) | In Progress | Tailwind v4 upgrade, shadcn alignment, and dark mode |
+| [STYLING_MODERNIZATION_SDD.md](./STYLING_MODERNIZATION_SDD.md) | In Progress | Tailwind modernization, ThemeProvider hardening, design tokens, and layout primitives |
 | [GRAPHQL_ENHANCEMENT_SDD.md](./GRAPHQL_ENHANCEMENT_SDD.md) | In Progress | Apollo Server v4, DataLoader, subscriptions, schema docs |
 | [AUTH_OVERHAUL_SDD.md](./AUTH_OVERHAUL_SDD.md) | Draft | Refresh tokens, OAuth providers, email flows, 2FA, sessions |
 

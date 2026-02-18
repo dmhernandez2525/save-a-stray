@@ -131,7 +131,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ open, onClose, children }) =>
         onClick={onClose}
       />
       {/* Sheet */}
-      <div className="absolute bottom-0 left-0 right-0 bg-card rounded-t-3xl shadow-2xl animate-slide-up" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+      <div className="absolute bottom-0 left-0 right-0 bg-card rounded-t-3xl shadow-2xl animate-slide-up pb-[env(safe-area-inset-bottom,0px)]">
         {/* Handle */}
         <div className="flex justify-center pt-3 pb-2">
           <div className="w-10 h-1 rounded-full bg-warm-gray-300 dark:bg-warm-gray-600" />
@@ -235,13 +235,7 @@ const BottomNav: React.FC = () => {
                 >
                   {/* Glass background */}
                   <div className="bg-card/95 backdrop-blur-xl border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
-                    <div
-                      className="flex items-end justify-around px-2 pt-1"
-                      style={{
-                        paddingBottom:
-                          "max(0.5rem, env(safe-area-inset-bottom))",
-                      }}
-                    >
+                    <div className="flex items-end justify-around px-2 pt-1 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
                       {/* Left tabs */}
                       {leftTabs.map((tab) => {
                         const active = isTabActive(tab, location.pathname);

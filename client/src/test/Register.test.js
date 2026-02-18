@@ -5,8 +5,6 @@ import { MemoryRouter } from 'react-router-dom';
 import { MockedProvider } from '@apollo/client/testing';
 import { gql } from '@apollo/client';
 
-// Mock CSS imports
-vi.mock('../components/css/App.css', () => ({}));
 
 // GraphQL mutation for registration with shelter fields
 const REGISTER_USER = gql`
