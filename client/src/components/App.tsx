@@ -27,12 +27,18 @@ import TermsOfService from "./TermsOfService";
 import { DemoProvider } from "../demo/DemoContext";
 import DemoLanding from "../demo/DemoLanding";
 import { ThemeProvider } from "./ThemeProvider";
+import InstallPrompt from "./InstallPrompt";
+import OfflineBanner from "./OfflineBanner";
+import UpdatePrompt from "./UpdatePrompt";
 
 const App: React.FC = () => {
   return (
     <DemoProvider>
       <ThemeProvider defaultTheme="system" storageKey="save-a-stray-theme">
         <HashRouter>
+          <OfflineBanner />
+          <InstallPrompt />
+          <UpdatePrompt />
           <div className="text-foreground grid grid-cols-1 md:grid-cols-main grid-rows-[auto_1fr] md:grid-rows-main min-h-screen md:h-screen">
             <Nav />
             <Routes>
