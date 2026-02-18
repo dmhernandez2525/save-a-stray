@@ -96,6 +96,10 @@ import {
   generateCsvFromRecords, generateJsonFromRecords,
   validateCsvImport, validateJsonImport,
 } from '../../services/import-export';
+import {
+  WidgetModel, WidgetEventModel, WIDGET_TYPES,
+  generateEmbedCode, generateWidgetCss,
+} from '../../services/widgets';
 import { paginationQueryFields } from './pagination_queries';
 import { GraphQLContext } from '../../graphql/context';
 import { requireAuth } from '../../graphql/authorization';
@@ -6030,6 +6034,204 @@ const RootQueryType = new GraphQLObjectType({
           key,
           ...config,
         }));
+      },
+    },
+
+    // ── F10.4: Widgets & Embeds ──────────────────────────────
+
+    shelterWidgets: {
+      type: new GraphQLList(new GraphQLObjectType({
+        name: 'Widget',
+        fields: {
+          _id: { type: GraphQLID },
+          shelterId: { type: GraphQLString },
+          name: { type: GraphQLString },
+          widgetType: { type: GraphQLString },
+          displayMode: { type: GraphQLString },
+          embedToken: { type: GraphQLString },
+          enabled: { type: GraphQLBoolean },
+          version: { type: GraphQLInt },
+          impressionCount: { type: GraphQLInt },
+          clickCount: { type: GraphQLInt },
+          applicationCount: { type: GraphQLInt },
+          createdAt: { type: GraphQLString },
+        },
+      })),
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      async resolve(_root: unknown, args: Record<string, unknown>, context: unknown) {
+        const ctx = context as GraphQLContext;
+        requireAuth(ctx);
+        return WidgetModel.find({ shelterId: args.shelterId as string }).sort({ createdAt: -1 }).lean();
+      },
+    },
+
+    widgetById: {
+      type: new GraphQLObjectType({
+        name: 'WidgetDetail',
+        fields: {
+          _id: { type: GraphQLID },
+          shelterId: { type: GraphQLString },
+          name: { type: GraphQLString },
+          widgetType: { type: GraphQLString },
+          displayMode: { type: GraphQLString },
+          primaryColor: { type: GraphQLString },
+          backgroundColor: { type: GraphQLString },
+          textColor: { type: GraphQLString },
+          borderRadius: { type: GraphQLInt },
+          maxWidth: { type: GraphQLInt },
+          showImages: { type: GraphQLBoolean },
+          showStatus: { type: GraphQLBoolean },
+          itemsPerPage: { type: GraphQLInt },
+          embedToken: { type: GraphQLString },
+          enabled: { type: GraphQLBoolean },
+          version: { type: GraphQLInt },
+          iframeCode: { type: GraphQLString },
+          scriptCode: { type: GraphQLString },
+          cssCode: { type: GraphQLString },
+        },
+      }),
+      args: { widgetId: { type: new GraphQLNonNull(GraphQLID) } },
+      async resolve(_root: unknown, args: Record<string, unknown>, context: unknown) {
+        const ctx = context as GraphQLContext;
+        requireAuth(ctx);
+        const widget = await WidgetModel.findById(args.widgetId as string).lean();
+        if (!widget) return null;
+
+        const baseUrl = 'https://saveastray.com';
+        const embedCode = generateEmbedCode({
+          embedToken: widget.embedToken,
+          widgetType: widget.widgetType,
+          displayMode: widget.displayMode,
+          customization: widget.customization,
+        }, baseUrl);
+        const cssCode = generateWidgetCss(widget.customization);
+
+        return {
+          _id: widget._id,
+          shelterId: widget.shelterId,
+          name: widget.name,
+          widgetType: widget.widgetType,
+          displayMode: widget.displayMode,
+          primaryColor: widget.customization.primaryColor,
+          backgroundColor: widget.customization.backgroundColor,
+          textColor: widget.customization.textColor,
+          borderRadius: widget.customization.borderRadius,
+          maxWidth: widget.customization.maxWidth,
+          showImages: widget.customization.showImages,
+          showStatus: widget.customization.showStatus,
+          itemsPerPage: widget.customization.itemsPerPage,
+          embedToken: widget.embedToken,
+          enabled: widget.enabled,
+          version: widget.version,
+          iframeCode: embedCode.iframe,
+          scriptCode: embedCode.script,
+          cssCode,
+        };
+      },
+    },
+
+    widgetAnalytics: {
+      type: new GraphQLObjectType({
+        name: 'WidgetAnalytics',
+        fields: {
+          widgetId: { type: GraphQLString },
+          impressions: { type: GraphQLInt },
+          clicks: { type: GraphQLInt },
+          applications: { type: GraphQLInt },
+          ctr: { type: GraphQLFloat },
+          conversionRate: { type: GraphQLFloat },
+        },
+      }),
+      args: {
+        widgetId: { type: new GraphQLNonNull(GraphQLID) },
+        days: { type: GraphQLInt },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>, context: unknown) {
+        const ctx = context as GraphQLContext;
+        requireAuth(ctx);
+        const widgetId = args.widgetId as string;
+        const days = (args.days as number) || 30;
+
+        const since = new Date();
+        since.setDate(since.getDate() - days);
+
+        const events = await WidgetEventModel.find({
+          widgetId,
+          createdAt: { $gte: since },
+        }).lean();
+
+        const impressions = events.filter(e => e.eventType === 'impression').length;
+        const clicks = events.filter(e => e.eventType === 'click').length;
+        const applications = events.filter(e => e.eventType === 'application').length;
+
+        return {
+          widgetId,
+          impressions,
+          clicks,
+          applications,
+          ctr: impressions > 0 ? Math.round((clicks / impressions) * 10000) / 10000 : 0,
+          conversionRate: clicks > 0 ? Math.round((applications / clicks) * 10000) / 10000 : 0,
+        };
+      },
+    },
+
+    widgetTypes: {
+      type: new GraphQLList(new GraphQLObjectType({
+        name: 'WidgetTypeConfig',
+        fields: {
+          key: { type: GraphQLString },
+          name: { type: GraphQLString },
+          description: { type: GraphQLString },
+          displayModes: { type: new GraphQLList(GraphQLString) },
+          supportedFilters: { type: new GraphQLList(GraphQLString) },
+        },
+      })),
+      resolve() {
+        return Object.entries(WIDGET_TYPES).map(([key, config]) => ({
+          key,
+          ...config,
+        }));
+      },
+    },
+
+    widgetEmbed: {
+      type: new GraphQLObjectType({
+        name: 'WidgetEmbedData',
+        fields: {
+          widgetType: { type: GraphQLString },
+          displayMode: { type: GraphQLString },
+          shelterId: { type: GraphQLString },
+          shelterName: { type: GraphQLString },
+          customization: { type: GraphQLString },
+          animals: { type: new GraphQLList(AnimalType) },
+        },
+      }),
+      args: { embedToken: { type: new GraphQLNonNull(GraphQLString) } },
+      async resolve(_root: unknown, args: Record<string, unknown>) {
+        const embedToken = args.embedToken as string;
+        const widget = await WidgetModel.findOne({ embedToken, enabled: true }).lean();
+        if (!widget) return null;
+
+        const shelter = await mongoose.model<ShelterDocument>('shelter').findById(widget.shelterId).lean();
+        if (!shelter) return null;
+
+        const query: Record<string, unknown> = { _id: { $in: shelter.animals } };
+        if (widget.filters.status) query.status = widget.filters.status;
+        if (widget.filters.type) query.type = widget.filters.type;
+
+        const animals = await mongoose.model<AnimalDocument>('animal')
+          .find(query)
+          .limit(widget.customization.itemsPerPage)
+          .lean();
+
+        return {
+          widgetType: widget.widgetType,
+          displayMode: widget.displayMode,
+          shelterId: widget.shelterId,
+          shelterName: shelter.name,
+          customization: JSON.stringify(widget.customization),
+          animals,
+        };
       },
     },
   })
