@@ -71,6 +71,8 @@ import FosterProfileType from './foster_profile_type';
 import { FosterPlacementDocument } from '../../models/FosterPlacement';
 import FosterPlacementType from './foster_placement_type';
 import { calculateFosterMatchScore, isAvailable } from '../../services/foster-matching';
+import { FosterUpdateDocument } from '../../models/FosterUpdate';
+import FosterUpdateType from './foster_update_type';
 import { paginationQueryFields } from './pagination_queries';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
@@ -151,6 +153,7 @@ const AdoptionRecordModel = mongoose.model<AdoptionRecordDocument>('adoptionReco
 const PostAdoptionSurveyModel = mongoose.model<PostAdoptionSurveyDocument>('postAdoptionSurvey');
 const FosterProfileModel = mongoose.model<FosterProfileDocument>('fosterProfile');
 const FosterPlacementModel = mongoose.model<FosterPlacementDocument>('fosterPlacement');
+const FosterUpdateModel = mongoose.model<FosterUpdateDocument>('fosterUpdate');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -1841,6 +1844,126 @@ const RootQueryType = new GraphQLObjectType({
           averageMatchScore: Math.round(avgScore * 10) / 10,
           utilizationRate: Math.round(utilizationRate * 100) / 100,
         };
+      },
+    },
+
+    // F5.3 - Foster Management
+    fosterDashboard: {
+      type: new GraphQLObjectType({
+        name: 'FosterDashboardType',
+        fields: {
+          activePlacements: { type: new GraphQLList(FosterPlacementType) },
+          recentUpdates: { type: new GraphQLList(FosterUpdateType) },
+          pendingSupplyRequests: { type: GraphQLInt },
+          pendingExpenses: { type: GraphQLInt },
+          totalExpenses: { type: GraphQLFloat },
+          milestones: { type: new GraphQLList(FosterUpdateType) },
+        },
+      }),
+      args: { userId: { type: GraphQLString } },
+      async resolve(_parent, args) {
+        if (!args.userId) return null;
+        const profiles = await FosterProfileModel.find({ userId: args.userId });
+        const profileIds = profiles.map(p => p._id.toString());
+        const activePlacements = await FosterPlacementModel.find({
+          fosterProfileId: { $in: profileIds },
+          status: 'active',
+        });
+        const recentUpdates = await FosterUpdateModel.find({
+          userId: args.userId,
+        }).sort({ date: -1 }).limit(20);
+        const pendingSupplies = await FosterUpdateModel.countDocuments({
+          userId: args.userId,
+          type: 'supply_request',
+          supplyStatus: 'pending',
+        });
+        const pendingExpenses = await FosterUpdateModel.countDocuments({
+          userId: args.userId,
+          type: 'expense',
+          expenseStatus: 'pending',
+        });
+        const expenseUpdates = await FosterUpdateModel.find({
+          userId: args.userId,
+          type: 'expense',
+        });
+        const totalExpenses = expenseUpdates.reduce((s, u) => s + u.expenseAmount, 0);
+        const milestones = await FosterUpdateModel.find({
+          userId: args.userId,
+          type: 'milestone',
+        }).sort({ date: -1 }).limit(10);
+        return {
+          activePlacements,
+          recentUpdates,
+          pendingSupplyRequests: pendingSupplies,
+          pendingExpenses,
+          totalExpenses,
+          milestones,
+        };
+      },
+    },
+    fosterUpdatesForPlacement: {
+      type: new GraphQLList(FosterUpdateType),
+      args: {
+        placementId: { type: GraphQLString },
+        type: { type: GraphQLString },
+        limit: { type: GraphQLInt },
+      },
+      async resolve(_parent, args) {
+        if (!args.placementId) return [];
+        const filter: Record<string, unknown> = { placementId: args.placementId };
+        if (args.type) filter.type = args.type;
+        const limit = clampLimit(args.limit, 50, 100);
+        return FosterUpdateModel.find(filter).sort({ date: -1 }).limit(limit);
+      },
+    },
+    shelterSupplyRequests: {
+      type: new GraphQLList(FosterUpdateType),
+      args: {
+        shelterId: { type: GraphQLString },
+        status: { type: GraphQLString },
+      },
+      async resolve(_parent, args) {
+        if (!args.shelterId) return [];
+        const filter: Record<string, unknown> = {
+          shelterId: args.shelterId,
+          type: 'supply_request',
+        };
+        if (args.status) filter.supplyStatus = args.status;
+        return FosterUpdateModel.find(filter).sort({ createdAt: -1 });
+      },
+    },
+    shelterFosterExpenses: {
+      type: new GraphQLList(FosterUpdateType),
+      args: {
+        shelterId: { type: GraphQLString },
+        status: { type: GraphQLString },
+      },
+      async resolve(_parent, args) {
+        if (!args.shelterId) return [];
+        const filter: Record<string, unknown> = {
+          shelterId: args.shelterId,
+          type: 'expense',
+        };
+        if (args.status) filter.expenseStatus = args.status;
+        return FosterUpdateModel.find(filter).sort({ createdAt: -1 });
+      },
+    },
+    fosterPhotoUpdates: {
+      type: new GraphQLList(FosterUpdateType),
+      args: {
+        animalId: { type: GraphQLString },
+        visibleToAdopters: { type: GraphQLBoolean },
+      },
+      async resolve(_parent, args) {
+        if (!args.animalId) return [];
+        const filter: Record<string, unknown> = {
+          animalId: args.animalId,
+          type: 'photo',
+        };
+        if (args.visibleToAdopters !== undefined) {
+          filter.visibleToAdopters = args.visibleToAdopters;
+        }
+        return FosterUpdateModel.find(filter).sort({ date: -1 });
       },
     },
   })

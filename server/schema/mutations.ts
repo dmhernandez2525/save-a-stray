@@ -115,6 +115,8 @@ import FosterProfileType, {
 import { FosterPlacementDocument } from '../models/FosterPlacement';
 import FosterPlacementType from './types/foster_placement_type';
 import { calculateFosterMatchScore } from '../services/foster-matching';
+import { FosterUpdateDocument } from '../models/FosterUpdate';
+import FosterUpdateType from './types/foster_update_type';
 import { ShelterSettingsDocument } from '../models/ShelterSettings';
 import ShelterSettingsType, {
   DayScheduleInput,
@@ -176,6 +178,7 @@ const PostAdoptionSurveyModel = mongoose.model<PostAdoptionSurveyDocument>('post
 const ShelterSettingsModel = mongoose.model<ShelterSettingsDocument>('shelterSettings');
 const FosterProfileModel = mongoose.model<FosterProfileDocument>('fosterProfile');
 const FosterPlacementModel = mongoose.model<FosterPlacementDocument>('fosterPlacement');
+const FosterUpdateModel = mongoose.model<FosterUpdateDocument>('fosterUpdate');
 
 interface RegisterArgs {
   name: string;
@@ -4299,6 +4302,255 @@ const mutation = new GraphQLObjectType({
         });
         await placement.save();
         return placement;
+      },
+    },
+
+    // F5.3 - Foster Management
+    submitFosterDailyUpdate: {
+      type: FosterUpdateType,
+      args: {
+        placementId: { type: GraphQLString },
+        feeding: { type: GraphQLString },
+        behavior: { type: GraphQLString },
+        healthObservations: { type: GraphQLString },
+        notes: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        const placement = await FosterPlacementModel.findById(args.placementId);
+        if (!placement) throw new Error('Placement not found');
+        if (placement.userId !== userId) throw new Error('Not authorized');
+        const update = new FosterUpdateModel({
+          placementId: args.placementId,
+          fosterProfileId: placement.fosterProfileId,
+          userId,
+          shelterId: placement.shelterId,
+          animalId: placement.animalId,
+          type: 'daily_status',
+          feeding: args.feeding ?? '',
+          behavior: args.behavior ?? '',
+          healthObservations: args.healthObservations ?? '',
+          notes: args.notes ?? '',
+        });
+        await update.save();
+        return update;
+      },
+    },
+    submitFosterMedicalUpdate: {
+      type: FosterUpdateType,
+      args: {
+        placementId: { type: GraphQLString },
+        medications: { type: new GraphQLList(GraphQLString) },
+        vetVisitDate: { type: GraphQLString },
+        vetNotes: { type: GraphQLString },
+        symptoms: { type: new GraphQLList(GraphQLString) },
+        notes: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        const placement = await FosterPlacementModel.findById(args.placementId);
+        if (!placement) throw new Error('Placement not found');
+        if (placement.userId !== userId) throw new Error('Not authorized');
+        const update = new FosterUpdateModel({
+          placementId: args.placementId,
+          fosterProfileId: placement.fosterProfileId,
+          userId,
+          shelterId: placement.shelterId,
+          animalId: placement.animalId,
+          type: 'medical',
+          medications: args.medications ?? [],
+          vetVisitDate: args.vetVisitDate ? new Date(args.vetVisitDate as string) : undefined,
+          vetNotes: args.vetNotes ?? '',
+          symptoms: args.symptoms ?? [],
+          notes: args.notes ?? '',
+        });
+        await update.save();
+        return update;
+      },
+    },
+    submitFosterExpense: {
+      type: FosterUpdateType,
+      args: {
+        placementId: { type: GraphQLString },
+        expenseAmount: { type: GraphQLFloat },
+        expenseCategory: { type: GraphQLString },
+        receiptUrl: { type: GraphQLString },
+        notes: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        const placement = await FosterPlacementModel.findById(args.placementId);
+        if (!placement) throw new Error('Placement not found');
+        if (placement.userId !== userId) throw new Error('Not authorized');
+        const update = new FosterUpdateModel({
+          placementId: args.placementId,
+          fosterProfileId: placement.fosterProfileId,
+          userId,
+          shelterId: placement.shelterId,
+          animalId: placement.animalId,
+          type: 'expense',
+          expenseAmount: args.expenseAmount ?? 0,
+          expenseCategory: args.expenseCategory ?? '',
+          receiptUrl: args.receiptUrl ?? '',
+          notes: args.notes ?? '',
+        });
+        await update.save();
+        return update;
+      },
+    },
+    updateFosterExpenseStatus: {
+      type: FosterUpdateType,
+      args: {
+        updateId: { type: GraphQLString },
+        expenseStatus: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const update = await FosterUpdateModel.findById(args.updateId);
+        if (!update) throw new Error('Update not found');
+        if (update.type !== 'expense') throw new Error('Not an expense update');
+        requireShelterStaff(context, update.shelterId);
+        const valid = ['pending', 'approved', 'rejected', 'reimbursed'];
+        if (!valid.includes(args.expenseStatus as string)) {
+          throw new Error('Invalid expense status');
+        }
+        update.expenseStatus = args.expenseStatus as FosterUpdateDocument['expenseStatus'];
+        await update.save();
+        return update;
+      },
+    },
+    requestFosterSupplies: {
+      type: FosterUpdateType,
+      args: {
+        placementId: { type: GraphQLString },
+        supplyItems: { type: new GraphQLList(GraphQLString) },
+        supplyNotes: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        const placement = await FosterPlacementModel.findById(args.placementId);
+        if (!placement) throw new Error('Placement not found');
+        if (placement.userId !== userId) throw new Error('Not authorized');
+        const update = new FosterUpdateModel({
+          placementId: args.placementId,
+          fosterProfileId: placement.fosterProfileId,
+          userId,
+          shelterId: placement.shelterId,
+          animalId: placement.animalId,
+          type: 'supply_request',
+          supplyItems: args.supplyItems ?? [],
+          supplyNotes: args.supplyNotes ?? '',
+        });
+        await update.save();
+        return update;
+      },
+    },
+    updateSupplyRequestStatus: {
+      type: FosterUpdateType,
+      args: {
+        updateId: { type: GraphQLString },
+        supplyStatus: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const update = await FosterUpdateModel.findById(args.updateId);
+        if (!update) throw new Error('Update not found');
+        if (update.type !== 'supply_request') throw new Error('Not a supply request');
+        requireShelterStaff(context, update.shelterId);
+        const valid = ['pending', 'approved', 'fulfilled', 'denied'];
+        if (!valid.includes(args.supplyStatus as string)) {
+          throw new Error('Invalid supply status');
+        }
+        update.supplyStatus = args.supplyStatus as FosterUpdateDocument['supplyStatus'];
+        await update.save();
+        return update;
+      },
+    },
+    submitFosterPhotoUpdate: {
+      type: FosterUpdateType,
+      args: {
+        placementId: { type: GraphQLString },
+        photoUrls: { type: new GraphQLList(GraphQLString) },
+        videoUrls: { type: new GraphQLList(GraphQLString) },
+        caption: { type: GraphQLString },
+        visibleToAdopters: { type: GraphQLBoolean },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        const placement = await FosterPlacementModel.findById(args.placementId);
+        if (!placement) throw new Error('Placement not found');
+        if (placement.userId !== userId) throw new Error('Not authorized');
+        const update = new FosterUpdateModel({
+          placementId: args.placementId,
+          fosterProfileId: placement.fosterProfileId,
+          userId,
+          shelterId: placement.shelterId,
+          animalId: placement.animalId,
+          type: 'photo',
+          photoUrls: args.photoUrls ?? [],
+          videoUrls: args.videoUrls ?? [],
+          caption: args.caption ?? '',
+          visibleToAdopters: args.visibleToAdopters ?? false,
+        });
+        await update.save();
+        return update;
+      },
+    },
+    recordFosterMilestone: {
+      type: FosterUpdateType,
+      args: {
+        placementId: { type: GraphQLString },
+        milestone: { type: GraphQLString },
+        milestoneNotes: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        const placement = await FosterPlacementModel.findById(args.placementId);
+        if (!placement) throw new Error('Placement not found');
+        if (placement.userId !== userId) throw new Error('Not authorized');
+        const update = new FosterUpdateModel({
+          placementId: args.placementId,
+          fosterProfileId: placement.fosterProfileId,
+          userId,
+          shelterId: placement.shelterId,
+          animalId: placement.animalId,
+          type: 'milestone',
+          milestone: args.milestone ?? '',
+          milestoneNotes: args.milestoneNotes ?? '',
+        });
+        await update.save();
+        return update;
+      },
+    },
+    initiateFosterToAdopt: {
+      type: ApplicationType,
+      args: {
+        placementId: { type: GraphQLString },
+        notes: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        const placement = await FosterPlacementModel.findById(args.placementId);
+        if (!placement) throw new Error('Placement not found');
+        if (placement.userId !== userId) throw new Error('Not authorized');
+        if (placement.status !== 'active') throw new Error('Placement is not active');
+        const existing = await Application.findOne({
+          userId,
+          animalId: placement.animalId,
+          status: { $nin: ['rejected', 'withdrawn'] },
+        });
+        if (existing) throw new Error('Application already exists for this animal');
+        const app = new Application({
+          userId,
+          animalId: placement.animalId,
+          shelterId: placement.shelterId,
+          status: 'submitted',
+          experience: 'Current foster parent',
+          livingSituation: 'Foster home',
+          notes: (args.notes as string) ?? 'Foster-to-adopt conversion',
+        });
+        await app.save();
+        return app;
       },
     },
   }),
