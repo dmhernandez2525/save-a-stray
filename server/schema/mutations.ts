@@ -5224,6 +5224,98 @@ const mutation = new GraphQLObjectType({
         return shelter;
       },
     },
+    // F7.2 - User Accounts
+    updateUserProfile: {
+      type: UserType,
+      args: {
+        name: { type: GraphQLString },
+        bio: { type: GraphQLString },
+        phone: { type: GraphQLString },
+        avatar: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        const user = await User.findById(userId);
+        if (!user) throw new Error('User not found');
+        if (args.name !== undefined) user.name = args.name as string;
+        if (args.bio !== undefined) user.bio = args.bio as string;
+        if (args.phone !== undefined) user.phone = args.phone as string;
+        if (args.avatar !== undefined) user.avatar = args.avatar as string;
+        await user.save();
+        return user;
+      },
+    },
+    updatePrivacySettings: {
+      type: UserType,
+      args: {
+        profileVisibility: { type: GraphQLString },
+        showFavorites: { type: GraphQLBoolean },
+        showAdoptionHistory: { type: GraphQLBoolean },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        const user = await User.findById(userId);
+        if (!user) throw new Error('User not found');
+        if (args.profileVisibility !== undefined) {
+          const valid = ['public', 'shelters_only', 'private'];
+          if (!valid.includes(args.profileVisibility as string)) {
+            throw new Error('Invalid visibility setting');
+          }
+          user.profileVisibility = args.profileVisibility as 'public' | 'shelters_only' | 'private';
+        }
+        if (args.showFavorites !== undefined) user.showFavorites = args.showFavorites as boolean;
+        if (args.showAdoptionHistory !== undefined) user.showAdoptionHistory = args.showAdoptionHistory as boolean;
+        await user.save();
+        return user;
+      },
+    },
+    toggleFavoriteAnimal: {
+      type: UserType,
+      args: {
+        animalId: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        const user = await User.findById(userId);
+        if (!user) throw new Error('User not found');
+        const animalId = args.animalId as string;
+        const animal = await Animal.findById(animalId);
+        if (!animal) throw new Error('Animal not found');
+        const idx = user.favorites.findIndex(
+          (fav) => fav.toString() === animalId
+        );
+        if (idx >= 0) {
+          user.favorites.splice(idx, 1);
+        } else {
+          user.favorites.push(animalId);
+        }
+        await user.save();
+        return user;
+      },
+    },
+    deleteUserAccount: {
+      type: GraphQLBoolean,
+      async resolve(_parent: unknown, _args: unknown, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        const user = await User.findById(userId);
+        if (!user) throw new Error('User not found');
+        await AdopterProfileModel.deleteMany({ userId });
+        await Application.updateMany(
+          { userId },
+          { $set: { status: 'withdrawn' } }
+        );
+        const AuthSession = mongoose.model('authSession');
+        await AuthSession.deleteMany({ userId });
+        const NotificationPref = mongoose.model('notificationPreference');
+        await NotificationPref.deleteMany({ userId });
+        const EmailPref = mongoose.model('emailPreference');
+        await EmailPref.deleteMany({ userId });
+        const PushSub = mongoose.model('pushSubscription');
+        await PushSub.deleteMany({ userId });
+        await User.findByIdAndDelete(userId);
+        return true;
+      },
+    },
     bulkGenerateAnimalSlugs: {
       type: GraphQLInt,
       args: {
