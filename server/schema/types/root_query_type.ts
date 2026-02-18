@@ -1966,6 +1966,250 @@ const RootQueryType = new GraphQLObjectType({
         return FosterUpdateModel.find(filter).sort({ date: -1 });
       },
     },
+
+    // F5.4 - Foster Analytics
+    fosterProgramMetrics: {
+      type: new GraphQLObjectType({
+        name: 'FosterProgramMetricsType',
+        fields: {
+          activeFosters: { type: GraphQLInt },
+          animalsInFoster: { type: GraphQLInt },
+          avgPlacementDurationDays: { type: GraphQLFloat },
+          totalPlacements: { type: GraphQLInt },
+          fosterToAdoptConversions: { type: GraphQLInt },
+          returnRate: { type: GraphQLFloat },
+          totalExpenses: { type: GraphQLFloat },
+          avgExpensePerPlacement: { type: GraphQLFloat },
+        },
+      }),
+      args: { shelterId: { type: GraphQLString } },
+      async resolve(_parent, args) {
+        if (!args.shelterId) return null;
+        const profiles = await FosterProfileModel.find({
+          shelterId: args.shelterId,
+          status: 'active',
+        });
+        const placements = await FosterPlacementModel.find({ shelterId: args.shelterId });
+        const active = placements.filter(p => p.status === 'active');
+        const completed = placements.filter(p => p.status === 'completed');
+        const durations = completed
+          .filter(p => p.startDate && p.endDate)
+          .map(p => (p.endDate!.getTime() - p.startDate!.getTime()) / (1000 * 60 * 60 * 24));
+        const avgDuration = durations.length > 0
+          ? durations.reduce((s, d) => s + d, 0) / durations.length : 0;
+        const expenses = await FosterUpdateModel.find({
+          shelterId: args.shelterId,
+          type: 'expense',
+        });
+        const totalExpenses = expenses.reduce((s, e) => s + e.expenseAmount, 0);
+        const cancelled = placements.filter(p => p.status === 'cancelled' && p.returnReason);
+        const returnRate = placements.length > 0
+          ? cancelled.length / placements.length : 0;
+        const adoptApps = await Application.find({
+          shelterId: args.shelterId,
+          notes: { $regex: /foster-to-adopt/i },
+        });
+        return {
+          activeFosters: profiles.length,
+          animalsInFoster: active.length,
+          avgPlacementDurationDays: Math.round(avgDuration * 10) / 10,
+          totalPlacements: placements.length,
+          fosterToAdoptConversions: adoptApps.length,
+          returnRate: Math.round(returnRate * 100) / 100,
+          totalExpenses: Math.round(totalExpenses * 100) / 100,
+          avgExpensePerPlacement: completed.length > 0
+            ? Math.round((totalExpenses / completed.length) * 100) / 100 : 0,
+        };
+      },
+    },
+    fosterPerformanceScores: {
+      type: new GraphQLList(new GraphQLObjectType({
+        name: 'FosterPerformanceScoreType',
+        fields: {
+          fosterProfileId: { type: GraphQLString },
+          userId: { type: GraphQLString },
+          reliabilityScore: { type: GraphQLFloat },
+          communicationScore: { type: GraphQLFloat },
+          careQualityScore: { type: GraphQLFloat },
+          overallScore: { type: GraphQLFloat },
+          totalPlacements: { type: GraphQLInt },
+          completedPlacements: { type: GraphQLInt },
+        },
+      })),
+      args: { shelterId: { type: GraphQLString } },
+      async resolve(_parent, args) {
+        if (!args.shelterId) return [];
+        const profiles = await FosterProfileModel.find({
+          shelterId: args.shelterId,
+          status: 'active',
+        });
+        const results = [];
+        for (const profile of profiles) {
+          const pid = profile._id.toString();
+          const placements = await FosterPlacementModel.find({ fosterProfileId: pid });
+          const completed = placements.filter(p => p.status === 'completed').length;
+          const cancelled = placements.filter(p => p.status === 'cancelled').length;
+          const reliability = placements.length > 0
+            ? ((completed) / placements.length) * 100 : 50;
+          const updates = await FosterUpdateModel.find({ fosterProfileId: pid });
+          const dailyUpdates = updates.filter(u => u.type === 'daily_status').length;
+          const activeDays = placements.reduce((sum, p) => {
+            if (!p.startDate) return sum;
+            const end = p.endDate ?? new Date();
+            return sum + (end.getTime() - p.startDate.getTime()) / (1000 * 60 * 60 * 24);
+          }, 0);
+          const communication = activeDays > 0
+            ? Math.min(100, (dailyUpdates / Math.max(1, activeDays)) * 100) : 50;
+          const milestones = updates.filter(u => u.type === 'milestone').length;
+          const careQuality = Math.min(100, 50 + milestones * 10 - cancelled * 20);
+          const overall = (reliability * 0.4) + (communication * 0.3) + (careQuality * 0.3);
+          results.push({
+            fosterProfileId: pid,
+            userId: profile.userId,
+            reliabilityScore: Math.round(reliability * 10) / 10,
+            communicationScore: Math.round(communication * 10) / 10,
+            careQualityScore: Math.round(Math.max(0, careQuality) * 10) / 10,
+            overallScore: Math.round(overall * 10) / 10,
+            totalPlacements: placements.length,
+            completedPlacements: completed,
+          });
+        }
+        return results.sort((a, b) => b.overallScore - a.overallScore);
+      },
+    },
+    fosterRetentionAnalysis: {
+      type: new GraphQLObjectType({
+        name: 'FosterRetentionAnalysisType',
+        fields: {
+          totalRegistered: { type: GraphQLInt },
+          currentlyActive: { type: GraphQLInt },
+          onHold: { type: GraphQLInt },
+          inactive: { type: GraphQLInt },
+          churnRate: { type: GraphQLFloat },
+          avgTenureDays: { type: GraphQLFloat },
+          atRiskFosters: { type: new GraphQLList(GraphQLString) },
+        },
+      }),
+      args: { shelterId: { type: GraphQLString } },
+      async resolve(_parent, args) {
+        if (!args.shelterId) return null;
+        const all = await FosterProfileModel.find({ shelterId: args.shelterId });
+        const active = all.filter(p => p.status === 'active');
+        const onHold = all.filter(p => p.status === 'on_hold');
+        const inactive = all.filter(p => p.status === 'inactive');
+        const churnRate = all.length > 0 ? inactive.length / all.length : 0;
+        const now = new Date();
+        const tenures = active.map(p =>
+          (now.getTime() - p.createdAt.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        const avgTenure = tenures.length > 0
+          ? tenures.reduce((s, t) => s + t, 0) / tenures.length : 0;
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        const atRisk: string[] = [];
+        for (const profile of active) {
+          const recentUpdates = await FosterUpdateModel.countDocuments({
+            fosterProfileId: profile._id.toString(),
+            date: { $gte: thirtyDaysAgo },
+          });
+          if (recentUpdates === 0) {
+            atRisk.push(profile._id.toString());
+          }
+        }
+        return {
+          totalRegistered: all.length,
+          currentlyActive: active.length,
+          onHold: onHold.length,
+          inactive: inactive.length,
+          churnRate: Math.round(churnRate * 100) / 100,
+          avgTenureDays: Math.round(avgTenure * 10) / 10,
+          atRiskFosters: atRisk,
+        };
+      },
+    },
+    fosterRecruitmentPipeline: {
+      type: new GraphQLObjectType({
+        name: 'FosterRecruitmentPipelineType',
+        fields: {
+          pendingApproval: { type: GraphQLInt },
+          active: { type: GraphQLInt },
+          onHold: { type: GraphQLInt },
+          inactive: { type: GraphQLInt },
+          conversionRate: { type: GraphQLFloat },
+          avgTimeToActiveHours: { type: GraphQLFloat },
+        },
+      }),
+      args: { shelterId: { type: GraphQLString } },
+      async resolve(_parent, args) {
+        if (!args.shelterId) return null;
+        const all = await FosterProfileModel.find({ shelterId: args.shelterId });
+        const pending = all.filter(p => p.status === 'pending_approval');
+        const active = all.filter(p => p.status === 'active');
+        const onHold = all.filter(p => p.status === 'on_hold');
+        const inactive = all.filter(p => p.status === 'inactive');
+        const everActive = all.filter(p =>
+          p.status === 'active' || p.status === 'on_hold' || p.totalAnimalsHelped > 0
+        );
+        const conversionRate = all.length > 0 ? everActive.length / all.length : 0;
+        return {
+          pendingApproval: pending.length,
+          active: active.length,
+          onHold: onHold.length,
+          inactive: inactive.length,
+          conversionRate: Math.round(conversionRate * 100) / 100,
+          avgTimeToActiveHours: 0,
+        };
+      },
+    },
+    fosterAppreciationMetrics: {
+      type: new GraphQLList(new GraphQLObjectType({
+        name: 'FosterAppreciationMetricType',
+        fields: {
+          fosterProfileId: { type: GraphQLString },
+          userId: { type: GraphQLString },
+          totalAnimalsHelped: { type: GraphQLInt },
+          yearsActive: { type: GraphQLFloat },
+          totalMilestones: { type: GraphQLInt },
+          currentStreak: { type: GraphQLInt },
+        },
+      })),
+      args: { shelterId: { type: GraphQLString } },
+      async resolve(_parent, args) {
+        if (!args.shelterId) return [];
+        const profiles = await FosterProfileModel.find({
+          shelterId: args.shelterId,
+          status: { $in: ['active', 'on_hold'] },
+        });
+        const now = new Date();
+        const results = [];
+        for (const p of profiles) {
+          const pid = p._id.toString();
+          const milestones = await FosterUpdateModel.countDocuments({
+            fosterProfileId: pid,
+            type: 'milestone',
+          });
+          const yearsActive = (now.getTime() - p.createdAt.getTime())
+            / (1000 * 60 * 60 * 24 * 365);
+          const placements = await FosterPlacementModel.find({
+            fosterProfileId: pid,
+            status: 'completed',
+          }).sort({ endDate: -1 });
+          let streak = 0;
+          for (const pl of placements) {
+            if (pl.status === 'completed') streak++;
+            else break;
+          }
+          results.push({
+            fosterProfileId: pid,
+            userId: p.userId,
+            totalAnimalsHelped: p.totalAnimalsHelped,
+            yearsActive: Math.round(yearsActive * 10) / 10,
+            totalMilestones: milestones,
+            currentStreak: streak,
+          });
+        }
+        return results.sort((a, b) => b.totalAnimalsHelped - a.totalAnimalsHelped);
+      },
+    },
   })
 });
 
