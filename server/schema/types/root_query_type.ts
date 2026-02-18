@@ -59,6 +59,10 @@ import ShelterSettingsType from './shelter_settings_type';
 import { ApplicationReviewDocument } from '../../models/ApplicationReview';
 import ApplicationReviewType from './application_review_type';
 import { RejectionTemplateDocument } from '../../models/RejectionTemplate';
+import { AdopterProfileDocument } from '../../models/AdopterProfile';
+import AdopterProfileType from './adopter_profile_type';
+import { MatchRecordDocument } from '../../models/MatchRecord';
+import { calculateMatchScore } from '../../services/matching';
 import { paginationQueryFields } from './pagination_queries';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
@@ -133,6 +137,8 @@ const KennelAssignmentModel = mongoose.model<KennelAssignmentDocument>('kennelAs
 const ShelterSettingsModel = mongoose.model<ShelterSettingsDocument>('shelterSettings');
 const ApplicationReviewModel = mongoose.model<ApplicationReviewDocument>('applicationReview');
 const RejectionTemplateModel = mongoose.model<RejectionTemplateDocument>('rejectionTemplate');
+const AdopterProfileModel = mongoose.model<AdopterProfileDocument>('adopterProfile');
+const MatchRecordModel = mongoose.model<MatchRecordDocument>('matchRecord');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -1136,6 +1142,119 @@ const RootQueryType = new GraphQLObjectType({
             percentage: total > 0 ? Math.round((count / total) * 1000) / 10 : 0,
           }))
           .sort((a, b) => b.count - a.count);
+      }
+    },
+    adopterProfile: {
+      type: AdopterProfileType,
+      args: { userId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { userId: string }) {
+        return AdopterProfileModel.findOne({ userId: args.userId });
+      }
+    },
+    recommendedAnimals: {
+      type: new GraphQLList(new GraphQLObjectType({
+        name: 'AnimalMatchType',
+        fields: () => ({
+          animal: { type: AnimalType },
+          score: { type: GraphQLInt },
+          factors: { type: GraphQLString },
+        }),
+      })),
+      args: {
+        userId: { type: new GraphQLNonNull(GraphQLID) },
+        limit: { type: GraphQLInt },
+      },
+      async resolve(_, args: { userId: string; limit?: number }) {
+        const profile = await AdopterProfileModel.findOne({ userId: args.userId });
+        if (!profile) return [];
+
+        const limit = clampLimit(args.limit, 5, 20);
+        const filter: Record<string, unknown> = { status: 'available' };
+        if (profile.preferredSpecies.length > 0) {
+          filter.type = { $in: profile.preferredSpecies };
+        }
+
+        const animals = await Animal.find(filter).limit(200);
+        const scored = animals.map(animal => {
+          const result = calculateMatchScore(profile, {
+            _id: animal._id.toString(),
+            type: animal.type,
+            size: animal.size,
+            energyLevel: animal.energyLevel,
+            age: animal.age,
+            goodWithKids: animal.goodWithKids,
+            goodWithDogs: animal.goodWithDogs,
+            goodWithCats: animal.goodWithCats,
+            houseTrained: animal.houseTrained,
+            specialNeeds: animal.specialNeeds,
+          });
+          return { animal, score: result.score, factors: JSON.stringify(result.factors) };
+        });
+
+        scored.sort((a, b) => b.score - a.score);
+        return scored.slice(0, limit);
+      }
+    },
+    animalCompatibleApplicants: {
+      type: new GraphQLList(new GraphQLObjectType({
+        name: 'ApplicantMatchType',
+        fields: () => ({
+          userId: { type: GraphQLString },
+          score: { type: GraphQLInt },
+          factors: { type: GraphQLString },
+        }),
+      })),
+      args: {
+        animalId: { type: new GraphQLNonNull(GraphQLID) },
+        limit: { type: GraphQLInt },
+      },
+      async resolve(_, args: { animalId: string; limit?: number }) {
+        const animal = await Animal.findById(args.animalId);
+        if (!animal) return [];
+
+        const limit = clampLimit(args.limit, 10, 50);
+        const profiles = await AdopterProfileModel.find({}).limit(500);
+        const animalData = {
+          _id: animal._id.toString(),
+          type: animal.type,
+          size: animal.size,
+          energyLevel: animal.energyLevel,
+          age: animal.age,
+          goodWithKids: animal.goodWithKids,
+          goodWithDogs: animal.goodWithDogs,
+          goodWithCats: animal.goodWithCats,
+          houseTrained: animal.houseTrained,
+          specialNeeds: animal.specialNeeds,
+        };
+
+        const scored = profiles.map(profile => {
+          const result = calculateMatchScore(profile, animalData);
+          return { userId: profile.userId, score: result.score, factors: JSON.stringify(result.factors) };
+        });
+
+        scored.sort((a, b) => b.score - a.score);
+        return scored.slice(0, limit);
+      }
+    },
+    userMatchHistory: {
+      type: new GraphQLList(new GraphQLObjectType({
+        name: 'MatchRecordType',
+        fields: () => ({
+          _id: { type: GraphQLID },
+          userId: { type: GraphQLString },
+          animalId: { type: GraphQLString },
+          score: { type: GraphQLInt },
+          outcome: { type: GraphQLString },
+          createdAt: { type: GraphQLString },
+        }),
+      })),
+      args: {
+        userId: { type: new GraphQLNonNull(GraphQLID) },
+        limit: { type: GraphQLInt },
+      },
+      resolve(_, args: { userId: string; limit?: number }) {
+        const limit = clampLimit(args.limit, 50, MAX_ANIMAL_LIMIT);
+        return MatchRecordModel.find({ userId: args.userId }).sort({ createdAt: -1 }).limit(limit);
       }
     },
     applicationReviews: {

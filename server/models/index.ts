@@ -34,8 +34,10 @@ import KennelAssignment from './KennelAssignment';
 import ShelterSettings from './ShelterSettings';
 import ApplicationReview from './ApplicationReview';
 import RejectionTemplate from './RejectionTemplate';
+import AdopterProfile from './AdopterProfile';
+import MatchRecord from './MatchRecord';
 
-export { User, Animal, Application, Shelter, SuccessStory, Review, Notification, Event, Donation, Foster, SavedSearch, ApplicationTemplate, ActivityLog, TerminalReader, Message, Volunteer, BehaviorNote, Announcement, Microchip, WeightRecord, Vaccination, AdoptionFee, SpayNeuter, IntakeLog, OutcomeLog, AuthSession, StatusHistory, MediaAsset, DashboardLayout, StaffInvitation, ShelterStaffRole, InternalNote, KennelAssignment, ShelterSettings, ApplicationReview, RejectionTemplate };
+export { User, Animal, Application, Shelter, SuccessStory, Review, Notification, Event, Donation, Foster, SavedSearch, ApplicationTemplate, ActivityLog, TerminalReader, Message, Volunteer, BehaviorNote, Announcement, Microchip, WeightRecord, Vaccination, AdoptionFee, SpayNeuter, IntakeLog, OutcomeLog, AuthSession, StatusHistory, MediaAsset, DashboardLayout, StaffInvitation, ShelterStaffRole, InternalNote, KennelAssignment, ShelterSettings, ApplicationReview, RejectionTemplate, AdopterProfile, MatchRecord };
 
 // Also import models to ensure they are registered with Mongoose
 import './User';
@@ -74,3 +76,5 @@ import './KennelAssignment';
 import './ShelterSettings';
 import './ApplicationReview';
 import './RejectionTemplate';
+import './AdopterProfile';
+import './MatchRecord';
