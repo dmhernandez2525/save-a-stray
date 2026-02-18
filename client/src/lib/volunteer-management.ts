@@ -80,22 +80,22 @@ export function createShift(data: Omit<Shift, 'assignedVolunteers'>): Shift {
 export function signUpForShift(
   shift: Shift,
   volunteerId: string
-): { success: boolean; reason?: string } {
+): { success: boolean; shift: Shift; reason?: string } {
   if (shift.assignedVolunteers.includes(volunteerId)) {
-    return { success: false, reason: 'Already signed up for this shift' };
+    return { success: false, shift, reason: 'Already signed up for this shift' };
   }
   if (shift.assignedVolunteers.length >= shift.maxVolunteers) {
-    return { success: false, reason: 'Shift is full' };
+    return { success: false, shift, reason: 'Shift is full' };
   }
-  shift.assignedVolunteers.push(volunteerId);
-  return { success: true };
+  const updated = { ...shift, assignedVolunteers: [...shift.assignedVolunteers, volunteerId] };
+  return { success: true, shift: updated };
 }
 
-export function removeFromShift(shift: Shift, volunteerId: string): boolean {
+export function removeFromShift(shift: Shift, volunteerId: string): { removed: boolean; shift: Shift } {
   const idx = shift.assignedVolunteers.indexOf(volunteerId);
-  if (idx === -1) return false;
-  shift.assignedVolunteers.splice(idx, 1);
-  return true;
+  if (idx === -1) return { removed: false, shift };
+  const updated = { ...shift, assignedVolunteers: shift.assignedVolunteers.filter(v => v !== volunteerId) };
+  return { removed: true, shift: updated };
 }
 
 export function detectScheduleConflict(

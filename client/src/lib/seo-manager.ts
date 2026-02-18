@@ -246,11 +246,20 @@ export function generateSitemapEntries(
   return [...staticEntries, ...dynamicEntries];
 }
 
+function escapeXml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
 export function generateSitemapXml(entries: SitemapEntry[], baseUrl: string): string {
   const urls = entries.map(entry => {
     const parts = [
       `  <url>`,
-      `    <loc>${baseUrl}${entry.url}</loc>`,
+      `    <loc>${escapeXml(baseUrl)}${escapeXml(entry.url)}</loc>`,
     ];
     if (entry.lastmod) parts.push(`    <lastmod>${entry.lastmod}</lastmod>`);
     parts.push(`    <changefreq>${entry.changefreq}</changefreq>`);

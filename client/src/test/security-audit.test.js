@@ -263,5 +263,9 @@ describe('Security Audit', () => {
     it('should reject protocol-relative URLs', () => {
       expect(isSafeRedirectUrl('//evil.com/steal', allowed)).toBe(false);
     });
+
+    it('should reject backslash-prefixed URLs', () => {
+      expect(isSafeRedirectUrl('/\\evil.com', allowed)).toBe(false);
+    });
   });
 });

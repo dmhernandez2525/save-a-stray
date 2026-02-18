@@ -169,10 +169,17 @@ describe('Import/Export Manager', () => {
 
     it('should convert to CSV', () => {
       const csv = convertToFormat(records, fields, 'csv');
-      const lines = csv.split('\n');
+      // Strip UTF-8 BOM for content assertions
+      const content = csv.replace(/^\uFEFF/, '');
+      const lines = content.split('\n');
       expect(lines[0]).toBe('name,type,age');
       expect(lines[1]).toBe('Buddy,Dog,3');
       expect(lines[2]).toBe('Luna,Cat,2');
+    });
+
+    it('should include UTF-8 BOM for Excel compatibility', () => {
+      const csv = convertToFormat(records, fields, 'csv');
+      expect(csv.charCodeAt(0)).toBe(0xFEFF);
     });
 
     it('should convert to JSON', () => {

@@ -184,10 +184,14 @@ export function createTransportRoute(
   animalIds: string[],
   date: string
 ): TransportRoute {
-  // Simplified distance estimation
-  const dLat = destination.lat - origin.lat;
-  const dLng = destination.lng - origin.lng;
-  const distanceKm = Math.round(Math.sqrt(dLat ** 2 + dLng ** 2) * 111);  // rough km
+  // Haversine distance estimation
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const R = 6371; // Earth radius in km
+  const dLat = toRad(destination.lat - origin.lat);
+  const dLng = toRad(destination.lng - origin.lng);
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(origin.lat)) * Math.cos(toRad(destination.lat)) * Math.sin(dLng / 2) ** 2;
+  const distanceKm = Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
   const estimatedMinutes = Math.round(distanceKm * 1.2); // ~50 km/h average
 
   return {

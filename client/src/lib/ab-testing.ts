@@ -66,6 +66,10 @@ function saveResults(results: Record<string, Record<string, { conversions: numbe
  * Uses weighted random selection, persists across sessions.
  */
 export function assignVariant(experiment: Experiment): string {
+  if (experiment.variants.length === 0) {
+    throw new Error('Experiment must have at least one variant');
+  }
+
   const assignments = getAssignments();
 
   if (assignments[experiment.id]) {
@@ -189,7 +193,7 @@ export function calculateSignificance(
 
   return {
     zScore: Math.round(zScore * 1000) / 1000,
-    pValue: Math.round(pValue * 10000) / 10000,
+    pValue: Math.round(Math.max(0, Math.min(1, pValue)) * 10000) / 10000,
     isSignificant: pValue < 0.05,
   };
 }

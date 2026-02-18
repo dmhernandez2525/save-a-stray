@@ -13,7 +13,7 @@ export interface AdoptionPrediction {
   recommendedActions: string[];
 }
 
-interface AnimalFeatures {
+export interface AnimalFeatures {
   id: string;
   species: string;
   breed?: string;
@@ -132,11 +132,11 @@ export function predictAdoption(animal: AnimalFeatures): AdoptionPrediction {
   const likelihood = Math.round(factors.reduce((sum, f) => sum + (f.score * f.weight), 0) / totalWeight);
   const confidence = Math.min(85, 40 + (animal.daysInShelter > 0 ? 15 : 0) + (animal.listingViews > 10 ? 15 : 0) + (animal.photoCount > 0 ? 15 : 0));
 
-  // Estimate days based on likelihood
-  const estimatedDays = likelihood >= 80 ? Math.round(7 + Math.random() * 7)
-    : likelihood >= 60 ? Math.round(14 + Math.random() * 21)
-    : likelihood >= 40 ? Math.round(30 + Math.random() * 30)
-    : Math.round(60 + Math.random() * 60);
+  // Estimate days based on likelihood (inversely proportional)
+  const estimatedDays = likelihood >= 80 ? Math.round(14 - (likelihood - 80) * 0.35)
+    : likelihood >= 60 ? Math.round(35 - (likelihood - 60) * 1.05)
+    : likelihood >= 40 ? Math.round(60 - (likelihood - 40) * 1.25)
+    : Math.round(120 - likelihood * 1.5);
 
   const riskLevel = likelihood >= 60 ? 'low' : likelihood >= 40 ? 'medium' : 'high';
 
@@ -200,10 +200,10 @@ export function calculateLosStats(stays: { species: string; age: string; days: n
     byAge[key] = Math.round(byAge[key] / ageCounts[key]);
   }
 
-  // Simple trend calculation: compare first half to second half
-  const midpoint = Math.floor(sorted.length / 2);
-  const firstHalf = sorted.slice(0, midpoint);
-  const secondHalf = sorted.slice(midpoint);
+  // Simple trend calculation: compare first half to second half of input order (chronological)
+  const midpoint = Math.floor(stays.length / 2);
+  const firstHalf = stays.slice(0, midpoint);
+  const secondHalf = stays.slice(midpoint);
   const firstAvg = firstHalf.reduce((s, x) => s + x.days, 0) / (firstHalf.length || 1);
   const secondAvg = secondHalf.reduce((s, x) => s + x.days, 0) / (secondHalf.length || 1);
   const trend = secondAvg < firstAvg * 0.9 ? 'improving' : secondAvg > firstAvg * 1.1 ? 'worsening' : 'stable';
@@ -282,7 +282,8 @@ export function forecastDemand(
   const expectedIntake = Math.round(historicalIntake * factor * (1 + growthRate));
   const expectedAdoptions = Math.round(historicalAdoptions * factor * (1 + growthRate));
   const netChange = expectedIntake - expectedAdoptions;
-  const confidence = 60 + Math.round(Math.random() * 20); // Simulated
+  // Confidence based on data quality: higher when using known seasonal factors
+  const confidence = factor !== 1.0 ? 75 : 65;
 
   return { period: month, expectedIntake, expectedAdoptions, netChange, seasonalFactor: factor, confidence };
 }

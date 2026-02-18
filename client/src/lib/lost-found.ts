@@ -48,6 +48,13 @@ export function validateReport(data: Partial<LostFoundReport>): { valid: boolean
   if (data.location) {
     if (typeof data.location.lat !== 'number' || typeof data.location.lng !== 'number') {
       errors.push('Location must have valid lat/lng coordinates');
+    } else {
+      if (data.location.lat < -90 || data.location.lat > 90) {
+        errors.push('Latitude must be between -90 and 90');
+      }
+      if (data.location.lng < -180 || data.location.lng > 180) {
+        errors.push('Longitude must be between -180 and 180');
+      }
     }
   }
 
@@ -82,8 +89,8 @@ export function calculateDistance(
   const R = 6371;
   const dLat = toRad(lat2 - lat1);
   const dLng = toRad(lng2 - lng1);
-  const a = Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  const a = Math.min(1, Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return Math.round(R * c * 100) / 100;
 }
@@ -276,26 +283,36 @@ export function generateFlyerData(report: LostFoundReport, reward?: string): Fly
     lastSeenLocation: report.location.address,
     contactName: report.contactName,
     contactPhone: report.contactPhone,
-    photoUrl: report.photoUrls[0],
+    photoUrl: report.photoUrls.length > 0 ? report.photoUrls[0] : undefined,
     reward,
   };
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
 export function generateFlyerHtml(data: FlyerData): string {
+  const e = escapeHtml;
   return [
     `<div class="flyer">`,
-    `<h1>${data.title}</h1>`,
-    data.photoUrl ? `<img src="${data.photoUrl}" alt="${data.petName}" />` : '',
-    `<h2>${data.petName}</h2>`,
-    `<p><strong>Species:</strong> ${data.species}</p>`,
-    `<p><strong>Breed:</strong> ${data.breed}</p>`,
-    `<p><strong>Color:</strong> ${data.color}</p>`,
-    `<p><strong>Size:</strong> ${data.size}</p>`,
-    `<p><strong>Description:</strong> ${data.description}</p>`,
-    data.distinguishingFeatures ? `<p><strong>Distinguishing Features:</strong> ${data.distinguishingFeatures}</p>` : '',
-    `<p><strong>Last Seen:</strong> ${data.lastSeenDate} at ${data.lastSeenLocation}</p>`,
-    `<p><strong>Contact:</strong> ${data.contactName} - ${data.contactPhone}</p>`,
-    data.reward ? `<p class="reward"><strong>REWARD: ${data.reward}</strong></p>` : '',
+    `<h1>${e(data.title)}</h1>`,
+    data.photoUrl ? `<img src="${e(data.photoUrl)}" alt="${e(data.petName)}" />` : '',
+    `<h2>${e(data.petName)}</h2>`,
+    `<p><strong>Species:</strong> ${e(data.species)}</p>`,
+    `<p><strong>Breed:</strong> ${e(data.breed)}</p>`,
+    `<p><strong>Color:</strong> ${e(data.color)}</p>`,
+    `<p><strong>Size:</strong> ${e(data.size)}</p>`,
+    `<p><strong>Description:</strong> ${e(data.description)}</p>`,
+    data.distinguishingFeatures ? `<p><strong>Distinguishing Features:</strong> ${e(data.distinguishingFeatures)}</p>` : '',
+    `<p><strong>Last Seen:</strong> ${e(data.lastSeenDate)} at ${e(data.lastSeenLocation)}</p>`,
+    `<p><strong>Contact:</strong> ${e(data.contactName)} - ${e(data.contactPhone)}</p>`,
+    data.reward ? `<p class="reward"><strong>REWARD: ${e(data.reward)}</strong></p>` : '',
     `</div>`,
   ].filter(Boolean).join('\n');
 }
@@ -320,7 +337,7 @@ export function recordReunification(
 ): Reunification {
   const lostDate = new Date(lostReport.date);
   const now = new Date();
-  const daysToReunify = Math.round((now.getTime() - lostDate.getTime()) / 86400000);
+  const daysToReunify = Math.max(0, Math.round((now.getTime() - lostDate.getTime()) / 86400000));
 
   return {
     id: `reunite_${Date.now()}`,

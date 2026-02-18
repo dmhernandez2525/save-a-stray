@@ -78,13 +78,17 @@ export function generateIframeCode(token: string, baseUrl: string, maxWidth: num
   return `<iframe src="${src}" width="100%" height="600" style="max-width:${maxWidth}px;border:none;" title="Save A Stray Widget"></iframe>`;
 }
 
+function escapeAttr(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 export function generateScriptCode(token: string, baseUrl: string, options: {
   type: string;
   displayMode: string;
   primaryColor: string;
 }): string {
-  const containerId = `sas-widget-${token.slice(-8)}`;
-  return `<div id="${containerId}"></div>\n<script src="${baseUrl}/sdk/widget.js" data-token="${token}" data-type="${options.type}" data-display="${options.displayMode}" data-color="${options.primaryColor}"></script>`;
+  const containerId = `sas-widget-${escapeAttr(token.slice(-8))}`;
+  return `<div id="${containerId}"></div>\n<script src="${escapeAttr(baseUrl)}/sdk/widget.js" data-token="${escapeAttr(token)}" data-type="${escapeAttr(options.type)}" data-display="${escapeAttr(options.displayMode)}" data-color="${escapeAttr(options.primaryColor)}"></script>`;
 }
 
 // ── CSS Generation ────────────────────────────────────────────
@@ -107,8 +111,17 @@ export function isValidHexColor(color: string): boolean {
   return /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(color);
 }
 
+function normalizeHex(hex: string): string {
+  const raw = hex.replace('#', '');
+  if (raw.length === 3) {
+    return `#${raw[0]}${raw[0]}${raw[1]}${raw[1]}${raw[2]}${raw[2]}`;
+  }
+  return `#${raw}`;
+}
+
 export function lightenColor(hex: string, percent: number): string {
-  const num = parseInt(hex.replace('#', ''), 16);
+  const normalized = normalizeHex(hex);
+  const num = parseInt(normalized.replace('#', ''), 16);
   const r = Math.min(255, Math.floor(((num >> 16) & 255) + (255 - ((num >> 16) & 255)) * (percent / 100)));
   const g = Math.min(255, Math.floor(((num >> 8) & 255) + (255 - ((num >> 8) & 255)) * (percent / 100)));
   const b = Math.min(255, Math.floor((num & 255) + (255 - (num & 255)) * (percent / 100)));
@@ -116,7 +129,8 @@ export function lightenColor(hex: string, percent: number): string {
 }
 
 export function getContrastColor(hex: string): string {
-  const num = parseInt(hex.replace('#', ''), 16);
+  const normalized = normalizeHex(hex);
+  const num = parseInt(normalized.replace('#', ''), 16);
   const r = (num >> 16) & 255;
   const g = (num >> 8) & 255;
   const b = num & 255;

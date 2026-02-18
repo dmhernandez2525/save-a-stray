@@ -90,10 +90,10 @@ export class SaveAStrayApi {
     if (!response.ok) {
       this.metrics.errorCount++;
       const errorBody = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw {
-        error: errorBody.error || `HTTP ${response.status}`,
-        status: response.status,
-      } as ApiError;
+      const err = new Error(errorBody.error || `HTTP ${response.status}`) as Error & ApiError;
+      err.error = errorBody.error || `HTTP ${response.status}`;
+      err.status = response.status;
+      throw err;
     }
 
     return response.json();
