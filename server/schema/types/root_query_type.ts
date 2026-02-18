@@ -3453,6 +3453,191 @@ const RootQueryType = new GraphQLObjectType({
         };
       },
     },
+    // F7.4 - Events & Calendar
+    publicEventCalendar: {
+      type: new GraphQLObjectType({
+        name: 'PublicEventCalendarType',
+        fields: {
+          events: { type: new GraphQLList(EventType) },
+          totalCount: { type: GraphQLInt },
+        },
+      }),
+      args: {
+        shelterId: { type: GraphQLString },
+        eventType: { type: GraphQLString },
+        startDate: { type: GraphQLString },
+        endDate: { type: GraphQLString },
+        tag: { type: GraphQLString },
+        isVirtual: { type: GraphQLBoolean },
+        limit: { type: GraphQLInt },
+        offset: { type: GraphQLInt },
+      },
+      async resolve(_parent, args) {
+        const filter: Record<string, unknown> = { status: 'published' };
+        if (args.shelterId) filter.shelterId = args.shelterId;
+        if (args.eventType) filter.eventType = args.eventType;
+        if (args.isVirtual !== undefined) filter.isVirtual = args.isVirtual;
+        if (args.tag) filter.tags = args.tag;
+        if (args.startDate || args.endDate) {
+          const dateFilter: Record<string, Date> = {};
+          if (args.startDate) dateFilter.$gte = new Date(args.startDate);
+          if (args.endDate) dateFilter.$lte = new Date(args.endDate);
+          filter.date = dateFilter;
+        }
+        const limit = clampLimit(args.limit, 20, MAX_ANIMAL_LIMIT);
+        const offset = args.offset ?? 0;
+        const [events, totalCount] = await Promise.all([
+          EventModel.find(filter).sort({ date: 1 }).skip(offset).limit(limit),
+          EventModel.countDocuments(filter),
+        ]);
+        return { events, totalCount };
+      },
+    },
+    eventDetail: {
+      type: EventType,
+      args: {
+        id: { type: GraphQLString },
+        slug: { type: GraphQLString },
+      },
+      async resolve(_parent, args) {
+        if (args.id) return EventModel.findById(args.id);
+        if (args.slug) return EventModel.findOne({ slug: args.slug });
+        return null;
+      },
+    },
+    upcomingEvents: {
+      type: new GraphQLList(EventType),
+      args: {
+        shelterId: { type: GraphQLString },
+        limit: { type: GraphQLInt },
+      },
+      async resolve(_parent, args) {
+        const filter: Record<string, unknown> = {
+          status: 'published',
+          date: { $gte: new Date() },
+        };
+        if (args.shelterId) filter.shelterId = args.shelterId;
+        const limit = clampLimit(args.limit, 10, 50);
+        return EventModel.find(filter).sort({ date: 1 }).limit(limit);
+      },
+    },
+    eventRegistrations: {
+      type: new GraphQLObjectType({
+        name: 'EventRegistrationsResultType',
+        fields: {
+          registered: { type: GraphQLInt },
+          waitlisted: { type: GraphQLInt },
+          attended: { type: GraphQLInt },
+          cancelled: { type: GraphQLInt },
+          capacity: { type: GraphQLInt },
+          isFull: { type: GraphQLBoolean },
+        },
+      }),
+      args: {
+        eventId: { type: GraphQLString },
+      },
+      async resolve(_parent, args) {
+        const event = await EventModel.findById(args.eventId);
+        if (!event) return null;
+        const registered = event.registrations.filter(r => r.status === 'registered').length;
+        const waitlisted = event.waitlist.length;
+        const attended = event.registrations.filter(r => r.status === 'attended').length;
+        const cancelled = event.registrations.filter(r => r.status === 'cancelled').length;
+        return {
+          registered,
+          waitlisted,
+          attended,
+          cancelled,
+          capacity: event.capacity,
+          isFull: event.capacity > 0 && registered >= event.capacity,
+        };
+      },
+    },
+    eventAnalytics: {
+      type: new GraphQLObjectType({
+        name: 'EventAnalyticsType',
+        fields: {
+          totalEvents: { type: GraphQLInt },
+          totalRegistrations: { type: GraphQLInt },
+          totalAttendance: { type: GraphQLInt },
+          totalApplicationsGenerated: { type: GraphQLInt },
+          averageAttendanceRate: { type: GraphQLFloat },
+          topEventType: { type: GraphQLString },
+        },
+      }),
+      args: {
+        shelterId: { type: GraphQLString },
+        startDate: { type: GraphQLString },
+        endDate: { type: GraphQLString },
+      },
+      async resolve(_parent, args) {
+        const filter: Record<string, unknown> = {};
+        if (args.shelterId) filter.shelterId = args.shelterId;
+        if (args.startDate || args.endDate) {
+          const dateFilter: Record<string, Date> = {};
+          if (args.startDate) dateFilter.$gte = new Date(args.startDate);
+          if (args.endDate) dateFilter.$lte = new Date(args.endDate);
+          filter.date = dateFilter;
+        }
+        const events = await EventModel.find(filter).lean();
+        let totalRegs = 0;
+        let totalAttendance = 0;
+        let totalApps = 0;
+        const typeCounts = new Map<string, number>();
+        for (const e of events) {
+          totalRegs += e.registrationCount ?? 0;
+          totalAttendance += e.attendanceCount ?? 0;
+          totalApps += e.applicationsGenerated ?? 0;
+          typeCounts.set(e.eventType, (typeCounts.get(e.eventType) ?? 0) + 1);
+        }
+        let topEventType = '';
+        let topCount = 0;
+        typeCounts.forEach((count, eventType) => {
+          if (count > topCount) {
+            topEventType = eventType;
+            topCount = count;
+          }
+        });
+        return {
+          totalEvents: events.length,
+          totalRegistrations: totalRegs,
+          totalAttendance,
+          totalApplicationsGenerated: totalApps,
+          averageAttendanceRate: totalRegs > 0 ? totalAttendance / totalRegs : 0,
+          topEventType,
+        };
+      },
+    },
+    eventIcalExport: {
+      type: GraphQLString,
+      args: {
+        eventId: { type: GraphQLString },
+      },
+      async resolve(_parent, args) {
+        const event = await EventModel.findById(args.eventId);
+        if (!event) return null;
+        const formatDate = (d: Date) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+        const lines = [
+          'BEGIN:VCALENDAR',
+          'VERSION:2.0',
+          'PRODID:-//SaveAStray//Events//EN',
+          'BEGIN:VEVENT',
+          `DTSTART:${formatDate(event.date)}`,
+        ];
+        if (event.endDate) {
+          lines.push(`DTEND:${formatDate(event.endDate)}`);
+        }
+        lines.push(
+          `SUMMARY:${event.title}`,
+          `DESCRIPTION:${event.description.replace(/\n/g, '\\n')}`,
+          `LOCATION:${event.isVirtual ? event.virtualLink : event.location}`,
+          `UID:${event._id}@saveastray`,
+          'END:VEVENT',
+          'END:VCALENDAR',
+        );
+        return lines.join('\r\n');
+      },
+    },
   })
 });
 
