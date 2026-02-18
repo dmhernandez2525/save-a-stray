@@ -73,6 +73,10 @@ import FosterPlacementType from './foster_placement_type';
 import { calculateFosterMatchScore, isAvailable } from '../../services/foster-matching';
 import { FosterUpdateDocument } from '../../models/FosterUpdate';
 import FosterUpdateType from './foster_update_type';
+import { MessageThreadDocument } from '../../models/MessageThread';
+import MessageThreadType from './message_thread_type';
+import { MessageTemplateDocument } from '../../models/MessageTemplate';
+import MessageTemplateType from './message_template_type';
 import { paginationQueryFields } from './pagination_queries';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
@@ -154,6 +158,8 @@ const PostAdoptionSurveyModel = mongoose.model<PostAdoptionSurveyDocument>('post
 const FosterProfileModel = mongoose.model<FosterProfileDocument>('fosterProfile');
 const FosterPlacementModel = mongoose.model<FosterPlacementDocument>('fosterPlacement');
 const FosterUpdateModel = mongoose.model<FosterUpdateDocument>('fosterUpdate');
+const MessageThreadModel = mongoose.model<MessageThreadDocument>('messageThread');
+const MessageTemplateModel = mongoose.model<MessageTemplateDocument>('messageTemplate');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -2208,6 +2214,113 @@ const RootQueryType = new GraphQLObjectType({
           });
         }
         return results.sort((a, b) => b.totalAnimalsHelped - a.totalAnimalsHelped);
+      },
+    },
+
+    // F6.1 - Messaging System
+    messageThreads: {
+      type: new GraphQLList(MessageThreadType),
+      args: {
+        userId: { type: GraphQLString },
+        shelterId: { type: GraphQLString },
+        status: { type: GraphQLString },
+      },
+      async resolve(_parent, args) {
+        const filter: Record<string, unknown> = {};
+        if (args.userId) filter.participants = args.userId;
+        if (args.shelterId) filter.shelterId = args.shelterId;
+        if (args.status) filter.status = args.status;
+        return MessageThreadModel.find(filter).sort({ lastMessageAt: -1 });
+      },
+    },
+    messageThread: {
+      type: MessageThreadType,
+      args: { threadId: { type: GraphQLString } },
+      async resolve(_parent, args) {
+        if (!args.threadId) return null;
+        return MessageThreadModel.findById(args.threadId);
+      },
+    },
+    threadMessages: {
+      type: new GraphQLList(MessageType),
+      args: {
+        threadId: { type: GraphQLString },
+        limit: { type: GraphQLInt },
+        before: { type: GraphQLString },
+      },
+      async resolve(_parent, args) {
+        if (!args.threadId) return [];
+        const filter: Record<string, unknown> = {
+          threadId: args.threadId,
+          archived: { $ne: true },
+        };
+        if (args.before) {
+          filter.createdAt = { $lt: new Date(args.before) };
+        }
+        const limit = clampLimit(args.limit, 50, 100);
+        return MessageModel.find(filter).sort({ createdAt: -1 }).limit(limit);
+      },
+    },
+    searchMessages: {
+      type: new GraphQLList(MessageType),
+      args: {
+        userId: { type: GraphQLString },
+        query: { type: GraphQLString },
+        limit: { type: GraphQLInt },
+      },
+      async resolve(_parent, args) {
+        if (!args.userId || !args.query) return [];
+        const limit = clampLimit(args.limit, 20, 50);
+        return MessageModel.find({
+          $or: [{ senderId: args.userId }, { recipientId: args.userId }],
+          content: { $regex: args.query, $options: 'i' },
+        }).sort({ createdAt: -1 }).limit(limit);
+      },
+    },
+    messageTemplates: {
+      type: new GraphQLList(MessageTemplateType),
+      args: {
+        shelterId: { type: GraphQLString },
+        category: { type: GraphQLString },
+      },
+      async resolve(_parent, args) {
+        if (!args.shelterId) return [];
+        const filter: Record<string, unknown> = {
+          shelterId: args.shelterId,
+          isActive: true,
+        };
+        if (args.category) filter.category = args.category;
+        return MessageTemplateModel.find(filter).sort({ usageCount: -1 });
+      },
+    },
+    messagingAnalytics: {
+      type: new GraphQLObjectType({
+        name: 'MessagingAnalyticsType',
+        fields: {
+          totalConversations: { type: GraphQLInt },
+          activeConversations: { type: GraphQLInt },
+          totalMessages: { type: GraphQLInt },
+          avgResponseTimeMinutes: { type: GraphQLFloat },
+          unreadMessages: { type: GraphQLInt },
+        },
+      }),
+      args: { shelterId: { type: GraphQLString } },
+      async resolve(_parent, args) {
+        if (!args.shelterId) return null;
+        const threads = await MessageThreadModel.find({ shelterId: args.shelterId });
+        const active = threads.filter(t => t.status === 'active');
+        const messages = await MessageModel.countDocuments({ shelterId: args.shelterId });
+        const unread = await MessageModel.countDocuments({
+          shelterId: args.shelterId,
+          read: false,
+        });
+        return {
+          totalConversations: threads.length,
+          activeConversations: active.length,
+          totalMessages: messages,
+          avgResponseTimeMinutes: 0,
+          unreadMessages: unread,
+        };
       },
     },
   })

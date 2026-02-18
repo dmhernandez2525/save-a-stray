@@ -117,6 +117,10 @@ import FosterPlacementType from './types/foster_placement_type';
 import { calculateFosterMatchScore } from '../services/foster-matching';
 import { FosterUpdateDocument } from '../models/FosterUpdate';
 import FosterUpdateType from './types/foster_update_type';
+import { MessageThreadDocument } from '../models/MessageThread';
+import MessageThreadType from './types/message_thread_type';
+import { MessageTemplateDocument } from '../models/MessageTemplate';
+import MessageTemplateType from './types/message_template_type';
 import { ShelterSettingsDocument } from '../models/ShelterSettings';
 import ShelterSettingsType, {
   DayScheduleInput,
@@ -179,6 +183,8 @@ const ShelterSettingsModel = mongoose.model<ShelterSettingsDocument>('shelterSet
 const FosterProfileModel = mongoose.model<FosterProfileDocument>('fosterProfile');
 const FosterPlacementModel = mongoose.model<FosterPlacementDocument>('fosterPlacement');
 const FosterUpdateModel = mongoose.model<FosterUpdateDocument>('fosterUpdate');
+const MessageThreadModel = mongoose.model<MessageThreadDocument>('messageThread');
+const MessageTemplateModel = mongoose.model<MessageTemplateDocument>('messageTemplate');
 
 interface RegisterArgs {
   name: string;
@@ -4551,6 +4557,223 @@ const mutation = new GraphQLObjectType({
         });
         await app.save();
         return app;
+      },
+    },
+
+    // F6.1 - Messaging System
+    createMessageThread: {
+      type: MessageThreadType,
+      args: {
+        shelterId: { type: GraphQLString },
+        recipientId: { type: GraphQLString },
+        animalId: { type: GraphQLString },
+        subject: { type: GraphQLString },
+        initialMessage: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        const shelterId = args.shelterId as string;
+        if (!shelterId) throw new Error('shelterId is required');
+        const recipientId = args.recipientId as string;
+        if (!recipientId) throw new Error('recipientId is required');
+        const thread = new MessageThreadModel({
+          shelterId,
+          participants: [userId, recipientId],
+          animalId: args.animalId ?? '',
+          subject: args.subject ?? '',
+          lastMessagePreview: ((args.initialMessage as string) ?? '').slice(0, 100),
+        });
+        await thread.save();
+        if (args.initialMessage) {
+          const msg = new MessageModel({
+            senderId: userId,
+            recipientId,
+            shelterId,
+            threadId: thread._id.toString(),
+            animalId: args.animalId ?? '',
+            content: args.initialMessage,
+            delivered: true,
+            deliveredAt: new Date(),
+          });
+          await msg.save();
+        }
+        return thread;
+      },
+    },
+    sendThreadMessage: {
+      type: MessageType,
+      args: {
+        threadId: { type: GraphQLString },
+        content: { type: GraphQLString },
+        attachments: {
+          type: new GraphQLList(new GraphQLInputObjectType({
+            name: 'MessageAttachmentInput',
+            fields: {
+              url: { type: GraphQLString },
+              filename: { type: GraphQLString },
+              mimeType: { type: GraphQLString },
+              size: { type: GraphQLInt },
+            },
+          })),
+        },
+        templateId: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        const thread = await MessageThreadModel.findById(args.threadId);
+        if (!thread) throw new Error('Thread not found');
+        if (!thread.participants.includes(userId)) throw new Error('Not a participant');
+        const recipientId = thread.participants.find(p => p !== userId) ?? '';
+        let content = args.content as string;
+        if (args.templateId) {
+          const template = await MessageTemplateModel.findById(args.templateId);
+          if (template) {
+            content = content || template.body;
+            template.usageCount += 1;
+            await template.save();
+          }
+        }
+        const msg = new MessageModel({
+          senderId: userId,
+          recipientId,
+          shelterId: thread.shelterId,
+          threadId: thread._id.toString(),
+          animalId: thread.animalId,
+          content,
+          attachments: args.attachments ?? [],
+          templateId: args.templateId ?? '',
+          delivered: true,
+          deliveredAt: new Date(),
+        });
+        await msg.save();
+        thread.lastMessageAt = new Date();
+        thread.lastMessagePreview = content.slice(0, 100);
+        const current = thread.unreadCount.get(recipientId) ?? 0;
+        thread.unreadCount.set(recipientId, current + 1);
+        await thread.save();
+        pubsub.publish(SUBSCRIPTION_EVENTS.NEW_MESSAGE, { newMessage: msg });
+        return msg;
+      },
+    },
+    markThreadMessagesRead: {
+      type: GraphQLBoolean,
+      args: {
+        threadId: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        if (!args.threadId) throw new Error('threadId is required');
+        await MessageModel.updateMany(
+          { threadId: args.threadId, recipientId: userId, read: false },
+          { read: true, readAt: new Date() },
+        );
+        const thread = await MessageThreadModel.findById(args.threadId);
+        if (thread) {
+          thread.unreadCount.set(userId, 0);
+          await thread.save();
+        }
+        return true;
+      },
+    },
+    archiveThread: {
+      type: MessageThreadType,
+      args: { threadId: { type: GraphQLString } },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const thread = await MessageThreadModel.findById(args.threadId);
+        if (!thread) throw new Error('Thread not found');
+        requireShelterStaff(context, thread.shelterId);
+        thread.status = 'archived';
+        await thread.save();
+        return thread;
+      },
+    },
+    assignThreadToStaff: {
+      type: MessageThreadType,
+      args: {
+        threadId: { type: GraphQLString },
+        staffId: { type: GraphQLString },
+        routingCategory: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const thread = await MessageThreadModel.findById(args.threadId);
+        if (!thread) throw new Error('Thread not found');
+        requireShelterStaff(context, thread.shelterId);
+        if (args.staffId) thread.assignedTo = args.staffId as string;
+        if (args.routingCategory) thread.routingCategory = args.routingCategory as string;
+        await thread.save();
+        return thread;
+      },
+    },
+    createMessageTemplate: {
+      type: MessageTemplateType,
+      args: {
+        shelterId: { type: GraphQLString },
+        name: { type: GraphQLString },
+        category: { type: GraphQLString },
+        subject: { type: GraphQLString },
+        body: { type: GraphQLString },
+        variables: { type: new GraphQLList(GraphQLString) },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        requireShelterStaff(context, args.shelterId as string);
+        const template = new MessageTemplateModel({
+          shelterId: args.shelterId,
+          name: args.name ?? '',
+          category: args.category ?? 'general',
+          subject: args.subject ?? '',
+          body: args.body ?? '',
+          variables: args.variables ?? [],
+          createdBy: userId,
+        });
+        await template.save();
+        return template;
+      },
+    },
+    updateMessageTemplate: {
+      type: MessageTemplateType,
+      args: {
+        templateId: { type: GraphQLString },
+        name: { type: GraphQLString },
+        category: { type: GraphQLString },
+        subject: { type: GraphQLString },
+        body: { type: GraphQLString },
+        variables: { type: new GraphQLList(GraphQLString) },
+        isActive: { type: GraphQLBoolean },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const template = await MessageTemplateModel.findById(args.templateId);
+        if (!template) throw new Error('Template not found');
+        requireShelterStaff(context, template.shelterId);
+        if (args.name !== undefined) template.name = args.name as string;
+        if (args.category !== undefined) template.category = args.category as string;
+        if (args.subject !== undefined) template.subject = args.subject as string;
+        if (args.body !== undefined) template.body = args.body as string;
+        if (args.variables) template.variables = args.variables as string[];
+        if (args.isActive !== undefined) template.isActive = args.isActive as boolean;
+        await template.save();
+        return template;
+      },
+    },
+    bulkArchiveMessages: {
+      type: GraphQLInt,
+      args: {
+        shelterId: { type: GraphQLString },
+        threadIds: { type: new GraphQLList(GraphQLString) },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        requireShelterStaff(context, args.shelterId as string);
+        const ids = args.threadIds as string[];
+        if (!ids || ids.length === 0) return 0;
+        const result = await MessageThreadModel.updateMany(
+          { _id: { $in: ids }, shelterId: args.shelterId },
+          { status: 'archived' },
+        );
+        return result.modifiedCount;
       },
     },
   }),
