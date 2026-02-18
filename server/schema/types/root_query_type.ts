@@ -148,6 +148,7 @@ const RootQueryType = new GraphQLObjectType({
         houseTrained: { type: GraphQLBoolean },
         minAge: { type: GraphQLInt },
         maxAge: { type: GraphQLInt },
+        sortBy: { type: GraphQLString },
         limit: { type: GraphQLInt },
         offset: { type: GraphQLInt }
       },
@@ -156,7 +157,7 @@ const RootQueryType = new GraphQLObjectType({
         status?: string; size?: string; energyLevel?: string;
         goodWithKids?: boolean; goodWithDogs?: boolean; goodWithCats?: boolean;
         houseTrained?: boolean;
-        minAge?: number; maxAge?: number; limit?: number; offset?: number;
+        minAge?: number; maxAge?: number; sortBy?: string; limit?: number; offset?: number;
       }) {
         // Return mock data if MongoDB is not connected
         if (!isMongoConnected()) {
@@ -180,11 +181,65 @@ const RootQueryType = new GraphQLObjectType({
           if (args.minAge !== undefined) (filter.age as Record<string, number>).$gte = args.minAge;
           if (args.maxAge !== undefined) (filter.age as Record<string, number>).$lte = args.maxAge;
         }
-        let query = Animal.find(filter);
+        const sortOptions: Record<string, Record<string, 1 | -1>> = {
+          newest: { _id: -1 },
+          oldest: { _id: 1 },
+          name_asc: { name: 1 },
+          name_desc: { name: -1 },
+          age_asc: { age: 1 },
+          age_desc: { age: -1 },
+        };
+        const sort = sortOptions[args.sortBy ?? ''] ?? { _id: -1 };
+        let query = Animal.find(filter).sort(sort);
         if (args.offset !== undefined) query = query.skip(args.offset);
         const limit = clampLimit(args.limit, DEFAULT_ANIMAL_LIMIT, MAX_ANIMAL_LIMIT);
         query = query.limit(limit);
         return query;
+      }
+    },
+    findAnimalsCount: {
+      type: GraphQLInt,
+      args: {
+        type: { type: GraphQLString },
+        breed: { type: GraphQLString },
+        sex: { type: GraphQLString },
+        color: { type: GraphQLString },
+        name: { type: GraphQLString },
+        status: { type: GraphQLString },
+        size: { type: GraphQLString },
+        energyLevel: { type: GraphQLString },
+        goodWithKids: { type: GraphQLBoolean },
+        goodWithDogs: { type: GraphQLBoolean },
+        goodWithCats: { type: GraphQLBoolean },
+        houseTrained: { type: GraphQLBoolean },
+        minAge: { type: GraphQLInt },
+        maxAge: { type: GraphQLInt },
+      },
+      resolve(_, args: {
+        type?: string; breed?: string; sex?: string; color?: string; name?: string;
+        status?: string; size?: string; energyLevel?: string;
+        goodWithKids?: boolean; goodWithDogs?: boolean; goodWithCats?: boolean;
+        houseTrained?: boolean; minAge?: number; maxAge?: number;
+      }) {
+        const filter: Record<string, unknown> = {};
+        if (args.type) filter.type = args.type;
+        if (args.breed) filter.breed = { $regex: args.breed, $options: 'i' };
+        if (args.sex) filter.sex = args.sex;
+        if (args.status) filter.status = args.status;
+        if (args.size) filter.size = args.size;
+        if (args.energyLevel) filter.energyLevel = args.energyLevel;
+        if (args.goodWithKids !== undefined) filter.goodWithKids = args.goodWithKids;
+        if (args.goodWithDogs !== undefined) filter.goodWithDogs = args.goodWithDogs;
+        if (args.goodWithCats !== undefined) filter.goodWithCats = args.goodWithCats;
+        if (args.houseTrained !== undefined) filter.houseTrained = args.houseTrained;
+        if (args.color) filter.color = { $regex: args.color, $options: 'i' };
+        if (args.name) filter.name = { $regex: args.name, $options: 'i' };
+        if (args.minAge !== undefined || args.maxAge !== undefined) {
+          filter.age = {};
+          if (args.minAge !== undefined) (filter.age as Record<string, number>).$gte = args.minAge;
+          if (args.maxAge !== undefined) (filter.age as Record<string, number>).$lte = args.maxAge;
+        }
+        return Animal.countDocuments(filter);
       }
     },
     applications: {
@@ -677,6 +732,79 @@ const RootQueryType = new GraphQLObjectType({
       args: { animalId: { type: new GraphQLNonNull(GraphQLID) } },
       resolve(_, args: { animalId: string }) {
         return BehaviorNoteModel.find({ animalId: args.animalId }).sort({ createdAt: -1 });
+      }
+    },
+    breedAutocomplete: {
+      type: new GraphQLList(GraphQLString),
+      args: {
+        query: { type: new GraphQLNonNull(GraphQLString) },
+        animalType: { type: GraphQLString },
+        limit: { type: GraphQLInt },
+      },
+      async resolve(_, args: { query: string; animalType?: string; limit?: number }) {
+        const filter: Record<string, unknown> = {
+          breed: { $regex: args.query, $options: 'i' },
+        };
+        if (args.animalType) filter.type = args.animalType;
+        const limit = clampLimit(args.limit, 10, 50);
+        const results = await Animal.distinct('breed', filter);
+        return results
+          .filter((b: string) => b && b.length > 0)
+          .sort()
+          .slice(0, limit);
+      }
+    },
+    findNearbyShelters: {
+      type: new GraphQLList(ShelterType),
+      args: {
+        latitude: { type: new GraphQLNonNull(GraphQLFloat) },
+        longitude: { type: new GraphQLNonNull(GraphQLFloat) },
+        radiusMiles: { type: GraphQLInt },
+        limit: { type: GraphQLInt },
+      },
+      resolve(_, args: { latitude: number; longitude: number; radiusMiles?: number; limit?: number }) {
+        const radiusMeters = (args.radiusMiles ?? 50) * 1609.34;
+        const limit = clampLimit(args.limit, 20, MAX_ANIMAL_LIMIT);
+        return Shelter.find({
+          coordinates: {
+            $near: {
+              $geometry: { type: 'Point', coordinates: [args.longitude, args.latitude] },
+              $maxDistance: radiusMeters,
+            },
+          },
+        }).limit(limit);
+      }
+    },
+    findNearbyAnimals: {
+      type: new GraphQLList(AnimalType),
+      args: {
+        latitude: { type: new GraphQLNonNull(GraphQLFloat) },
+        longitude: { type: new GraphQLNonNull(GraphQLFloat) },
+        radiusMiles: { type: GraphQLInt },
+        status: { type: GraphQLString },
+        type: { type: GraphQLString },
+        limit: { type: GraphQLInt },
+      },
+      async resolve(_, args: {
+        latitude: number; longitude: number; radiusMiles?: number;
+        status?: string; type?: string; limit?: number;
+      }) {
+        const radiusMeters = (args.radiusMiles ?? 50) * 1609.34;
+        const limit = clampLimit(args.limit, DEFAULT_ANIMAL_LIMIT, MAX_ANIMAL_LIMIT);
+        const shelters = await Shelter.find({
+          coordinates: {
+            $near: {
+              $geometry: { type: 'Point', coordinates: [args.longitude, args.latitude] },
+              $maxDistance: radiusMeters,
+            },
+          },
+        });
+        const animalIds = shelters.flatMap(s => s.animals.map(id => id.toString()));
+        if (animalIds.length === 0) return [];
+        const filter: Record<string, unknown> = { _id: { $in: animalIds } };
+        if (args.status) filter.status = args.status;
+        if (args.type) filter.type = args.type;
+        return Animal.find(filter).limit(limit);
       }
     }
   })

@@ -12,6 +12,16 @@ const ShelterSchema = new Schema<ShelterDocument>({
     type: String,
     required: true
   },
+  coordinates: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point',
+    },
+    coordinates: {
+      type: [Number], // [longitude, latitude]
+    },
+  },
   users: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'user'
@@ -52,6 +62,8 @@ const ShelterSchema = new Schema<ShelterDocument>({
     ref: 'animal'
   }]
 });
+
+ShelterSchema.index({ coordinates: '2dsphere' });
 
 const Shelter: Model<ShelterDocument> = mongoose.model<ShelterDocument>('shelter', ShelterSchema);
 

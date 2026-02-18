@@ -5,6 +5,7 @@ import {
   GraphQLBoolean,
   GraphQLID,
   GraphQLList,
+  GraphQLFloat,
   GraphQLFieldConfigMap
 } from 'graphql';
 import { GraphQLContext } from '../../graphql/context';
@@ -14,6 +15,7 @@ interface ShelterParentValue {
   _id: string;
   name: string;
   location: string;
+  coordinates?: { type: string; coordinates: [number, number] };
   paymentEmail: string;
   animals?: Array<string | Types.ObjectId>;
   users?: Array<string | Types.ObjectId>;
@@ -31,6 +33,18 @@ const ShelterType: GraphQLObjectType = new GraphQLObjectType({
     website: { type: GraphQLString },
     hours: { type: GraphQLString },
     description: { type: GraphQLString },
+    latitude: {
+      type: GraphQLFloat,
+      resolve(parent: ShelterParentValue) {
+        return parent.coordinates?.coordinates?.[1] ?? null;
+      },
+    },
+    longitude: {
+      type: GraphQLFloat,
+      resolve(parent: ShelterParentValue) {
+        return parent.coordinates?.coordinates?.[0] ?? null;
+      },
+    },
     verified: { type: GraphQLBoolean },
     verifiedAt: { type: GraphQLString },
     animals: {
