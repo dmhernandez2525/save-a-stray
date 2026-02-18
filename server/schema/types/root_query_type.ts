@@ -77,6 +77,10 @@ import { MessageThreadDocument } from '../../models/MessageThread';
 import MessageThreadType from './message_thread_type';
 import { MessageTemplateDocument } from '../../models/MessageTemplate';
 import MessageTemplateType from './message_template_type';
+import { EmailPreferenceDocument } from '../../models/EmailPreference';
+import EmailPreferenceType from './email_preference_type';
+import { EmailLogDocument } from '../../models/EmailLog';
+import EmailLogType from './email_log_type';
 import { paginationQueryFields } from './pagination_queries';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
@@ -160,6 +164,8 @@ const FosterPlacementModel = mongoose.model<FosterPlacementDocument>('fosterPlac
 const FosterUpdateModel = mongoose.model<FosterUpdateDocument>('fosterUpdate');
 const MessageThreadModel = mongoose.model<MessageThreadDocument>('messageThread');
 const MessageTemplateModel = mongoose.model<MessageTemplateDocument>('messageTemplate');
+const EmailPreferenceModel = mongoose.model<EmailPreferenceDocument>('emailPreference');
+const EmailLogModel = mongoose.model<EmailLogDocument>('emailLog');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -2321,6 +2327,88 @@ const RootQueryType = new GraphQLObjectType({
           avgResponseTimeMinutes: 0,
           unreadMessages: unread,
         };
+      },
+    },
+
+    // F6.2 - Email Notifications
+    emailPreferences: {
+      type: EmailPreferenceType,
+      args: { userId: { type: GraphQLString } },
+      async resolve(_parent, args) {
+        if (!args.userId) return null;
+        return EmailPreferenceModel.findOneAndUpdate(
+          { userId: args.userId },
+          { $setOnInsert: { userId: args.userId } },
+          { upsert: true, new: true },
+        );
+      },
+    },
+    emailAnalytics: {
+      type: new GraphQLObjectType({
+        name: 'EmailAnalyticsType',
+        fields: {
+          totalSent: { type: GraphQLInt },
+          delivered: { type: GraphQLInt },
+          opened: { type: GraphQLInt },
+          clicked: { type: GraphQLInt },
+          bounced: { type: GraphQLInt },
+          failed: { type: GraphQLInt },
+          openRate: { type: GraphQLFloat },
+          clickRate: { type: GraphQLFloat },
+          bounceRate: { type: GraphQLFloat },
+        },
+      }),
+      args: {
+        shelterId: { type: GraphQLString },
+        startDate: { type: GraphQLString },
+        endDate: { type: GraphQLString },
+      },
+      async resolve(_parent, args) {
+        if (!args.shelterId) return null;
+        const filter: Record<string, unknown> = { shelterId: args.shelterId };
+        if (args.startDate || args.endDate) {
+          const dateFilter: Record<string, Date> = {};
+          if (args.startDate) dateFilter.$gte = new Date(args.startDate);
+          if (args.endDate) dateFilter.$lte = new Date(args.endDate);
+          filter.createdAt = dateFilter;
+        }
+        const logs = await EmailLogModel.find(filter);
+        const sent = logs.filter(l => l.status !== 'queued').length;
+        const delivered = logs.filter(l => ['delivered', 'opened', 'clicked'].includes(l.status)).length;
+        const opened = logs.filter(l => ['opened', 'clicked'].includes(l.status)).length;
+        const clicked = logs.filter(l => l.status === 'clicked').length;
+        const bounced = logs.filter(l => l.status === 'bounced').length;
+        const failed = logs.filter(l => l.status === 'failed').length;
+        return {
+          totalSent: sent,
+          delivered,
+          opened,
+          clicked,
+          bounced,
+          failed,
+          openRate: sent > 0 ? Math.round((opened / sent) * 10000) / 100 : 0,
+          clickRate: sent > 0 ? Math.round((clicked / sent) * 10000) / 100 : 0,
+          bounceRate: sent > 0 ? Math.round((bounced / sent) * 10000) / 100 : 0,
+        };
+      },
+    },
+    emailLogs: {
+      type: new GraphQLList(EmailLogType),
+      args: {
+        shelterId: { type: GraphQLString },
+        userId: { type: GraphQLString },
+        category: { type: GraphQLString },
+        status: { type: GraphQLString },
+        limit: { type: GraphQLInt },
+      },
+      async resolve(_parent, args) {
+        const filter: Record<string, unknown> = {};
+        if (args.shelterId) filter.shelterId = args.shelterId;
+        if (args.userId) filter.userId = args.userId;
+        if (args.category) filter.category = args.category;
+        if (args.status) filter.status = args.status;
+        const limit = clampLimit(args.limit, 50, 100);
+        return EmailLogModel.find(filter).sort({ createdAt: -1 }).limit(limit);
       },
     },
   })
