@@ -127,7 +127,7 @@ export interface IShelterDocument extends IShelter {
 }
 
 // Application Types
-export type ApplicationStatus = 'submitted' | 'under_review' | 'approved' | 'rejected';
+export type ApplicationStatus = 'draft' | 'submitted' | 'under_review' | 'approved' | 'rejected' | 'withdrawn';
 
 export interface IApplication {
   _id: Types.ObjectId | string;
@@ -135,6 +135,15 @@ export interface IApplication {
   userId: string;
   applicationData: string;
   status: ApplicationStatus;
+  isDraft?: boolean;
+  currentStep?: number;
+  totalSteps?: number;
+  templateId?: string;
+  applicationFee?: number;
+  applicationFeeStatus?: 'none' | 'pending' | 'paid' | 'waived';
+  reviewNotes?: string;
+  reviewedBy?: string;
+  reviewedAt?: Date;
   submittedAt: Date;
 }
 

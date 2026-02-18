@@ -234,6 +234,8 @@ const TemplateFieldInput = new GraphQLInputObjectType({
     fieldType: { type: GraphQLString },
     required: { type: GraphQLBoolean },
     options: { type: new GraphQLList(GraphQLString) },
+    placeholder: { type: GraphQLString },
+    helpText: { type: GraphQLString },
   },
 });
 
@@ -714,12 +716,27 @@ const mutation = new GraphQLObjectType({
         animalId: { type: GraphQLString },
         userId: { type: GraphQLString },
         applicationData: { type: GraphQLString },
+        templateId: { type: GraphQLString },
+        applicationFee: { type: GraphQLFloat },
       },
-      async resolve(_, args: ApplicationArgs, context: GraphQLContext) {
-        // Users can only create applications for themselves
+      async resolve(
+        _,
+        args: ApplicationArgs & { templateId?: string; applicationFee?: number },
+        context: GraphQLContext
+      ) {
         const authenticatedUserId = requireAuth(context);
         if (args.userId !== authenticatedUserId && context.userRole !== 'admin') {
           throw new Error('You can only submit applications for yourself');
+        }
+
+        // Duplicate detection: prevent multiple active applications for same animal
+        const existing = await Application.findOne({
+          userId: args.userId,
+          animalId: args.animalId,
+          status: { $in: ['submitted', 'under_review'] },
+        });
+        if (existing) {
+          throw new Error('You already have an active application for this animal');
         }
 
         const { animalId, userId, applicationData } = args;
@@ -728,6 +745,10 @@ const mutation = new GraphQLObjectType({
           userId,
           applicationData,
           status: 'submitted',
+          isDraft: false,
+          templateId: args.templateId ?? '',
+          applicationFee: args.applicationFee ?? 0,
+          applicationFeeStatus: args.applicationFee ? 'pending' : 'none',
           submittedAt: new Date(),
         });
         const animal = await Animal.findById(animalId);
@@ -743,6 +764,122 @@ const mutation = new GraphQLObjectType({
           return newApp;
         }
         return null;
+      },
+    },
+    saveApplicationDraft: {
+      type: ApplicationType,
+      args: {
+        _id: { type: GraphQLID },
+        animalId: { type: GraphQLString },
+        userId: { type: GraphQLString },
+        applicationData: { type: GraphQLString },
+        currentStep: { type: GraphQLInt },
+        totalSteps: { type: GraphQLInt },
+        templateId: { type: GraphQLString },
+      },
+      async resolve(
+        _,
+        args: {
+          _id?: string;
+          animalId: string;
+          userId: string;
+          applicationData: string;
+          currentStep?: number;
+          totalSteps?: number;
+          templateId?: string;
+        },
+        context: GraphQLContext
+      ) {
+        requireSelf(context, args.userId);
+
+        // Update existing draft or create new one
+        if (args._id) {
+          const draft = await Application.findById(args._id);
+          if (!draft) throw new Error('Draft not found');
+          if (draft.userId !== args.userId) throw new Error('Not your draft');
+          if (!draft.isDraft) throw new Error('Cannot modify a submitted application as draft');
+
+          draft.applicationData = args.applicationData;
+          if (args.currentStep !== undefined) draft.currentStep = args.currentStep;
+          if (args.totalSteps !== undefined) draft.totalSteps = args.totalSteps;
+          await draft.save();
+          return draft;
+        }
+
+        const draft = new Application({
+          animalId: args.animalId,
+          userId: args.userId,
+          applicationData: args.applicationData,
+          status: 'draft',
+          isDraft: true,
+          currentStep: args.currentStep ?? 0,
+          totalSteps: args.totalSteps ?? 1,
+          templateId: args.templateId ?? '',
+          submittedAt: new Date(),
+        });
+        await draft.save();
+        return draft;
+      },
+    },
+    submitDraft: {
+      type: ApplicationType,
+      args: {
+        _id: { type: GraphQLID },
+      },
+      async resolve(_, args: { _id: string }, context: GraphQLContext) {
+        const draft = await Application.findById(args._id);
+        if (!draft) throw new Error('Draft not found');
+        requireSelf(context, draft.userId);
+
+        if (!draft.isDraft) throw new Error('Application is already submitted');
+
+        // Check for duplicates before submitting
+        const existing = await Application.findOne({
+          _id: { $ne: draft._id },
+          userId: draft.userId,
+          animalId: draft.animalId,
+          status: { $in: ['submitted', 'under_review'] },
+        });
+        if (existing) {
+          throw new Error('You already have an active application for this animal');
+        }
+
+        draft.isDraft = false;
+        draft.status = 'submitted';
+        draft.submittedAt = new Date();
+        await draft.save();
+
+        const animal = await Animal.findById(draft.animalId);
+        if (animal) {
+          const alreadyLinked = animal.applications.some(id => id.toString() === draft._id.toString());
+          if (!alreadyLinked) {
+            animal.applications.push(draft._id);
+            await animal.save();
+          }
+          const shelter = await Shelter.findOne({ animals: animal._id });
+          await pubsub.publish(SUBSCRIPTION_EVENTS.NEW_APPLICATION, {
+            newApplication: draft,
+            newApplicationShelterId: shelter?._id.toString(),
+          });
+        }
+        return draft;
+      },
+    },
+    withdrawApplication: {
+      type: ApplicationType,
+      args: { _id: { type: GraphQLID } },
+      async resolve(_, args: { _id: string }, context: GraphQLContext) {
+        const application = await Application.findById(args._id);
+        if (!application) throw new Error('Application not found');
+        requireSelf(context, application.userId);
+
+        if (application.status === 'approved' || application.status === 'rejected') {
+          throw new Error('Cannot withdraw an application that has already been finalized');
+        }
+
+        application.status = 'withdrawn';
+        await application.save();
+        return application;
       },
     },
     deleteApplication: {
@@ -1478,6 +1615,7 @@ const mutation = new GraphQLObjectType({
       args: {
         shelterId: { type: GraphQLID },
         name: { type: GraphQLString },
+        animalType: { type: GraphQLString },
         fields: { type: new GraphQLList(TemplateFieldInput) },
       },
       async resolve(
@@ -1485,26 +1623,31 @@ const mutation = new GraphQLObjectType({
         args: {
           shelterId: string;
           name: string;
+          animalType?: string;
           fields: Array<{
             label: string;
             fieldType: string;
             required?: boolean;
             options?: string[];
+            placeholder?: string;
+            helpText?: string;
           }>;
         },
         context: GraphQLContext
       ) {
-        // Only shelter staff can create templates
         await requireShelterStaff(context, args.shelterId);
 
         const template = new ApplicationTemplateModel({
           shelterId: args.shelterId,
           name: args.name,
+          animalType: args.animalType ?? '',
           fields: (args.fields || []).map((f) => ({
             label: f.label,
             fieldType: f.fieldType,
             required: f.required || false,
             options: f.options || [],
+            placeholder: f.placeholder || '',
+            helpText: f.helpText || '',
           })),
         });
         await template.save();
