@@ -66,6 +66,8 @@ import { calculateMatchScore } from '../../services/matching';
 import { AdoptionRecordDocument } from '../../models/AdoptionRecord';
 import AdoptionRecordType from './adoption_record_type';
 import { PostAdoptionSurveyDocument } from '../../models/PostAdoptionSurvey';
+import { FosterProfileDocument } from '../../models/FosterProfile';
+import FosterProfileType from './foster_profile_type';
 import { paginationQueryFields } from './pagination_queries';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
@@ -144,6 +146,7 @@ const AdopterProfileModel = mongoose.model<AdopterProfileDocument>('adopterProfi
 const MatchRecordModel = mongoose.model<MatchRecordDocument>('matchRecord');
 const AdoptionRecordModel = mongoose.model<AdoptionRecordDocument>('adoptionRecord');
 const PostAdoptionSurveyModel = mongoose.model<PostAdoptionSurveyDocument>('postAdoptionSurvey');
+const FosterProfileModel = mongoose.model<FosterProfileDocument>('fosterProfile');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -1612,7 +1615,83 @@ const RootQueryType = new GraphQLObjectType({
         if (args.type) filter.type = args.type;
         return Animal.find(filter).limit(limit);
       }
-    }
+    },
+
+    // F5.1 - Foster Registration
+    fosterProfile: {
+      type: FosterProfileType,
+      args: { userId: { type: GraphQLString }, shelterId: { type: GraphQLString } },
+      async resolve(_parent, args) {
+        const filter: Record<string, unknown> = {};
+        if (args.userId) filter.userId = args.userId;
+        if (args.shelterId) filter.shelterId = args.shelterId;
+        return FosterProfileModel.findOne(filter);
+      },
+    },
+    shelterFosterDirectory: {
+      type: new GraphQLList(FosterProfileType),
+      args: {
+        shelterId: { type: GraphQLString },
+        status: { type: GraphQLString },
+        animalType: { type: GraphQLString },
+        search: { type: GraphQLString },
+      },
+      async resolve(_parent, args) {
+        if (!args.shelterId) return [];
+        const filter: Record<string, unknown> = { shelterId: args.shelterId };
+        if (args.status) filter.status = args.status;
+        if (args.animalType) {
+          filter.acceptedAnimalTypes = args.animalType;
+        }
+        let profiles = FosterProfileModel.find(filter).sort({ createdAt: -1 });
+        const results = await profiles;
+        if (!args.search) return results;
+        const term = args.search.toLowerCase();
+        const UserModel = mongoose.model<UserDocument>('user');
+        const userIds = results.map(p => p.userId);
+        const users = await UserModel.find({ _id: { $in: userIds } });
+        const userMap = new Map(users.map(u => [u._id.toString(), u]));
+        return results.filter(p => {
+          const user = userMap.get(p.userId);
+          if (!user) return false;
+          return user.name.toLowerCase().includes(term)
+            || p.bio.toLowerCase().includes(term)
+            || p.specialSkills.some(s => s.toLowerCase().includes(term));
+        });
+      },
+    },
+    fosterOrientationStatus: {
+      type: new GraphQLObjectType({
+        name: 'FosterOrientationStatusType',
+        fields: {
+          totalModules: { type: GraphQLInt },
+          completedModules: { type: GraphQLInt },
+          requiredModules: { type: GraphQLInt },
+          requiredCompleted: { type: GraphQLInt },
+          isComplete: { type: GraphQLBoolean },
+        },
+      }),
+      args: { userId: { type: GraphQLString }, shelterId: { type: GraphQLString } },
+      async resolve(_parent, args) {
+        if (!args.userId || !args.shelterId) return null;
+        const profile = await FosterProfileModel.findOne({
+          userId: args.userId,
+          shelterId: args.shelterId,
+        });
+        if (!profile) return null;
+        const total = profile.orientation.length;
+        const completed = profile.orientation.filter(o => o.completedAt).length;
+        const required = profile.orientation.filter(o => o.required);
+        const requiredCompleted = required.filter(o => o.completedAt).length;
+        return {
+          totalModules: total,
+          completedModules: completed,
+          requiredModules: required.length,
+          requiredCompleted,
+          isComplete: requiredCompleted >= required.length,
+        };
+      },
+    },
   })
 });
 

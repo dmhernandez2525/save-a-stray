@@ -104,6 +104,12 @@ import { MatchRecordDocument } from '../models/MatchRecord';
 import { AdoptionRecordDocument } from '../models/AdoptionRecord';
 import AdoptionRecordType from './types/adoption_record_type';
 import { PostAdoptionSurveyDocument } from '../models/PostAdoptionSurvey';
+import { FosterProfileDocument, HousingDetail } from '../models/FosterProfile';
+import FosterProfileType, {
+  HousingDetailInput,
+  PetExperienceInput,
+  FosterReferenceInput,
+} from './types/foster_profile_type';
 import { ShelterSettingsDocument } from '../models/ShelterSettings';
 import ShelterSettingsType, {
   DayScheduleInput,
@@ -163,6 +169,7 @@ const MatchRecordModel = mongoose.model<MatchRecordDocument>('matchRecord');
 const AdoptionRecordModel = mongoose.model<AdoptionRecordDocument>('adoptionRecord');
 const PostAdoptionSurveyModel = mongoose.model<PostAdoptionSurveyDocument>('postAdoptionSurvey');
 const ShelterSettingsModel = mongoose.model<ShelterSettingsDocument>('shelterSettings');
+const FosterProfileModel = mongoose.model<FosterProfileDocument>('fosterProfile');
 
 interface RegisterArgs {
   name: string;
@@ -3741,6 +3748,309 @@ const mutation = new GraphQLObjectType({
         });
         await survey.save();
         return true;
+      },
+    },
+
+    // F5.1 - Foster Registration
+    registerFosterProfile: {
+      type: FosterProfileType,
+      args: {
+        shelterId: { type: GraphQLString },
+        bio: { type: GraphQLString },
+        photoUrl: { type: GraphQLString },
+        maxAnimals: { type: GraphQLInt },
+        acceptedAnimalTypes: { type: new GraphQLList(GraphQLString) },
+        specialSkills: { type: new GraphQLList(GraphQLString) },
+        housing: { type: HousingDetailInput },
+        experience: { type: new GraphQLList(PetExperienceInput) },
+        references: { type: new GraphQLList(FosterReferenceInput) },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        if (!args.shelterId) throw new Error('shelterId is required');
+        const existing = await FosterProfileModel.findOne({
+          userId,
+          shelterId: args.shelterId as string,
+        });
+        if (existing) throw new Error('Foster profile already exists for this shelter');
+        const profile = new FosterProfileModel({
+          userId,
+          shelterId: args.shelterId,
+          bio: args.bio ?? '',
+          photoUrl: args.photoUrl ?? '',
+          maxAnimals: args.maxAnimals ?? 1,
+          acceptedAnimalTypes: args.acceptedAnimalTypes ?? [],
+          specialSkills: args.specialSkills ?? [],
+          housing: args.housing ?? {},
+          experience: args.experience ?? [],
+          references: args.references ?? [],
+          status: 'pending_approval',
+        });
+        await profile.save();
+        return profile;
+      },
+    },
+    updateFosterProfile: {
+      type: FosterProfileType,
+      args: {
+        shelterId: { type: GraphQLString },
+        bio: { type: GraphQLString },
+        photoUrl: { type: GraphQLString },
+        maxAnimals: { type: GraphQLInt },
+        acceptedAnimalTypes: { type: new GraphQLList(GraphQLString) },
+        specialSkills: { type: new GraphQLList(GraphQLString) },
+        housing: { type: HousingDetailInput },
+        experience: { type: new GraphQLList(PetExperienceInput) },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        if (!args.shelterId) throw new Error('shelterId is required');
+        const profile = await FosterProfileModel.findOne({
+          userId,
+          shelterId: args.shelterId as string,
+        });
+        if (!profile) throw new Error('Foster profile not found');
+        if (args.bio !== undefined) profile.bio = args.bio as string;
+        if (args.photoUrl !== undefined) profile.photoUrl = args.photoUrl as string;
+        if (args.maxAnimals !== undefined) profile.maxAnimals = args.maxAnimals as number;
+        if (args.acceptedAnimalTypes) profile.acceptedAnimalTypes = args.acceptedAnimalTypes as string[];
+        if (args.specialSkills) profile.specialSkills = args.specialSkills as string[];
+        if (args.housing) {
+          const h = args.housing as Record<string, unknown>;
+          if (h.type !== undefined) profile.housing.type = h.type as HousingDetail['type'];
+          if (h.ownershipStatus !== undefined) profile.housing.ownershipStatus = h.ownershipStatus as 'own' | 'rent';
+          if (h.hasYard !== undefined) profile.housing.hasYard = h.hasYard as boolean;
+          if (h.yardFenced !== undefined) profile.housing.yardFenced = h.yardFenced as boolean;
+          if (h.squareFootage !== undefined) profile.housing.squareFootage = h.squareFootage as number;
+          if (h.landlordApproval !== undefined) profile.housing.landlordApproval = h.landlordApproval as boolean;
+          if (h.landlordContact !== undefined) profile.housing.landlordContact = h.landlordContact as string;
+          if (h.documentUrls) profile.housing.documentUrls = h.documentUrls as string[];
+        }
+        if (args.experience) profile.experience = args.experience as typeof profile.experience;
+        await profile.save();
+        return profile;
+      },
+    },
+    verifyFosterHousing: {
+      type: FosterProfileType,
+      args: {
+        fosterProfileId: { type: GraphQLString },
+        verificationStatus: { type: GraphQLString },
+        verificationNotes: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const profile = await FosterProfileModel.findById(args.fosterProfileId);
+        if (!profile) throw new Error('Foster profile not found');
+        requireShelterStaff(context, profile.shelterId);
+        const validStatuses = ['pending', 'verified', 'rejected'];
+        if (!validStatuses.includes(args.verificationStatus as string)) {
+          throw new Error('Invalid verification status');
+        }
+        profile.housing.verificationStatus = args.verificationStatus as 'pending' | 'verified' | 'rejected';
+        if (args.verificationNotes) profile.housing.verificationNotes = args.verificationNotes as string;
+        await profile.save();
+        return profile;
+      },
+    },
+    addFosterReference: {
+      type: FosterProfileType,
+      args: {
+        shelterId: { type: GraphQLString },
+        name: { type: GraphQLString },
+        email: { type: GraphQLString },
+        phone: { type: GraphQLString },
+        relationship: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        const profile = await FosterProfileModel.findOne({
+          userId,
+          shelterId: args.shelterId as string,
+        });
+        if (!profile) throw new Error('Foster profile not found');
+        profile.references.push({
+          name: args.name as string,
+          email: args.email as string,
+          phone: (args.phone as string) ?? '',
+          relationship: (args.relationship as string) ?? '',
+          status: 'pending',
+          comments: '',
+        });
+        await profile.save();
+        return profile;
+      },
+    },
+    sendReferenceRequest: {
+      type: GraphQLBoolean,
+      args: {
+        fosterProfileId: { type: GraphQLString },
+        referenceId: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const profile = await FosterProfileModel.findById(args.fosterProfileId);
+        if (!profile) throw new Error('Foster profile not found');
+        requireShelterStaff(context, profile.shelterId);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const ref = profile.references.find(
+          (r: any) => r._id?.toString() === args.referenceId
+        );
+        if (!ref) throw new Error('Reference not found');
+        ref.status = 'sent';
+        ref.requestSentAt = new Date();
+        await profile.save();
+        return true;
+      },
+    },
+    submitReferenceResponse: {
+      type: GraphQLBoolean,
+      args: {
+        fosterProfileId: { type: GraphQLString },
+        referenceId: { type: GraphQLString },
+        rating: { type: GraphQLInt },
+        comments: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>) {
+        const profile = await FosterProfileModel.findById(args.fosterProfileId);
+        if (!profile) throw new Error('Foster profile not found');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const ref = profile.references.find(
+          (r: any) => r._id?.toString() === args.referenceId
+        );
+        if (!ref) throw new Error('Reference not found');
+        ref.status = 'received';
+        ref.responseReceivedAt = new Date();
+        if (args.rating) ref.rating = args.rating as number;
+        if (args.comments) ref.comments = args.comments as string;
+        await profile.save();
+        return true;
+      },
+    },
+    signFosterAgreement: {
+      type: FosterProfileType,
+      args: {
+        shelterId: { type: GraphQLString },
+        agreementUrl: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        const profile = await FosterProfileModel.findOne({
+          userId,
+          shelterId: args.shelterId as string,
+        });
+        if (!profile) throw new Error('Foster profile not found');
+        profile.agreementUrl = (args.agreementUrl as string) ?? '';
+        profile.agreementSignedAt = new Date();
+        await profile.save();
+        return profile;
+      },
+    },
+    updateFosterOrientation: {
+      type: FosterProfileType,
+      args: {
+        fosterProfileId: { type: GraphQLString },
+        module: { type: GraphQLString },
+        completed: { type: GraphQLBoolean },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const profile = await FosterProfileModel.findById(args.fosterProfileId);
+        if (!profile) throw new Error('Foster profile not found');
+        requireShelterStaff(context, profile.shelterId);
+        const item = profile.orientation.find(
+          (o: { module: string }) => o.module === args.module
+        );
+        if (item) {
+          item.completedAt = args.completed ? new Date() : undefined;
+        } else {
+          profile.orientation.push({
+            module: args.module as string,
+            completedAt: args.completed ? new Date() : undefined,
+            required: true,
+          });
+        }
+        await profile.save();
+        return profile;
+      },
+    },
+    updateFosterBackgroundCheck: {
+      type: FosterProfileType,
+      args: {
+        fosterProfileId: { type: GraphQLString },
+        backgroundCheckStatus: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const profile = await FosterProfileModel.findById(args.fosterProfileId);
+        if (!profile) throw new Error('Foster profile not found');
+        requireShelterStaff(context, profile.shelterId);
+        const validStatuses = ['not_started', 'pending', 'passed', 'failed'];
+        if (!validStatuses.includes(args.backgroundCheckStatus as string)) {
+          throw new Error('Invalid background check status');
+        }
+        profile.backgroundCheckStatus = args.backgroundCheckStatus as FosterProfileDocument['backgroundCheckStatus'];
+        profile.backgroundCheckDate = new Date();
+        await profile.save();
+        return profile;
+      },
+    },
+    updateFosterProfileStatus: {
+      type: FosterProfileType,
+      args: {
+        fosterProfileId: { type: GraphQLString },
+        status: { type: GraphQLString },
+        reason: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const profile = await FosterProfileModel.findById(args.fosterProfileId);
+        if (!profile) throw new Error('Foster profile not found');
+        requireShelterStaff(context, profile.shelterId);
+        const validStatuses = ['pending_approval', 'active', 'on_hold', 'inactive'];
+        if (!validStatuses.includes(args.status as string)) {
+          throw new Error('Invalid foster status');
+        }
+        const transitionRules: Record<string, string[]> = {
+          pending_approval: ['active', 'inactive'],
+          active: ['on_hold', 'inactive'],
+          on_hold: ['active', 'inactive'],
+          inactive: ['pending_approval'],
+        };
+        const allowed = transitionRules[profile.status] ?? [];
+        if (!allowed.includes(args.status as string)) {
+          throw new Error(`Cannot transition from ${profile.status} to ${args.status}`);
+        }
+        profile.status = args.status as FosterProfileDocument['status'];
+        profile.statusReason = (args.reason as string) ?? '';
+        await profile.save();
+        return profile;
+      },
+    },
+    addFosterOrientationModules: {
+      type: FosterProfileType,
+      args: {
+        fosterProfileId: { type: GraphQLString },
+        modules: { type: new GraphQLList(GraphQLString) },
+        required: { type: GraphQLBoolean },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const profile = await FosterProfileModel.findById(args.fosterProfileId);
+        if (!profile) throw new Error('Foster profile not found');
+        requireShelterStaff(context, profile.shelterId);
+        const modules = args.modules as string[];
+        const isRequired = args.required !== false;
+        for (const mod of modules) {
+          const exists = profile.orientation.some(
+            (o: { module: string }) => o.module === mod
+          );
+          if (!exists) {
+            profile.orientation.push({ module: mod, required: isRequired });
+          }
+        }
+        await profile.save();
+        return profile;
       },
     },
   }),
