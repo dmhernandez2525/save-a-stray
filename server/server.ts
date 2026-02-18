@@ -12,11 +12,12 @@ import { WebSocketServer } from 'ws';
 import { useServer } from 'graphql-ws/lib/use/ws';
 import keys from '../config/keys';
 import schema from './schema/schema';
-import { facebookRegister } from './services/auth';
+import { facebookRegister } from './services/auth-legacy';
 import { createGraphQLContext, GraphQLContext } from './graphql/context';
 import { logger } from './services/logger';
 import { createGraphQLValidationRules } from './graphql/validation-rules';
 import { formatGraphQLError } from './graphql/errors';
+import { authRateLimitMiddleware } from './middleware/auth-rate-limit';
 
 const db = keys.MONGO_URI;
 
@@ -195,8 +196,9 @@ const startApolloServer = async (): Promise<void> => {
   app.use(
     '/graphql',
     express.json(),
+    authRateLimitMiddleware,
     expressMiddleware(apolloServer, {
-      context: async ({ req }) => createGraphQLContext(req),
+      context: async ({ req, res }) => createGraphQLContext(req, undefined, res),
     }) as express.RequestHandler
   );
 };

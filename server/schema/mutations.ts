@@ -15,7 +15,23 @@ import AnimalType from './types/animal_type';
 import ShelterType from './types/shelter_type';
 import ApplicationType from './types/application_type';
 import SuccessStoryType from './types/success_story_type';
-import AuthService from '../services/auth';
+import { register, login, refreshToken as refreshAccessToken, logout } from '../services/auth-primary';
+import { verifyUser, userId } from '../services/auth-legacy';
+import {
+  verifyEmail,
+  requestPasswordReset,
+  resetPassword,
+  setupTwoFactor,
+  confirmTwoFactor,
+  disableTwoFactor,
+  getActiveSessionsForUser,
+  revokeSessionById,
+  completeGoogleOAuth,
+  completeFacebookOAuth,
+  resendEmailVerification,
+} from '../services/auth-account';
+import AuthSessionType from './types/auth_session_type';
+import TwoFactorSetupType from './types/two_factor_setup_type';
 import { UserDocument } from '../models/User';
 import { AnimalDocument } from '../models/Animal';
 import { ApplicationDocument } from '../models/Application';
@@ -114,6 +130,8 @@ interface RegisterArgs {
 interface LoginArgs {
   email: string;
   password: string;
+  totpCode?: string;
+  backupCode?: string;
 }
 
 interface LogoutArgs {
@@ -201,8 +219,8 @@ const mutation = new GraphQLObjectType({
         shelterLocation: { type: GraphQLString },
         shelterPaymentEmail: { type: EmailScalar },
       },
-      resolve(_, args: RegisterArgs) {
-        return AuthService.register(args);
+      resolve(_, args: RegisterArgs, context: GraphQLContext) {
+        return register(args, context);
       },
     },
     login: {
@@ -210,9 +228,11 @@ const mutation = new GraphQLObjectType({
       args: {
         email: { type: EmailScalar },
         password: { type: GraphQLString },
+        totpCode: { type: GraphQLString },
+        backupCode: { type: GraphQLString },
       },
-      resolve(_, args: LoginArgs) {
-        return AuthService.login(args);
+      resolve(_, args: LoginArgs, context: GraphQLContext) {
+        return login(args, context);
       },
     },
     logout: {
@@ -220,8 +240,8 @@ const mutation = new GraphQLObjectType({
       args: {
         _id: { type: GraphQLID },
       },
-      resolve(_, args: LogoutArgs) {
-        return AuthService.logout(args);
+      resolve(_, args: LogoutArgs, context: GraphQLContext) {
+        return logout(args, context);
       },
     },
     verifyUser: {
@@ -230,7 +250,7 @@ const mutation = new GraphQLObjectType({
         token: { type: GraphQLString },
       },
       resolve(_, args: VerifyUserArgs) {
-        return AuthService.verifyUser(args);
+        return verifyUser(args);
       },
     },
     userId: {
@@ -239,7 +259,116 @@ const mutation = new GraphQLObjectType({
         token: { type: GraphQLString },
       },
       resolve(_, args: VerifyUserArgs) {
-        return AuthService.userId(args);
+        return userId(args);
+      },
+    },
+    verifyEmail: {
+      type: GraphQLBoolean,
+      args: {
+        token: { type: GraphQLString },
+      },
+      resolve(_, args: { token: string }) {
+        return verifyEmail(args.token);
+      },
+    },
+    resendEmailVerification: {
+      type: GraphQLBoolean,
+      args: {},
+      resolve(_, _args: Record<string, never>, context: GraphQLContext) {
+        const authenticatedUserId = requireAuth(context);
+        return resendEmailVerification(authenticatedUserId);
+      },
+    },
+    requestPasswordReset: {
+      type: GraphQLBoolean,
+      args: {
+        email: { type: EmailScalar },
+      },
+      resolve(_, args: { email: string }) {
+        return requestPasswordReset(args.email);
+      },
+    },
+    resetPassword: {
+      type: GraphQLBoolean,
+      args: {
+        token: { type: GraphQLString },
+        newPassword: { type: GraphQLString },
+      },
+      resolve(_, args: { token: string; newPassword: string }) {
+        return resetPassword(args.token, args.newPassword);
+      },
+    },
+    setupTwoFactor: {
+      type: TwoFactorSetupType,
+      args: {},
+      resolve(_, _args: Record<string, never>, context: GraphQLContext) {
+        const authenticatedUserId = requireAuth(context);
+        return setupTwoFactor(authenticatedUserId);
+      },
+    },
+    confirmTwoFactor: {
+      type: UserType,
+      args: {
+        totpCode: { type: GraphQLString },
+      },
+      resolve(_, args: { totpCode: string }, context: GraphQLContext) {
+        const authenticatedUserId = requireAuth(context);
+        return confirmTwoFactor(authenticatedUserId, args.totpCode);
+      },
+    },
+    disableTwoFactor: {
+      type: UserType,
+      args: {
+        password: { type: GraphQLString },
+      },
+      resolve(_, args: { password: string }, context: GraphQLContext) {
+        const authenticatedUserId = requireAuth(context);
+        return disableTwoFactor(authenticatedUserId, args.password);
+      },
+    },
+    refreshAccessToken: {
+      type: UserType,
+      args: {},
+      resolve(_, _args: Record<string, never>, context: GraphQLContext) {
+        return refreshAccessToken(context);
+      },
+    },
+    getActiveSessions: {
+      type: new GraphQLList(AuthSessionType),
+      args: {},
+      resolve(_, _args: Record<string, never>, context: GraphQLContext) {
+        const authenticatedUserId = requireAuth(context);
+        return getActiveSessionsForUser(authenticatedUserId);
+      },
+    },
+    revokeSession: {
+      type: GraphQLBoolean,
+      args: {
+        sessionId: { type: GraphQLID },
+      },
+      async resolve(_, args: { sessionId: string }, context: GraphQLContext) {
+        requireAuth(context);
+        return revokeSessionById(args.sessionId, 'manual_revocation');
+      },
+    },
+    completeGoogleOAuth: {
+      type: UserType,
+      args: {
+        code: { type: GraphQLString },
+        redirectUri: { type: GraphQLString },
+      },
+      resolve(_, args: { code: string; redirectUri: string }, context: GraphQLContext) {
+        return completeGoogleOAuth(args.code, args.redirectUri, context);
+      },
+    },
+    completeFacebookOAuth: {
+      type: UserType,
+      args: {
+        code: { type: GraphQLString },
+        redirectUri: { type: GraphQLString },
+      },
+      resolve(_, args: { code: string; redirectUri: string }, context: GraphQLContext) {
+        return completeFacebookOAuth(args.code, args.redirectUri, context);
       },
     },
     newAnimal: {

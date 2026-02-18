@@ -20,6 +20,10 @@ interface UserParentValue {
   userRole: string;
   shelterId?: string | Types.ObjectId;
   favorites?: Array<string | Types.ObjectId>;
+  emailVerified?: boolean;
+  twoFactorEnabled?: boolean;
+  requiresTwoFactor?: boolean;
+  twoFactorSetupPending?: boolean;
 }
 
 const UserType: GraphQLObjectType = new GraphQLObjectType({
@@ -69,7 +73,11 @@ const UserType: GraphQLObjectType = new GraphQLObjectType({
       resolve(parentValue: UserParentValue) {
         return parentValue.favorites || [];
       }
-    }
+    },
+    emailVerified: { type: GraphQLBoolean },
+    twoFactorEnabled: { type: GraphQLBoolean },
+    requiresTwoFactor: { type: GraphQLBoolean },
+    twoFactorSetupPending: { type: GraphQLBoolean }
   })
 });
 

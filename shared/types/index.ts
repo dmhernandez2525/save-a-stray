@@ -12,9 +12,22 @@ export interface IUser {
   password: string;
   date: Date;
   fbookId?: string;
+  googleId?: string;
   shelterId?: Types.ObjectId | string;
   varId?: Types.ObjectId | string;
   favorites: (Types.ObjectId | string)[];
+  emailVerified?: boolean;
+  emailVerificationTokenHash?: string;
+  emailVerificationExpiresAt?: Date;
+  passwordResetTokenHash?: string;
+  passwordResetExpiresAt?: Date;
+  twoFactorEnabled?: boolean;
+  twoFactorSecret?: string;
+  twoFactorTempSecret?: string;
+  twoFactorBackupCodes?: string[];
+  failedLoginAttempts?: number;
+  lockoutUntil?: Date;
+  lastLoginAt?: Date;
 }
 
 export interface IUserDocument extends IUser {
@@ -30,6 +43,10 @@ export interface UserAuthPayload {
   userRole: string;
   shelterId?: string;
   shelter?: IShelter | null;
+  emailVerified?: boolean;
+  twoFactorEnabled?: boolean;
+  requiresTwoFactor?: boolean;
+  twoFactorSetupPending?: boolean;
 }
 
 // Animal Types
@@ -132,6 +149,8 @@ export interface RegisterInput {
 export interface LoginInput {
   email: string;
   password: string;
+  totpCode?: string;
+  backupCode?: string;
 }
 
 export interface ValidationResult {
