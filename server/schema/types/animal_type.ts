@@ -76,6 +76,15 @@ const AnimalType: GraphQLObjectType = new GraphQLObjectType({
     },
     intakeSource: { type: GraphQLString },
     adoptionFee: { type: GraphQLFloat },
+    lengthOfStay: {
+      type: GraphQLInt,
+      resolve(parent: AnimalParentValue) {
+        if (!parent.intakeDate) return null;
+        const intake = new Date(parent.intakeDate);
+        const now = new Date();
+        return Math.floor((now.getTime() - intake.getTime()) / (1000 * 60 * 60 * 24));
+      },
+    },
     medicalRecords: { type: new GraphQLList(MedicalRecordType) },
     applications: {
       type: new GraphQLList(require("./application_type").default),

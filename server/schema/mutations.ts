@@ -81,6 +81,9 @@ import { IntakeLogDocument } from '../models/IntakeLog';
 import { OutcomeLogDocument } from '../models/OutcomeLog';
 import { pubsub, SUBSCRIPTION_EVENTS } from '../graphql/pubsub';
 import { GraphQLContext } from '../graphql/context';
+import { isValidTransition } from '../services/status-transitions';
+import { StatusHistoryDocument } from '../models/StatusHistory';
+import StatusHistoryType from './types/status_history_type';
 import { DateScalar, EmailScalar, URLScalar } from './scalars';
 import {
   requireAuth,
@@ -115,6 +118,7 @@ const AdoptionFeeModel = mongoose.model<AdoptionFeeDocument>('adoptionFee');
 const SpayNeuterModel = mongoose.model<SpayNeuterDocument>('spayNeuter');
 const IntakeLogModel = mongoose.model<IntakeLogDocument>('intakeLog');
 const OutcomeLogModel = mongoose.model<OutcomeLogDocument>('outcomeLog');
+const StatusHistoryModel = mongoose.model<StatusHistoryDocument>('statusHistory');
 
 interface RegisterArgs {
   name: string;
@@ -567,8 +571,9 @@ const mutation = new GraphQLObjectType({
       args: {
         _id: { type: GraphQLID },
         status: { type: GraphQLString },
+        reason: { type: GraphQLString },
       },
-      async resolve(_, args: { _id: string; status: string }, context: GraphQLContext) {
+      async resolve(_, args: { _id: string; status: string; reason?: string }, context: GraphQLContext) {
         const animal = await Animal.findById(args._id);
         if (!animal) return null;
 
@@ -580,12 +585,89 @@ const mutation = new GraphQLObjectType({
           requireAdmin(context);
         }
 
-        animal.status = args.status as typeof animal.status;
+        const fromStatus = animal.status;
+        const toStatus = args.status as typeof animal.status;
+
+        // Validate the transition (admins can override terminal state restrictions)
+        if (!isValidTransition(fromStatus, toStatus) && context.userRole !== 'admin') {
+          throw new Error(`Invalid status transition from "${fromStatus}" to "${toStatus}"`);
+        }
+
+        animal.status = toStatus;
         await animal.save();
+
+        // Log the status change
+        const historyEntry = new StatusHistoryModel({
+          animalId: args._id,
+          fromStatus,
+          toStatus,
+          changedBy: context.userId ?? '',
+          reason: args.reason ?? '',
+        });
+        await historyEntry.save();
+
         await pubsub.publish(SUBSCRIPTION_EVENTS.ANIMAL_STATUS_CHANGED, {
           animalStatusChanged: animal,
         });
         return animal;
+      },
+    },
+    bulkUpdateAnimalStatus: {
+      type: new GraphQLList(AnimalType),
+      args: {
+        animalIds: { type: new GraphQLList(GraphQLID) },
+        status: { type: GraphQLString },
+        reason: { type: GraphQLString },
+      },
+      async resolve(
+        _,
+        args: { animalIds: string[]; status: string; reason?: string },
+        context: GraphQLContext
+      ) {
+        if (!args.animalIds || args.animalIds.length === 0) {
+          throw new Error('At least one animal ID is required');
+        }
+        if (args.animalIds.length > 50) {
+          throw new Error('Cannot update more than 50 animals at once');
+        }
+
+        const updated = [];
+        for (const animalId of args.animalIds) {
+          const animal = await Animal.findById(animalId);
+          if (!animal) continue;
+
+          const shelter = await Shelter.findOne({ animals: animalId });
+          if (shelter) {
+            await requireShelterStaff(context, shelter._id.toString());
+          } else {
+            requireAdmin(context);
+          }
+
+          const fromStatus = animal.status;
+          const toStatus = args.status as typeof animal.status;
+
+          if (!isValidTransition(fromStatus, toStatus) && context.userRole !== 'admin') {
+            continue; // skip invalid transitions in bulk mode
+          }
+
+          animal.status = toStatus;
+          await animal.save();
+
+          const historyEntry = new StatusHistoryModel({
+            animalId,
+            fromStatus,
+            toStatus,
+            changedBy: context.userId ?? '',
+            reason: args.reason ?? 'Bulk status update',
+          });
+          await historyEntry.save();
+
+          await pubsub.publish(SUBSCRIPTION_EVENTS.ANIMAL_STATUS_CHANGED, {
+            animalStatusChanged: animal,
+          });
+          updated.push(animal);
+        }
+        return updated;
       },
     },
     newApplication: {
@@ -689,6 +771,25 @@ const mutation = new GraphQLObjectType({
 
         application.status = args.status as typeof application.status;
         await application.save();
+
+        // Auto-status rule: when application is approved, set animal to "pending"
+        if (args.status === 'approved' && animal && animal.status === 'available') {
+          const fromStatus = animal.status;
+          animal.status = 'pending';
+          await animal.save();
+          const historyEntry = new StatusHistoryModel({
+            animalId: animal._id.toString(),
+            fromStatus,
+            toStatus: 'pending',
+            changedBy: context.userId ?? '',
+            reason: 'Auto-set: application approved',
+          });
+          await historyEntry.save();
+          await pubsub.publish(SUBSCRIPTION_EVENTS.ANIMAL_STATUS_CHANGED, {
+            animalStatusChanged: animal,
+          });
+        }
+
         await pubsub.publish(SUBSCRIPTION_EVENTS.APPLICATION_STATUS_CHANGED, {
           applicationStatusChanged: application,
         });
