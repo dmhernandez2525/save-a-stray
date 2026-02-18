@@ -6,6 +6,7 @@ import {
   GraphQLID,
   GraphQLList,
   GraphQLFloat,
+  GraphQLInt,
   GraphQLFieldConfigMap
 } from 'graphql';
 import { GraphQLContext } from '../../graphql/context';
@@ -45,6 +46,8 @@ const ShelterType: GraphQLObjectType = new GraphQLObjectType({
         return parent.coordinates?.coordinates?.[0] ?? null;
       },
     },
+    maxCapacity: { type: GraphQLInt },
+    animalIdPrefix: { type: GraphQLString },
     verified: { type: GraphQLBoolean },
     verifiedAt: { type: GraphQLString },
     animals: {

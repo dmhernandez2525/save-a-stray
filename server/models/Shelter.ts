@@ -50,6 +50,18 @@ const ShelterSchema = new Schema<ShelterDocument>({
     type: String,
     default: ''
   },
+  maxCapacity: {
+    type: Number,
+    default: 0,
+  },
+  animalIdPrefix: {
+    type: String,
+    default: '',
+  },
+  nextAnimalIdSequence: {
+    type: Number,
+    default: 1,
+  },
   verified: {
     type: Boolean,
     default: false

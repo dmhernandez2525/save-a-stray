@@ -93,6 +93,8 @@ import { ShelterStaffRoleDocument } from '../models/ShelterStaffRole';
 import ShelterStaffRoleType from './types/shelter_staff_role_type';
 import { InternalNoteDocument } from '../models/InternalNote';
 import InternalNoteType from './types/internal_note_type';
+import { KennelAssignmentDocument } from '../models/KennelAssignment';
+import KennelAssignmentType from './types/kennel_assignment_type';
 import crypto from 'crypto';
 import MediaAssetType from './types/media_asset_type';
 import UploadSignatureType from './types/upload_signature_type';
@@ -137,6 +139,7 @@ const DashboardLayoutModel = mongoose.model<DashboardLayoutDocument>('dashboardL
 const StaffInvitationModel = mongoose.model<StaffInvitationDocument>('staffInvitation');
 const ShelterStaffRoleModel = mongoose.model<ShelterStaffRoleDocument>('shelterStaffRole');
 const InternalNoteModel = mongoose.model<InternalNoteDocument>('internalNote');
+const KennelAssignmentModel = mongoose.model<KennelAssignmentDocument>('kennelAssignment');
 
 interface RegisterArgs {
   name: string;
@@ -2754,6 +2757,154 @@ const mutation = new GraphQLObjectType({
           { upsert: true, new: true }
         );
         return layout;
+      },
+    },
+    assignKennel: {
+      type: KennelAssignmentType,
+      args: {
+        shelterId: { type: GraphQLID },
+        kennelId: { type: GraphQLString },
+        kennelName: { type: GraphQLString },
+        animalId: { type: GraphQLID },
+        notes: { type: GraphQLString },
+      },
+      async resolve(
+        _,
+        args: { shelterId: string; kennelId: string; kennelName?: string; animalId: string; notes?: string },
+        context: GraphQLContext
+      ) {
+        await requireShelterStaff(context, args.shelterId);
+
+        // Check if kennel is already occupied
+        const existing = await KennelAssignmentModel.findOne({
+          shelterId: args.shelterId,
+          kennelId: args.kennelId,
+          status: 'occupied',
+        });
+        if (existing) throw new Error('Kennel is already occupied');
+
+        // Check shelter capacity
+        const shelter = await Shelter.findById(args.shelterId);
+        if (shelter?.maxCapacity) {
+          const occupiedCount = await KennelAssignmentModel.countDocuments({
+            shelterId: args.shelterId,
+            status: 'occupied',
+          });
+          if (occupiedCount >= shelter.maxCapacity) {
+            throw new Error('Shelter is at maximum capacity');
+          }
+        }
+
+        const assignment = new KennelAssignmentModel({
+          shelterId: args.shelterId,
+          kennelId: args.kennelId,
+          kennelName: args.kennelName ?? '',
+          animalId: args.animalId,
+          assignedAt: new Date(),
+          status: 'occupied',
+          notes: args.notes ?? '',
+        });
+        await assignment.save();
+        return assignment;
+      },
+    },
+    releaseKennel: {
+      type: KennelAssignmentType,
+      args: {
+        _id: { type: GraphQLID },
+        notes: { type: GraphQLString },
+      },
+      async resolve(_, args: { _id: string; notes?: string }, context: GraphQLContext) {
+        const assignment = await KennelAssignmentModel.findById(args._id);
+        if (!assignment) throw new Error('Kennel assignment not found');
+
+        await requireShelterStaff(context, assignment.shelterId);
+
+        assignment.status = 'vacant';
+        assignment.releasedAt = new Date();
+        if (args.notes !== undefined) assignment.notes = args.notes;
+        await assignment.save();
+        return assignment;
+      },
+    },
+    updateKennelStatus: {
+      type: KennelAssignmentType,
+      args: {
+        _id: { type: GraphQLID },
+        status: { type: GraphQLString },
+        notes: { type: GraphQLString },
+      },
+      async resolve(_, args: { _id: string; status: string; notes?: string }, context: GraphQLContext) {
+        const assignment = await KennelAssignmentModel.findById(args._id);
+        if (!assignment) throw new Error('Kennel assignment not found');
+
+        await requireShelterStaff(context, assignment.shelterId);
+
+        const validStatuses = ['occupied', 'vacant', 'maintenance'];
+        if (!validStatuses.includes(args.status)) {
+          throw new Error(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
+        }
+
+        assignment.status = args.status as typeof assignment.status;
+        if (args.notes !== undefined) assignment.notes = args.notes;
+        if (args.status === 'vacant') assignment.releasedAt = new Date();
+        await assignment.save();
+        return assignment;
+      },
+    },
+    generateAnimalId: {
+      type: GraphQLString,
+      args: {
+        shelterId: { type: GraphQLID },
+      },
+      async resolve(_, args: { shelterId: string }, context: GraphQLContext) {
+        await requireShelterStaff(context, args.shelterId);
+
+        const shelter = await Shelter.findById(args.shelterId);
+        if (!shelter) throw new Error('Shelter not found');
+
+        const prefix = shelter.animalIdPrefix || 'ANM';
+        const seq = shelter.nextAnimalIdSequence || 1;
+        const paddedSeq = String(seq).padStart(5, '0');
+        const generatedId = `${prefix}-${paddedSeq}`;
+
+        shelter.nextAnimalIdSequence = seq + 1;
+        await shelter.save();
+
+        return generatedId;
+      },
+    },
+    updateShelterCapacity: {
+      type: ShelterType,
+      args: {
+        shelterId: { type: GraphQLID },
+        maxCapacity: { type: GraphQLInt },
+        animalIdPrefix: { type: GraphQLString },
+      },
+      async resolve(
+        _,
+        args: { shelterId: string; maxCapacity?: number; animalIdPrefix?: string },
+        context: GraphQLContext
+      ) {
+        await requireShelterStaff(context, args.shelterId);
+
+        const shelter = await Shelter.findById(args.shelterId);
+        if (!shelter) throw new Error('Shelter not found');
+
+        if (args.maxCapacity !== undefined) {
+          if (args.maxCapacity < 0 || args.maxCapacity > 10000) {
+            throw new Error('Max capacity must be between 0 and 10000');
+          }
+          shelter.maxCapacity = args.maxCapacity;
+        }
+        if (args.animalIdPrefix !== undefined) {
+          if (args.animalIdPrefix.length > 10) {
+            throw new Error('Animal ID prefix must be 10 characters or less');
+          }
+          shelter.animalIdPrefix = args.animalIdPrefix;
+        }
+        await shelter.save();
+        return shelter;
       },
     },
   }),
