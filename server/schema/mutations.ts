@@ -84,6 +84,10 @@ import { GraphQLContext } from '../graphql/context';
 import { isValidTransition } from '../services/status-transitions';
 import { StatusHistoryDocument } from '../models/StatusHistory';
 import StatusHistoryType from './types/status_history_type';
+import { MediaAssetDocument } from '../models/MediaAsset';
+import MediaAssetType from './types/media_asset_type';
+import UploadSignatureType from './types/upload_signature_type';
+import { generateUploadSignature, deleteImage, getThumbnailUrl, getMediumUrl, isValidVideoUrl } from '../services/cloudinary';
 import { DateScalar, EmailScalar, URLScalar } from './scalars';
 import {
   requireAuth,
@@ -119,6 +123,7 @@ const SpayNeuterModel = mongoose.model<SpayNeuterDocument>('spayNeuter');
 const IntakeLogModel = mongoose.model<IntakeLogDocument>('intakeLog');
 const OutcomeLogModel = mongoose.model<OutcomeLogDocument>('outcomeLog');
 const StatusHistoryModel = mongoose.model<StatusHistoryDocument>('statusHistory');
+const MediaAssetModel = mongoose.model<MediaAssetDocument>('mediaAsset');
 
 interface RegisterArgs {
   name: string;
@@ -2408,6 +2413,133 @@ const mutation = new GraphQLObjectType({
         });
         await log.save();
         return log;
+      },
+    },
+    generateUploadSignature: {
+      type: UploadSignatureType,
+      args: {
+        animalId: { type: GraphQLID },
+        shelterId: { type: GraphQLID },
+      },
+      async resolve(_, args: { animalId?: string; shelterId?: string }, context: GraphQLContext) {
+        if (args.shelterId) {
+          await requireShelterStaff(context, args.shelterId);
+        } else {
+          requireAuth(context);
+        }
+        const folder = args.animalId
+          ? `save-a-stray/animals/${args.animalId}`
+          : 'save-a-stray/uploads';
+        return generateUploadSignature(folder);
+      },
+    },
+    registerMediaAsset: {
+      type: MediaAssetType,
+      args: {
+        animalId: { type: GraphQLID },
+        shelterId: { type: GraphQLID },
+        publicId: { type: GraphQLString },
+        url: { type: GraphQLString },
+        width: { type: GraphQLInt },
+        height: { type: GraphQLInt },
+        mimeType: { type: GraphQLString },
+        sizeBytes: { type: GraphQLInt },
+      },
+      async resolve(
+        _,
+        args: {
+          animalId: string;
+          shelterId: string;
+          publicId: string;
+          url: string;
+          width?: number;
+          height?: number;
+          mimeType?: string;
+          sizeBytes?: number;
+        },
+        context: GraphQLContext
+      ) {
+        await requireShelterStaff(context, args.shelterId);
+
+        const existingCount = await MediaAssetModel.countDocuments({ animalId: args.animalId });
+        if (existingCount >= 20) {
+          throw new Error('Maximum of 20 media assets per animal');
+        }
+
+        const asset = new MediaAssetModel({
+          animalId: args.animalId,
+          shelterId: args.shelterId,
+          publicId: args.publicId,
+          url: args.url,
+          thumbnailUrl: getThumbnailUrl(args.publicId),
+          mediumUrl: getMediumUrl(args.publicId),
+          width: args.width ?? 0,
+          height: args.height ?? 0,
+          mimeType: args.mimeType ?? 'image/jpeg',
+          sizeBytes: args.sizeBytes ?? 0,
+          uploadedBy: context.userId ?? '',
+          sortOrder: existingCount,
+        });
+        await asset.save();
+        return asset;
+      },
+    },
+    deleteMediaAsset: {
+      type: MediaAssetType,
+      args: { _id: { type: GraphQLID } },
+      async resolve(_, args: { _id: string }, context: GraphQLContext) {
+        const asset = await MediaAssetModel.findById(args._id);
+        if (!asset) return null;
+
+        await requireShelterStaff(context, asset.shelterId);
+
+        await deleteImage(asset.publicId);
+        await MediaAssetModel.deleteOne({ _id: args._id });
+        return asset;
+      },
+    },
+    reorderAnimalMedia: {
+      type: new GraphQLList(MediaAssetType),
+      args: {
+        animalId: { type: GraphQLID },
+        orderedIds: { type: new GraphQLList(GraphQLID) },
+      },
+      async resolve(_, args: { animalId: string; orderedIds: string[] }, context: GraphQLContext) {
+        const animal = await Animal.findById(args.animalId);
+        if (!animal) throw new Error('Animal not found');
+
+        const shelter = await Shelter.findOne({ animals: args.animalId });
+        if (shelter) {
+          await requireShelterStaff(context, shelter._id.toString());
+        } else {
+          requireAdmin(context);
+        }
+
+        for (let i = 0; i < args.orderedIds.length; i++) {
+          await MediaAssetModel.updateOne(
+            { _id: args.orderedIds[i], animalId: args.animalId },
+            { sortOrder: i }
+          );
+        }
+        return MediaAssetModel.find({ animalId: args.animalId }).sort({ sortOrder: 1 });
+      },
+    },
+    trackMediaView: {
+      type: MediaAssetType,
+      args: { _id: { type: GraphQLID } },
+      async resolve(_, args: { _id: string }) {
+        const asset = await MediaAssetModel.findById(args._id);
+        if (!asset) return null;
+        asset.viewCount = (asset.viewCount || 0) + 1;
+        await asset.save();
+        return asset;
+      },
+    },
+    validateVideoUrl: {
+      type: GraphQLBoolean,
+      args: { url: { type: GraphQLString } },
+      resolve(_, args: { url: string }) {
+        return isValidVideoUrl(args.url);
       },
     },
   }),
