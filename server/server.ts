@@ -18,6 +18,7 @@ import { logger } from './services/logger';
 import { createGraphQLValidationRules } from './graphql/validation-rules';
 import { formatGraphQLError } from './graphql/errors';
 import { authRateLimitMiddleware } from './middleware/auth-rate-limit';
+import apiV1Router from './routes/api-v1';
 
 const db = keys.MONGO_URI;
 
@@ -136,6 +137,9 @@ app.get(
     res.json({ my_token: req.userStuff?.token });
   }
 );
+
+// REST API v1
+app.use('/api/v1', apiV1Router);
 
 // Connect to MongoDB
 if (db) {
