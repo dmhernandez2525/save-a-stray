@@ -125,6 +125,9 @@ import { EmailPreferenceDocument } from '../models/EmailPreference';
 import EmailPreferenceType from './types/email_preference_type';
 import { EmailLogDocument } from '../models/EmailLog';
 import EmailLogType from './types/email_log_type';
+import { PushSubscriptionDocument } from '../models/PushSubscription';
+import { NotificationPreferenceDocument } from '../models/NotificationPreference';
+import { ScheduledNotificationDocument } from '../models/ScheduledNotification';
 import { ShelterSettingsDocument } from '../models/ShelterSettings';
 import ShelterSettingsType, {
   DayScheduleInput,
@@ -191,6 +194,9 @@ const MessageThreadModel = mongoose.model<MessageThreadDocument>('messageThread'
 const MessageTemplateModel = mongoose.model<MessageTemplateDocument>('messageTemplate');
 const EmailPreferenceModel = mongoose.model<EmailPreferenceDocument>('emailPreference');
 const EmailLogModel = mongoose.model<EmailLogDocument>('emailLog');
+const PushSubscriptionModel = mongoose.model<PushSubscriptionDocument>('pushSubscription');
+const NotificationPreferenceModel = mongoose.model<NotificationPreferenceDocument>('notificationPreference');
+const ScheduledNotificationModel = mongoose.model<ScheduledNotificationDocument>('scheduledNotification');
 
 interface RegisterArgs {
   name: string;
@@ -4883,6 +4889,141 @@ const mutation = new GraphQLObjectType({
         if (status === 'bounced') log.bouncedAt = now;
         await log.save();
         return log;
+      },
+    },
+
+    // F6.3 - Push Notifications
+    registerPushSubscription: {
+      type: GraphQLBoolean,
+      args: {
+        endpoint: { type: GraphQLString },
+        p256dhKey: { type: GraphQLString },
+        authKey: { type: GraphQLString },
+        deviceName: { type: GraphQLString },
+        browserInfo: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        await PushSubscriptionModel.findOneAndUpdate(
+          { endpoint: args.endpoint },
+          {
+            userId,
+            endpoint: args.endpoint,
+            p256dhKey: args.p256dhKey,
+            authKey: args.authKey,
+            deviceName: args.deviceName ?? '',
+            browserInfo: args.browserInfo ?? '',
+            isActive: true,
+            lastUsedAt: new Date(),
+          },
+          { upsert: true },
+        );
+        return true;
+      },
+    },
+    unregisterPushSubscription: {
+      type: GraphQLBoolean,
+      args: { endpoint: { type: GraphQLString } },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        await PushSubscriptionModel.findOneAndUpdate(
+          { endpoint: args.endpoint },
+          { isActive: false },
+        );
+        return true;
+      },
+    },
+    updatePushNotificationPreferences: {
+      type: GraphQLBoolean,
+      args: {
+        applications: { type: GraphQLBoolean },
+        messages: { type: GraphQLBoolean },
+        favorites: { type: GraphQLBoolean },
+        events: { type: GraphQLBoolean },
+        shelterAnnouncements: { type: GraphQLBoolean },
+        animalStatusChanges: { type: GraphQLBoolean },
+        fosterUpdates: { type: GraphQLBoolean },
+        quietHoursEnabled: { type: GraphQLBoolean },
+        quietHoursStart: { type: GraphQLInt },
+        quietHoursEnd: { type: GraphQLInt },
+        quietHoursTimezone: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        const updates: Record<string, unknown> = {};
+        const boolFields = [
+          'applications', 'messages', 'favorites', 'events',
+          'shelterAnnouncements', 'animalStatusChanges', 'fosterUpdates',
+        ];
+        for (const f of boolFields) {
+          if (args[f] !== undefined) updates[f] = args[f];
+        }
+        if (args.quietHoursEnabled !== undefined) updates['quietHours.enabled'] = args.quietHoursEnabled;
+        if (args.quietHoursStart !== undefined) updates['quietHours.startHour'] = args.quietHoursStart;
+        if (args.quietHoursEnd !== undefined) updates['quietHours.endHour'] = args.quietHoursEnd;
+        if (args.quietHoursTimezone !== undefined) updates['quietHours.timezone'] = args.quietHoursTimezone;
+        await NotificationPreferenceModel.findOneAndUpdate(
+          { userId },
+          { $set: updates, $setOnInsert: { userId } },
+          { upsert: true },
+        );
+        return true;
+      },
+    },
+    markAllPushNotificationsRead: {
+      type: GraphQLInt,
+      args: {},
+      async resolve(_parent: unknown, _args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        const result = await NotificationModel.updateMany(
+          { userId, read: false },
+          { read: true },
+        );
+        return result.modifiedCount;
+      },
+    },
+    scheduleNotification: {
+      type: GraphQLBoolean,
+      args: {
+        shelterId: { type: GraphQLString },
+        title: { type: GraphQLString },
+        body: { type: GraphQLString },
+        category: { type: GraphQLString },
+        url: { type: GraphQLString },
+        scheduledFor: { type: GraphQLString },
+        isBatch: { type: GraphQLBoolean },
+        targetUserIds: { type: new GraphQLList(GraphQLString) },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        requireShelterStaff(context, args.shelterId as string);
+        const notification = new ScheduledNotificationModel({
+          shelterId: args.shelterId,
+          title: args.title,
+          body: args.body ?? '',
+          category: args.category ?? 'general',
+          url: args.url ?? '',
+          scheduledFor: new Date(args.scheduledFor as string),
+          isBatch: args.isBatch ?? false,
+          batchTargetUserIds: args.targetUserIds ?? [],
+        });
+        await notification.save();
+        return true;
+      },
+    },
+    cancelScheduledNotification: {
+      type: GraphQLBoolean,
+      args: { notificationId: { type: GraphQLString } },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const notification = await ScheduledNotificationModel.findById(args.notificationId);
+        if (!notification) throw new Error('Scheduled notification not found');
+        if (notification.shelterId) {
+          requireShelterStaff(context, notification.shelterId);
+        }
+        notification.status = 'cancelled';
+        await notification.save();
+        return true;
       },
     },
   }),

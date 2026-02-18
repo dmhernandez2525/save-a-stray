@@ -81,6 +81,9 @@ import { EmailPreferenceDocument } from '../../models/EmailPreference';
 import EmailPreferenceType from './email_preference_type';
 import { EmailLogDocument } from '../../models/EmailLog';
 import EmailLogType from './email_log_type';
+import { PushSubscriptionDocument } from '../../models/PushSubscription';
+import { NotificationPreferenceDocument } from '../../models/NotificationPreference';
+import { ScheduledNotificationDocument } from '../../models/ScheduledNotification';
 import { paginationQueryFields } from './pagination_queries';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
@@ -166,6 +169,9 @@ const MessageThreadModel = mongoose.model<MessageThreadDocument>('messageThread'
 const MessageTemplateModel = mongoose.model<MessageTemplateDocument>('messageTemplate');
 const EmailPreferenceModel = mongoose.model<EmailPreferenceDocument>('emailPreference');
 const EmailLogModel = mongoose.model<EmailLogDocument>('emailLog');
+const PushSubscriptionModel = mongoose.model<PushSubscriptionDocument>('pushSubscription');
+const NotificationPreferenceModel = mongoose.model<NotificationPreferenceDocument>('notificationPreference');
+const ScheduledNotificationModel = mongoose.model<ScheduledNotificationDocument>('scheduledNotification');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -2409,6 +2415,174 @@ const RootQueryType = new GraphQLObjectType({
         if (args.status) filter.status = args.status;
         const limit = clampLimit(args.limit, 50, 100);
         return EmailLogModel.find(filter).sort({ createdAt: -1 }).limit(limit);
+      },
+    },
+
+    // F6.3 - Push Notifications
+    notificationPreferences: {
+      type: new GraphQLObjectType({
+        name: 'NotificationPreferenceType',
+        fields: {
+          _id: { type: GraphQLID },
+          userId: { type: GraphQLString },
+          applications: { type: GraphQLBoolean },
+          messages: { type: GraphQLBoolean },
+          favorites: { type: GraphQLBoolean },
+          events: { type: GraphQLBoolean },
+          shelterAnnouncements: { type: GraphQLBoolean },
+          animalStatusChanges: { type: GraphQLBoolean },
+          fosterUpdates: { type: GraphQLBoolean },
+          quietHoursEnabled: {
+            type: GraphQLBoolean,
+            resolve(parent: Record<string, unknown>) {
+              const qh = parent.quietHours as Record<string, unknown> | undefined;
+              return qh?.enabled ?? false;
+            },
+          },
+          quietHoursStart: {
+            type: GraphQLInt,
+            resolve(parent: Record<string, unknown>) {
+              const qh = parent.quietHours as Record<string, unknown> | undefined;
+              return qh?.startHour ?? 22;
+            },
+          },
+          quietHoursEnd: {
+            type: GraphQLInt,
+            resolve(parent: Record<string, unknown>) {
+              const qh = parent.quietHours as Record<string, unknown> | undefined;
+              return qh?.endHour ?? 7;
+            },
+          },
+          quietHoursTimezone: {
+            type: GraphQLString,
+            resolve(parent: Record<string, unknown>) {
+              const qh = parent.quietHours as Record<string, unknown> | undefined;
+              return (qh?.timezone as string) ?? 'America/New_York';
+            },
+          },
+        },
+      }),
+      args: { userId: { type: GraphQLString } },
+      async resolve(_parent, args) {
+        if (!args.userId) return null;
+        return NotificationPreferenceModel.findOneAndUpdate(
+          { userId: args.userId },
+          { $setOnInsert: { userId: args.userId } },
+          { upsert: true, new: true },
+        );
+      },
+    },
+    userPushSubscriptions: {
+      type: new GraphQLList(new GraphQLObjectType({
+        name: 'PushSubscriptionType',
+        fields: {
+          _id: { type: GraphQLID },
+          userId: { type: GraphQLString },
+          deviceName: { type: GraphQLString },
+          browserInfo: { type: GraphQLString },
+          isActive: { type: GraphQLBoolean },
+          createdAt: { type: GraphQLString },
+          lastUsedAt: { type: GraphQLString },
+        },
+      })),
+      args: { userId: { type: GraphQLString } },
+      async resolve(_parent, args) {
+        if (!args.userId) return [];
+        return PushSubscriptionModel.find({ userId: args.userId, isActive: true });
+      },
+    },
+    notificationCenter: {
+      type: new GraphQLObjectType({
+        name: 'NotificationCenterType',
+        fields: {
+          notifications: { type: new GraphQLList(NotificationType) },
+          unreadCount: { type: GraphQLInt },
+          totalCount: { type: GraphQLInt },
+        },
+      }),
+      args: {
+        userId: { type: GraphQLString },
+        category: { type: GraphQLString },
+        unreadOnly: { type: GraphQLBoolean },
+        limit: { type: GraphQLInt },
+      },
+      async resolve(_parent, args) {
+        if (!args.userId) return null;
+        const filter: Record<string, unknown> = { userId: args.userId };
+        if (args.category) filter.type = args.category;
+        if (args.unreadOnly) filter.read = false;
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        filter.createdAt = { $gte: thirtyDaysAgo };
+        const limit = clampLimit(args.limit, 50, 100);
+        const notifications = await NotificationModel.find(filter)
+          .sort({ createdAt: -1 }).limit(limit);
+        const unreadCount = await NotificationModel.countDocuments({
+          userId: args.userId,
+          read: false,
+          createdAt: { $gte: thirtyDaysAgo },
+        });
+        const totalCount = await NotificationModel.countDocuments({
+          userId: args.userId,
+          createdAt: { $gte: thirtyDaysAgo },
+        });
+        return { notifications, unreadCount, totalCount };
+      },
+    },
+    scheduledNotifications: {
+      type: new GraphQLList(new GraphQLObjectType({
+        name: 'ScheduledNotificationType',
+        fields: {
+          _id: { type: GraphQLID },
+          userId: { type: GraphQLString },
+          shelterId: { type: GraphQLString },
+          title: { type: GraphQLString },
+          body: { type: GraphQLString },
+          category: { type: GraphQLString },
+          url: { type: GraphQLString },
+          scheduledFor: { type: GraphQLString },
+          status: { type: GraphQLString },
+          isBatch: { type: GraphQLBoolean },
+        },
+      })),
+      args: {
+        shelterId: { type: GraphQLString },
+        status: { type: GraphQLString },
+      },
+      async resolve(_parent, args) {
+        if (!args.shelterId) return [];
+        const filter: Record<string, unknown> = { shelterId: args.shelterId };
+        if (args.status) filter.status = args.status;
+        return ScheduledNotificationModel.find(filter).sort({ scheduledFor: 1 });
+      },
+    },
+    pushNotificationAnalytics: {
+      type: new GraphQLObjectType({
+        name: 'PushNotificationAnalyticsType',
+        fields: {
+          totalSubscribers: { type: GraphQLInt },
+          activeSubscribers: { type: GraphQLInt },
+          totalNotificationsSent: { type: GraphQLInt },
+          scheduledPending: { type: GraphQLInt },
+        },
+      }),
+      args: { shelterId: { type: GraphQLString } },
+      async resolve(_parent, args) {
+        if (!args.shelterId) return null;
+        const totalSubs = await PushSubscriptionModel.countDocuments({});
+        const activeSubs = await PushSubscriptionModel.countDocuments({ isActive: true });
+        const notifications = await NotificationModel.countDocuments({
+          shelterId: args.shelterId,
+        });
+        const pending = await ScheduledNotificationModel.countDocuments({
+          shelterId: args.shelterId,
+          status: 'pending',
+        });
+        return {
+          totalSubscribers: totalSubs,
+          activeSubscribers: activeSubs,
+          totalNotificationsSent: notifications,
+          scheduledPending: pending,
+        };
       },
     },
   })
