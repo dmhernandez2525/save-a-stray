@@ -48,8 +48,9 @@ import EmailLog from './EmailLog';
 import PushSubscription from './PushSubscription';
 import NotificationPreference from './NotificationPreference';
 import ScheduledNotification from './ScheduledNotification';
+import ShareEvent from './ShareEvent';
 
-export { User, Animal, Application, Shelter, SuccessStory, Review, Notification, Event, Donation, Foster, SavedSearch, ApplicationTemplate, ActivityLog, TerminalReader, Message, Volunteer, BehaviorNote, Announcement, Microchip, WeightRecord, Vaccination, AdoptionFee, SpayNeuter, IntakeLog, OutcomeLog, AuthSession, StatusHistory, MediaAsset, DashboardLayout, StaffInvitation, ShelterStaffRole, InternalNote, KennelAssignment, ShelterSettings, ApplicationReview, RejectionTemplate, AdopterProfile, MatchRecord, AdoptionRecord, PostAdoptionSurvey, FosterProfile, FosterPlacement, FosterUpdate, MessageThread, MessageTemplate, EmailPreference, EmailLog, PushSubscription, NotificationPreference, ScheduledNotification };
+export { User, Animal, Application, Shelter, SuccessStory, Review, Notification, Event, Donation, Foster, SavedSearch, ApplicationTemplate, ActivityLog, TerminalReader, Message, Volunteer, BehaviorNote, Announcement, Microchip, WeightRecord, Vaccination, AdoptionFee, SpayNeuter, IntakeLog, OutcomeLog, AuthSession, StatusHistory, MediaAsset, DashboardLayout, StaffInvitation, ShelterStaffRole, InternalNote, KennelAssignment, ShelterSettings, ApplicationReview, RejectionTemplate, AdopterProfile, MatchRecord, AdoptionRecord, PostAdoptionSurvey, FosterProfile, FosterPlacement, FosterUpdate, MessageThread, MessageTemplate, EmailPreference, EmailLog, PushSubscription, NotificationPreference, ScheduledNotification, ShareEvent };
 
 // Also import models to ensure they are registered with Mongoose
 import './User';
@@ -102,3 +103,4 @@ import './EmailLog';
 import './PushSubscription';
 import './NotificationPreference';
 import './ScheduledNotification';
+import './ShareEvent';

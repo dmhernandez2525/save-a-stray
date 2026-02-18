@@ -128,6 +128,7 @@ import EmailLogType from './types/email_log_type';
 import { PushSubscriptionDocument } from '../models/PushSubscription';
 import { NotificationPreferenceDocument } from '../models/NotificationPreference';
 import { ScheduledNotificationDocument } from '../models/ScheduledNotification';
+import { ShareEventDocument } from '../models/ShareEvent';
 import { ShelterSettingsDocument } from '../models/ShelterSettings';
 import ShelterSettingsType, {
   DayScheduleInput,
@@ -197,6 +198,7 @@ const EmailLogModel = mongoose.model<EmailLogDocument>('emailLog');
 const PushSubscriptionModel = mongoose.model<PushSubscriptionDocument>('pushSubscription');
 const NotificationPreferenceModel = mongoose.model<NotificationPreferenceDocument>('notificationPreference');
 const ScheduledNotificationModel = mongoose.model<ScheduledNotificationDocument>('scheduledNotification');
+const ShareEventModel = mongoose.model<ShareEventDocument>('shareEvent');
 
 interface RegisterArgs {
   name: string;
@@ -5024,6 +5026,103 @@ const mutation = new GraphQLObjectType({
         notification.status = 'cancelled';
         await notification.save();
         return true;
+      },
+    },
+
+    // F6.4 - Social Sharing
+    recordShareEvent: {
+      type: GraphQLBoolean,
+      args: {
+        entityType: { type: GraphQLString },
+        entityId: { type: GraphQLString },
+        shelterId: { type: GraphQLString },
+        platform: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = context.userId ?? '';
+        const referralCode = `${args.entityId}-${userId}-${Date.now().toString(36)}`;
+        const event = new ShareEventModel({
+          entityType: args.entityType,
+          entityId: args.entityId,
+          shelterId: args.shelterId ?? '',
+          userId,
+          platform: args.platform,
+          referralCode,
+        });
+        await event.save();
+        return true;
+      },
+    },
+    trackReferralClick: {
+      type: GraphQLBoolean,
+      args: { referralCode: { type: GraphQLString } },
+      async resolve(_parent: unknown, args: Record<string, unknown>) {
+        if (!args.referralCode) throw new Error('Referral code required');
+        await ShareEventModel.findOneAndUpdate(
+          { referralCode: args.referralCode },
+          { $inc: { clickCount: 1 } },
+        );
+        return true;
+      },
+    },
+    trackReferralApplication: {
+      type: GraphQLBoolean,
+      args: { referralCode: { type: GraphQLString } },
+      async resolve(_parent: unknown, args: Record<string, unknown>) {
+        if (!args.referralCode) throw new Error('Referral code required');
+        await ShareEventModel.findOneAndUpdate(
+          { referralCode: args.referralCode },
+          { $inc: { applicationCount: 1 } },
+        );
+        return true;
+      },
+    },
+    generateQrCode: {
+      type: new GraphQLObjectType({
+        name: 'QrCodeResultType',
+        fields: {
+          url: { type: GraphQLString },
+          qrDataUrl: { type: GraphQLString },
+        },
+      }),
+      args: {
+        entityType: { type: GraphQLString },
+        entityId: { type: GraphQLString },
+        baseUrl: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>) {
+        const url = `${args.baseUrl ?? ''}/${args.entityType}/${args.entityId}`;
+        const qrDataUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`;
+        return { url, qrDataUrl };
+      },
+    },
+    generateEmbedBadge: {
+      type: new GraphQLObjectType({
+        name: 'EmbedBadgeResultType',
+        fields: {
+          html: { type: GraphQLString },
+          animalName: { type: GraphQLString },
+          imageUrl: { type: GraphQLString },
+        },
+      }),
+      args: {
+        animalId: { type: GraphQLString },
+        baseUrl: { type: GraphQLString },
+        style: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>) {
+        const animal = await Animal.findById(args.animalId);
+        if (!animal) throw new Error('Animal not found');
+        const baseUrl = (args.baseUrl as string) ?? '';
+        const profileUrl = `${baseUrl}/animals/${args.animalId}`;
+        const style = (args.style as string) ?? 'standard';
+        const width = style === 'compact' ? '200' : '300';
+        const html = `<a href="${profileUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;width:${width}px;border:1px solid #ddd;border-radius:8px;overflow:hidden;text-decoration:none;color:#333;font-family:sans-serif;"><img src="${animal.image}" alt="${animal.name}" style="width:100%;height:auto;"/><div style="padding:8px;text-align:center;"><strong>${animal.name}</strong><br/><span style="font-size:12px;">Adopt Me!</span></div></a>`;
+        return {
+          html,
+          animalName: animal.name,
+          imageUrl: animal.image,
+        };
       },
     },
   }),

@@ -84,6 +84,7 @@ import EmailLogType from './email_log_type';
 import { PushSubscriptionDocument } from '../../models/PushSubscription';
 import { NotificationPreferenceDocument } from '../../models/NotificationPreference';
 import { ScheduledNotificationDocument } from '../../models/ScheduledNotification';
+import { ShareEventDocument } from '../../models/ShareEvent';
 import { paginationQueryFields } from './pagination_queries';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
@@ -172,6 +173,7 @@ const EmailLogModel = mongoose.model<EmailLogDocument>('emailLog');
 const PushSubscriptionModel = mongoose.model<PushSubscriptionDocument>('pushSubscription');
 const NotificationPreferenceModel = mongoose.model<NotificationPreferenceDocument>('notificationPreference');
 const ScheduledNotificationModel = mongoose.model<ScheduledNotificationDocument>('scheduledNotification');
+const ShareEventModel = mongoose.model<ShareEventDocument>('shareEvent');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -2583,6 +2585,149 @@ const RootQueryType = new GraphQLObjectType({
           totalNotificationsSent: notifications,
           scheduledPending: pending,
         };
+      },
+    },
+
+    // F6.4 - Social Sharing
+    shareCount: {
+      type: new GraphQLObjectType({
+        name: 'ShareCountType',
+        fields: {
+          entityId: { type: GraphQLString },
+          totalShares: { type: GraphQLInt },
+          totalClicks: { type: GraphQLInt },
+          totalApplications: { type: GraphQLInt },
+          byPlatform: {
+            type: new GraphQLList(new GraphQLObjectType({
+              name: 'PlatformShareCountType',
+              fields: {
+                platform: { type: GraphQLString },
+                shares: { type: GraphQLInt },
+                clicks: { type: GraphQLInt },
+              },
+            })),
+          },
+        },
+      }),
+      args: {
+        entityType: { type: GraphQLString },
+        entityId: { type: GraphQLString },
+      },
+      async resolve(_parent, args) {
+        if (!args.entityId) return null;
+        const filter: Record<string, unknown> = { entityId: args.entityId };
+        if (args.entityType) filter.entityType = args.entityType;
+        const events = await ShareEventModel.find(filter);
+        const platformMap = new Map<string, { shares: number; clicks: number }>();
+        let totalClicks = 0;
+        let totalApps = 0;
+        for (const e of events) {
+          const existing = platformMap.get(e.platform) ?? { shares: 0, clicks: 0 };
+          existing.shares += 1;
+          existing.clicks += e.clickCount;
+          platformMap.set(e.platform, existing);
+          totalClicks += e.clickCount;
+          totalApps += e.applicationCount;
+        }
+        const byPlatform = Array.from(platformMap.entries()).map(([platform, data]) => ({
+          platform,
+          ...data,
+        }));
+        return {
+          entityId: args.entityId,
+          totalShares: events.length,
+          totalClicks,
+          totalApplications: totalApps,
+          byPlatform,
+        };
+      },
+    },
+    sharingAnalytics: {
+      type: new GraphQLObjectType({
+        name: 'SharingAnalyticsType',
+        fields: {
+          totalShares: { type: GraphQLInt },
+          totalClicks: { type: GraphQLInt },
+          totalApplicationsFromShares: { type: GraphQLInt },
+          topPlatform: { type: GraphQLString },
+          topSharedEntityId: { type: GraphQLString },
+        },
+      }),
+      args: {
+        shelterId: { type: GraphQLString },
+        startDate: { type: GraphQLString },
+        endDate: { type: GraphQLString },
+      },
+      async resolve(_parent, args) {
+        if (!args.shelterId) return null;
+        const filter: Record<string, unknown> = { shelterId: args.shelterId };
+        if (args.startDate || args.endDate) {
+          const dateFilter: Record<string, Date> = {};
+          if (args.startDate) dateFilter.$gte = new Date(args.startDate);
+          if (args.endDate) dateFilter.$lte = new Date(args.endDate);
+          filter.createdAt = dateFilter;
+        }
+        const events = await ShareEventModel.find(filter);
+        const platformCounts = new Map<string, number>();
+        const entityCounts = new Map<string, number>();
+        let totalClicks = 0;
+        let totalApps = 0;
+        for (const e of events) {
+          platformCounts.set(e.platform, (platformCounts.get(e.platform) ?? 0) + 1);
+          entityCounts.set(e.entityId, (entityCounts.get(e.entityId) ?? 0) + 1);
+          totalClicks += e.clickCount;
+          totalApps += e.applicationCount;
+        }
+        let topPlatform = '';
+        let topPlatformCount = 0;
+        platformCounts.forEach((count, platform) => {
+          if (count > topPlatformCount) {
+            topPlatform = platform;
+            topPlatformCount = count;
+          }
+        });
+        let topEntity = '';
+        let topEntityCount = 0;
+        entityCounts.forEach((count, entity) => {
+          if (count > topEntityCount) {
+            topEntity = entity;
+            topEntityCount = count;
+          }
+        });
+        return {
+          totalShares: events.length,
+          totalClicks,
+          totalApplicationsFromShares: totalApps,
+          topPlatform,
+          topSharedEntityId: topEntity,
+        };
+      },
+    },
+    referralTracking: {
+      type: new GraphQLList(new GraphQLObjectType({
+        name: 'ReferralTrackingType',
+        fields: {
+          _id: { type: GraphQLID },
+          entityType: { type: GraphQLString },
+          entityId: { type: GraphQLString },
+          userId: { type: GraphQLString },
+          platform: { type: GraphQLString },
+          referralCode: { type: GraphQLString },
+          clickCount: { type: GraphQLInt },
+          applicationCount: { type: GraphQLInt },
+          createdAt: { type: GraphQLString },
+        },
+      })),
+      args: {
+        referralCode: { type: GraphQLString },
+        userId: { type: GraphQLString },
+      },
+      async resolve(_parent, args) {
+        const filter: Record<string, unknown> = {};
+        if (args.referralCode) filter.referralCode = args.referralCode;
+        if (args.userId) filter.userId = args.userId;
+        if (Object.keys(filter).length === 0) return [];
+        return ShareEventModel.find(filter).sort({ createdAt: -1 });
       },
     },
   })
