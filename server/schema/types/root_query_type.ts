@@ -44,6 +44,8 @@ import StatusHistoryType from './status_history_type';
 import { StatusHistoryDocument } from '../../models/StatusHistory';
 import { MediaAssetDocument } from '../../models/MediaAsset';
 import MediaAssetType from './media_asset_type';
+import { DashboardLayoutDocument } from '../../models/DashboardLayout';
+import DashboardLayoutType from './dashboard_layout_type';
 import { paginationQueryFields } from './pagination_queries';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
@@ -110,6 +112,7 @@ const IntakeLogModel = mongoose.model<IntakeLogDocument>('intakeLog');
 const OutcomeLogModel = mongoose.model<OutcomeLogDocument>('outcomeLog');
 const StatusHistoryModel = mongoose.model<StatusHistoryDocument>('statusHistory');
 const MediaAssetModel = mongoose.model<MediaAssetDocument>('mediaAsset');
+const DashboardLayoutModel = mongoose.model<DashboardLayoutDocument>('dashboardLayout');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -847,6 +850,114 @@ const RootQueryType = new GraphQLObjectType({
             },
           },
         }).limit(limit);
+      }
+    },
+    shelterPendingApplications: {
+      type: new GraphQLList(ApplicationType),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        limit: { type: GraphQLInt },
+      },
+      async resolve(_, args: { shelterId: string; limit?: number }) {
+        const shelter = await Shelter.findById(args.shelterId);
+        if (!shelter || !shelter.animals || shelter.animals.length === 0) return [];
+        const animalIds = shelter.animals.map(id => id.toString());
+        const limit = clampLimit(args.limit, 20, MAX_ANIMAL_LIMIT);
+        return Application.find({
+          animalId: { $in: animalIds },
+          status: 'submitted',
+        }).sort({ submittedAt: 1 }).limit(limit);
+      }
+    },
+    shelterRecentAdoptions: {
+      type: new GraphQLList(AnimalType),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        days: { type: GraphQLInt },
+        limit: { type: GraphQLInt },
+      },
+      async resolve(_, args: { shelterId: string; days?: number; limit?: number }) {
+        const shelter = await Shelter.findById(args.shelterId);
+        if (!shelter || !shelter.animals || shelter.animals.length === 0) return [];
+        const animalIds = shelter.animals.map(id => id.toString());
+        const limit = clampLimit(args.limit, 10, MAX_ANIMAL_LIMIT);
+        const daysAgo = new Date();
+        daysAgo.setDate(daysAgo.getDate() - (args.days ?? 30));
+
+        // Find animals that were recently adopted via status history
+        const StatusHistoryModelLocal = mongoose.model<StatusHistoryDocument>('statusHistory');
+        const recentAdoptions = await StatusHistoryModelLocal.find({
+          animalId: { $in: animalIds },
+          toStatus: 'adopted',
+          createdAt: { $gte: daysAgo },
+        }).sort({ createdAt: -1 }).limit(limit);
+
+        const adoptedIds = recentAdoptions.map(h => h.animalId);
+        if (adoptedIds.length === 0) return [];
+        return Animal.find({ _id: { $in: adoptedIds } });
+      }
+    },
+    shelterDailyReport: {
+      type: new GraphQLObjectType({
+        name: 'ShelterDailyReportType',
+        fields: () => ({
+          date: { type: GraphQLString },
+          totalAnimals: { type: GraphQLInt },
+          available: { type: GraphQLInt },
+          pending: { type: GraphQLInt },
+          adopted: { type: GraphQLInt },
+          intakesToday: { type: GraphQLInt },
+          outcomesToday: { type: GraphQLInt },
+          pendingApplications: { type: GraphQLInt },
+          newApplicationsToday: { type: GraphQLInt },
+        }),
+      }),
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      async resolve(_, args: { shelterId: string }) {
+        const shelter = await Shelter.findById(args.shelterId);
+        if (!shelter) return null;
+        const animalIds = shelter.animals?.map(id => id.toString()) ?? [];
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const animals = animalIds.length > 0 ? await Animal.find({ _id: { $in: animalIds } }) : [];
+        const totalAnimals = animals.length;
+        const available = animals.filter(a => a.status === 'available').length;
+        const pending = animals.filter(a => a.status === 'pending').length;
+        const adopted = animals.filter(a => a.status === 'adopted').length;
+
+        const [intakesToday, outcomesToday, allApps, newAppsToday] = await Promise.all([
+          IntakeLogModel.countDocuments({ shelterId: args.shelterId, intakeDate: { $gte: today } }),
+          OutcomeLogModel.countDocuments({ shelterId: args.shelterId, outcomeDate: { $gte: today } }),
+          animalIds.length > 0
+            ? Application.countDocuments({ animalId: { $in: animalIds }, status: 'submitted' })
+            : 0,
+          animalIds.length > 0
+            ? Application.countDocuments({ animalId: { $in: animalIds }, submittedAt: { $gte: today } })
+            : 0,
+        ]);
+
+        return {
+          date: new Date().toISOString().split('T')[0],
+          totalAnimals,
+          available,
+          pending,
+          adopted,
+          intakesToday,
+          outcomesToday,
+          pendingApplications: allApps,
+          newApplicationsToday: newAppsToday,
+        };
+      }
+    },
+    dashboardLayout: {
+      type: DashboardLayoutType,
+      args: {
+        userId: { type: new GraphQLNonNull(GraphQLID) },
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+      },
+      resolve(_, args: { userId: string; shelterId: string }) {
+        return DashboardLayoutModel.findOne({ userId: args.userId, shelterId: args.shelterId });
       }
     },
     animalMedia: {

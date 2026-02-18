@@ -85,6 +85,8 @@ import { isValidTransition } from '../services/status-transitions';
 import { StatusHistoryDocument } from '../models/StatusHistory';
 import StatusHistoryType from './types/status_history_type';
 import { MediaAssetDocument } from '../models/MediaAsset';
+import { DashboardLayoutDocument } from '../models/DashboardLayout';
+import DashboardLayoutType from './types/dashboard_layout_type';
 import MediaAssetType from './types/media_asset_type';
 import UploadSignatureType from './types/upload_signature_type';
 import { generateUploadSignature, deleteImage, getThumbnailUrl, getMediumUrl, isValidVideoUrl } from '../services/cloudinary';
@@ -124,6 +126,7 @@ const IntakeLogModel = mongoose.model<IntakeLogDocument>('intakeLog');
 const OutcomeLogModel = mongoose.model<OutcomeLogDocument>('outcomeLog');
 const StatusHistoryModel = mongoose.model<StatusHistoryDocument>('statusHistory');
 const MediaAssetModel = mongoose.model<MediaAssetDocument>('mediaAsset');
+const DashboardLayoutModel = mongoose.model<DashboardLayoutDocument>('dashboardLayout');
 
 interface RegisterArgs {
   name: string;
@@ -210,6 +213,15 @@ const TemplateFieldInput = new GraphQLInputObjectType({
     fieldType: { type: GraphQLString },
     required: { type: GraphQLBoolean },
     options: { type: new GraphQLList(GraphQLString) },
+  },
+});
+
+const DashboardWidgetInput = new GraphQLInputObjectType({
+  name: 'DashboardWidgetInput',
+  fields: {
+    widgetId: { type: GraphQLString },
+    visible: { type: GraphQLBoolean },
+    sortOrder: { type: GraphQLInt },
   },
 });
 
@@ -2540,6 +2552,31 @@ const mutation = new GraphQLObjectType({
       args: { url: { type: GraphQLString } },
       resolve(_, args: { url: string }) {
         return isValidVideoUrl(args.url);
+      },
+    },
+    saveDashboardLayout: {
+      type: DashboardLayoutType,
+      args: {
+        shelterId: { type: GraphQLID },
+        widgets: { type: new GraphQLList(DashboardWidgetInput) },
+      },
+      async resolve(
+        _,
+        args: {
+          shelterId: string;
+          widgets: Array<{ widgetId: string; visible: boolean; sortOrder: number }>;
+        },
+        context: GraphQLContext
+      ) {
+        await requireShelterStaff(context, args.shelterId);
+        const userId = requireAuth(context);
+
+        const layout = await DashboardLayoutModel.findOneAndUpdate(
+          { userId, shelterId: args.shelterId },
+          { widgets: args.widgets, updatedAt: new Date() },
+          { upsert: true, new: true }
+        );
+        return layout;
       },
     },
   }),
