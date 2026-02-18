@@ -3638,6 +3638,435 @@ const RootQueryType = new GraphQLObjectType({
         return lines.join('\r\n');
       },
     },
+
+    // ── F9.1 Shelter Analytics ──────────────────────────────────
+
+    shelterAdoptionMetrics: {
+      type: new GraphQLObjectType({
+        name: 'ShelterAdoptionMetrics',
+        fields: {
+          shelterId: { type: GraphQLString },
+          totalAdoptions: { type: GraphQLInt },
+          totalIntakes: { type: GraphQLInt },
+          monthlyData: { type: new GraphQLList(new GraphQLObjectType({
+            name: 'MonthlyAdoptionData',
+            fields: {
+              month: { type: GraphQLString },
+              adoptions: { type: GraphQLInt },
+              intakes: { type: GraphQLInt },
+              returns: { type: GraphQLInt },
+              netChange: { type: GraphQLInt },
+            },
+          }))},
+          adoptionRate: { type: GraphQLFloat },
+          averageLengthOfStayDays: { type: GraphQLFloat },
+          returnRate: { type: GraphQLFloat },
+          periodStart: { type: GraphQLString },
+          periodEnd: { type: GraphQLString },
+        },
+      }),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        startDate: { type: GraphQLString },
+        endDate: { type: GraphQLString },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>) {
+        const shelterId = args.shelterId as string;
+        const now = new Date();
+        const startDate = args.startDate ? new Date(args.startDate as string) : new Date(now.getFullYear(), now.getMonth() - 11, 1);
+        const endDate = args.endDate ? new Date(args.endDate as string) : now;
+
+        const AnimalModel = mongoose.model<AnimalDocument>('animal');
+        const IntakeModel = mongoose.model<IntakeLogDocument>('IntakeLog');
+        const OutcomeModel = mongoose.model<OutcomeLogDocument>('OutcomeLog');
+
+        const animals = await AnimalModel.find({ shelter: shelterId }).lean();
+        const filtered = animals.filter(a => {
+          const ts = a._id.getTimestamp();
+          return ts >= startDate && ts <= endDate;
+        });
+
+        const adoptions = filtered.filter(a => a.status === 'adopted');
+        const intakes = await IntakeModel.countDocuments({
+          shelterId,
+          intakeDate: { $gte: startDate, $lte: endDate },
+        });
+        const outcomes = await OutcomeModel.find({
+          shelterId,
+          outcomeDate: { $gte: startDate, $lte: endDate },
+        }).lean();
+
+        const months: Record<string, { adoptions: number; intakes: number; returns: number }> = {};
+        let current = new Date(startDate);
+        while (current <= endDate) {
+          const key = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
+          months[key] = { adoptions: 0, intakes: 0, returns: 0 };
+          current.setMonth(current.getMonth() + 1);
+        }
+
+        for (const a of adoptions) {
+          const d = a._id.getTimestamp();
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+          if (months[key]) months[key].adoptions++;
+        }
+
+        for (const o of outcomes) {
+          const d = new Date(o.outcomeDate);
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+          if (months[key] && o.outcomeType === 'return_to_owner') months[key].returns++;
+        }
+
+        const monthlyData = Object.entries(months).map(([month, data]) => ({
+          month,
+          ...data,
+          netChange: data.intakes - data.adoptions - data.returns,
+        }));
+
+        const totalAdoptions = adoptions.length;
+        const totalReturns = outcomes.filter(o => o.outcomeType === 'return_to_owner').length;
+
+        return {
+          shelterId,
+          totalAdoptions,
+          totalIntakes: intakes,
+          monthlyData,
+          adoptionRate: filtered.length > 0 ? totalAdoptions / filtered.length : 0,
+          averageLengthOfStayDays: 0,
+          returnRate: totalAdoptions > 0 ? totalReturns / totalAdoptions : 0,
+          periodStart: startDate.toISOString(),
+          periodEnd: endDate.toISOString(),
+        };
+      },
+    },
+
+    shelterDemographics: {
+      type: new GraphQLObjectType({
+        name: 'ShelterDemographics',
+        fields: {
+          byType: { type: new GraphQLList(new GraphQLObjectType({
+            name: 'DemographicBreakdown',
+            fields: {
+              category: { type: GraphQLString },
+              count: { type: GraphQLInt },
+              percentage: { type: GraphQLFloat },
+            },
+          }))},
+          byBreed: { type: new GraphQLList(new GraphQLObjectType({
+            name: 'BreedBreakdown',
+            fields: {
+              category: { type: GraphQLString },
+              count: { type: GraphQLInt },
+              percentage: { type: GraphQLFloat },
+            },
+          }))},
+          byAge: { type: new GraphQLList(new GraphQLObjectType({
+            name: 'AgeBreakdown',
+            fields: {
+              category: { type: GraphQLString },
+              count: { type: GraphQLInt },
+              percentage: { type: GraphQLFloat },
+            },
+          }))},
+          byStatus: { type: new GraphQLList(new GraphQLObjectType({
+            name: 'StatusBreakdown',
+            fields: {
+              category: { type: GraphQLString },
+              count: { type: GraphQLInt },
+              percentage: { type: GraphQLFloat },
+            },
+          }))},
+          totalAnimals: { type: GraphQLInt },
+        },
+      }),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>) {
+        const shelterId = args.shelterId as string;
+        const AnimalModel = mongoose.model<AnimalDocument>('animal');
+        const animals = await AnimalModel.find({ shelter: shelterId }).lean();
+        const total = animals.length;
+        if (total === 0) return { byType: [], byBreed: [], byAge: [], byStatus: [], totalAnimals: 0 };
+
+        const groupBy = (field: string): { category: string; count: number; percentage: number }[] => {
+          const counts: Record<string, number> = {};
+          for (const a of animals) {
+            const val = String((a as Record<string, unknown>)[field] || 'Unknown');
+            counts[val] = (counts[val] || 0) + 1;
+          }
+          return Object.entries(counts)
+            .map(([category, count]) => ({ category, count, percentage: count / total }))
+            .sort((a, b) => b.count - a.count);
+        };
+
+        const ageGroups = animals.map(a => {
+          const age = a.age || 0;
+          if (age < 1) return 'Puppy/Kitten';
+          if (age < 3) return 'Young';
+          if (age < 7) return 'Adult';
+          return 'Senior';
+        });
+        const ageCounts: Record<string, number> = {};
+        for (const g of ageGroups) ageCounts[g] = (ageCounts[g] || 0) + 1;
+        const byAge = Object.entries(ageCounts)
+          .map(([category, count]) => ({ category, count, percentage: count / total }))
+          .sort((a, b) => b.count - a.count);
+
+        return {
+          byType: groupBy('type'),
+          byBreed: groupBy('breed'),
+          byAge,
+          byStatus: groupBy('status'),
+          totalAnimals: total,
+        };
+      },
+    },
+
+    shelterLengthOfStay: {
+      type: new GraphQLObjectType({
+        name: 'ShelterLengthOfStay',
+        fields: {
+          averageDays: { type: GraphQLFloat },
+          medianDays: { type: GraphQLFloat },
+          distribution: { type: new GraphQLList(new GraphQLObjectType({
+            name: 'LengthOfStayBucket',
+            fields: {
+              range: { type: GraphQLString },
+              count: { type: GraphQLInt },
+            },
+          }))},
+          longStayAlerts: { type: new GraphQLList(new GraphQLObjectType({
+            name: 'LongStayAlert',
+            fields: {
+              animalId: { type: GraphQLID },
+              name: { type: GraphQLString },
+              days: { type: GraphQLInt },
+              type: { type: GraphQLString },
+            },
+          }))},
+          alertThresholdDays: { type: GraphQLInt },
+        },
+      }),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        thresholdDays: { type: GraphQLInt },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>) {
+        const shelterId = args.shelterId as string;
+        const threshold = (args.thresholdDays as number) || 90;
+        const AnimalModel = mongoose.model<AnimalDocument>('animal');
+
+        const animals = await AnimalModel.find({
+          shelter: shelterId,
+          status: { $in: ['available', 'hold', 'fostered'] },
+        }).lean();
+
+        const now = Date.now();
+        const stayDays = animals.map(a => {
+          const created = a._id.getTimestamp().getTime();
+          return Math.floor((now - created) / 86400000);
+        }).sort((a, b) => a - b);
+
+        const avg = stayDays.length > 0 ? stayDays.reduce((s, d) => s + d, 0) / stayDays.length : 0;
+        const median = stayDays.length > 0 ? stayDays[Math.floor(stayDays.length / 2)] : 0;
+
+        const buckets = [
+          { range: '0-7 days', min: 0, max: 7 },
+          { range: '8-30 days', min: 8, max: 30 },
+          { range: '31-90 days', min: 31, max: 90 },
+          { range: '91-180 days', min: 91, max: 180 },
+          { range: '180+ days', min: 181, max: Infinity },
+        ];
+
+        const distribution = buckets.map(b => ({
+          range: b.range,
+          count: stayDays.filter(d => d >= b.min && d <= b.max).length,
+        }));
+
+        const longStayAlerts = animals
+          .filter(a => {
+            const created = a._id.getTimestamp().getTime();
+            return Math.floor((now - created) / 86400000) >= threshold;
+          })
+          .map(a => ({
+            animalId: a._id.toString(),
+            name: a.name,
+            days: Math.floor((now - a._id.getTimestamp().getTime()) / 86400000),
+            type: a.type,
+          }))
+          .sort((a, b) => b.days - a.days);
+
+        return {
+          averageDays: Math.round(avg * 10) / 10,
+          medianDays: median,
+          distribution,
+          longStayAlerts,
+          alertThresholdDays: threshold,
+        };
+      },
+    },
+
+    shelterKpiAlerts: {
+      type: new GraphQLList(new GraphQLObjectType({
+        name: 'KpiAlert',
+        fields: {
+          metric: { type: GraphQLString },
+          currentValue: { type: GraphQLFloat },
+          threshold: { type: GraphQLFloat },
+          direction: { type: GraphQLString },
+          severity: { type: GraphQLString },
+          message: { type: GraphQLString },
+        },
+      })),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>) {
+        const shelterId = args.shelterId as string;
+        const AnimalModel = mongoose.model<AnimalDocument>('animal');
+
+        const total = await AnimalModel.countDocuments({ shelter: shelterId });
+        const available = await AnimalModel.countDocuments({ shelter: shelterId, status: 'available' });
+        const adopted = await AnimalModel.countDocuments({ shelter: shelterId, status: 'adopted' });
+
+        const alerts: { metric: string; currentValue: number; threshold: number; direction: string; severity: string; message: string }[] = [];
+
+        const adoptionRate = total > 0 ? adopted / total : 0;
+        if (adoptionRate < 0.3) {
+          alerts.push({
+            metric: 'adoption_rate',
+            currentValue: Math.round(adoptionRate * 100),
+            threshold: 30,
+            direction: 'below',
+            severity: 'warning',
+            message: `Adoption rate is ${Math.round(adoptionRate * 100)}%, below the 30% target`,
+          });
+        }
+
+        if (available > 50) {
+          alerts.push({
+            metric: 'capacity',
+            currentValue: available,
+            threshold: 50,
+            direction: 'above',
+            severity: 'info',
+            message: `${available} animals currently available, consider increasing outreach`,
+          });
+        }
+
+        return alerts;
+      },
+    },
+
+    shelterYearOverYear: {
+      type: new GraphQLList(new GraphQLObjectType({
+        name: 'YearOverYearData',
+        fields: {
+          year: { type: GraphQLInt },
+          totalAdoptions: { type: GraphQLInt },
+          totalIntakes: { type: GraphQLInt },
+          averageLengthOfStay: { type: GraphQLFloat },
+          returnRate: { type: GraphQLFloat },
+        },
+      })),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        years: { type: GraphQLInt },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>) {
+        const shelterId = args.shelterId as string;
+        const yearCount = (args.years as number) || 3;
+        const currentYear = new Date().getFullYear();
+        const AnimalModel = mongoose.model<AnimalDocument>('animal');
+
+        const results = [];
+        for (let i = 0; i < yearCount; i++) {
+          const year = currentYear - i;
+          const start = new Date(year, 0, 1);
+          const end = new Date(year, 11, 31, 23, 59, 59);
+
+          const allAnimals = await AnimalModel.find({ shelter: shelterId }).lean();
+          const yearAnimals = allAnimals.filter(a => {
+            const ts = a._id.getTimestamp();
+            return ts >= start && ts <= end;
+          });
+
+          const adopted = yearAnimals.filter(a => a.status === 'adopted').length;
+
+          results.push({
+            year,
+            totalAdoptions: adopted,
+            totalIntakes: yearAnimals.length,
+            averageLengthOfStay: 0,
+            returnRate: 0,
+          });
+        }
+
+        return results.sort((a, b) => a.year - b.year);
+      },
+    },
+
+    shelterExportReport: {
+      type: new GraphQLObjectType({
+        name: 'ShelterReport',
+        fields: {
+          shelterName: { type: GraphQLString },
+          generatedAt: { type: GraphQLString },
+          periodStart: { type: GraphQLString },
+          periodEnd: { type: GraphQLString },
+          totalAnimals: { type: GraphQLInt },
+          totalAdoptions: { type: GraphQLInt },
+          totalIntakes: { type: GraphQLInt },
+          adoptionRate: { type: GraphQLFloat },
+          averageLengthOfStay: { type: GraphQLFloat },
+          animalsByType: { type: GraphQLString },
+          animalsByStatus: { type: GraphQLString },
+        },
+      }),
+      args: {
+        shelterId: { type: new GraphQLNonNull(GraphQLID) },
+        startDate: { type: GraphQLString },
+        endDate: { type: GraphQLString },
+      },
+      async resolve(_root: unknown, args: Record<string, unknown>) {
+        const shelterId = args.shelterId as string;
+        const ShelterModel = mongoose.model<ShelterDocument>('shelter');
+        const AnimalModel = mongoose.model<AnimalDocument>('animal');
+
+        const shelter = await ShelterModel.findById(shelterId).lean();
+        const now = new Date();
+        const start = args.startDate ? new Date(args.startDate as string) : new Date(now.getFullYear(), now.getMonth() - 11, 1);
+        const end = args.endDate ? new Date(args.endDate as string) : now;
+
+        const allAnimals = await AnimalModel.find({ shelter: shelterId }).lean();
+        const reportAnimals = allAnimals.filter(a => {
+          const ts = a._id.getTimestamp();
+          return ts >= start && ts <= end;
+        });
+
+        const adopted = reportAnimals.filter(a => a.status === 'adopted').length;
+        const typeCounts: Record<string, number> = {};
+        const statusCounts: Record<string, number> = {};
+        for (const a of reportAnimals) {
+          typeCounts[a.type] = (typeCounts[a.type] || 0) + 1;
+          statusCounts[a.status || 'unknown'] = (statusCounts[a.status || 'unknown'] || 0) + 1;
+        }
+
+        return {
+          shelterName: shelter?.name || 'Unknown Shelter',
+          generatedAt: now.toISOString(),
+          periodStart: start.toISOString(),
+          periodEnd: end.toISOString(),
+          totalAnimals: reportAnimals.length,
+          totalAdoptions: adopted,
+          totalIntakes: reportAnimals.length,
+          adoptionRate: reportAnimals.length > 0 ? adopted / reportAnimals.length : 0,
+          averageLengthOfStay: 0,
+          animalsByType: JSON.stringify(typeCounts),
+          animalsByStatus: JSON.stringify(statusCounts),
+        };
+      },
+    },
   })
 });
 
