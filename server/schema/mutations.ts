@@ -5125,6 +5125,135 @@ const mutation = new GraphQLObjectType({
         };
       },
     },
+    // F7.1 - Public Pet Listings
+    generateAnimalSlug: {
+      type: AnimalType,
+      args: {
+        animalId: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const animal = await Animal.findById(args.animalId);
+        if (!animal) throw new Error('Animal not found');
+        const base = `${animal.name}-${animal.type}-${animal.breed}`
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '');
+        const existing = await Animal.findOne({ slug: base, _id: { $ne: animal._id } });
+        const slug = existing ? `${base}-${animal._id.toString().slice(-6)}` : base;
+        animal.slug = slug;
+        if (!animal.metaTitle) {
+          animal.metaTitle = `Adopt ${animal.name} - ${animal.breed} ${animal.type}`;
+        }
+        if (!animal.metaDescription) {
+          animal.metaDescription = animal.description.slice(0, 160);
+        }
+        await animal.save();
+        return animal;
+      },
+    },
+    updateAnimalSeo: {
+      type: AnimalType,
+      args: {
+        animalId: { type: GraphQLString },
+        slug: { type: GraphQLString },
+        metaTitle: { type: GraphQLString },
+        metaDescription: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const animal = await Animal.findById(args.animalId);
+        if (!animal) throw new Error('Animal not found');
+        const ownerShelter = animal.shelterId
+          ? await Shelter.findById(animal.shelterId)
+          : await Shelter.findOne({ animals: animal._id });
+        if (ownerShelter) await requireShelterStaff(context, ownerShelter._id.toString());
+        if (args.slug !== undefined) {
+          const slugStr = args.slug as string;
+          const clean = slugStr.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-|-$/g, '');
+          const conflict = await Animal.findOne({ slug: clean, _id: { $ne: animal._id } });
+          if (conflict) throw new Error('Slug already in use');
+          animal.slug = clean;
+        }
+        if (args.metaTitle !== undefined) animal.metaTitle = args.metaTitle as string;
+        if (args.metaDescription !== undefined) animal.metaDescription = args.metaDescription as string;
+        await animal.save();
+        return animal;
+      },
+    },
+    generateShelterSlug: {
+      type: ShelterType,
+      args: {
+        shelterId: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const shelter = await Shelter.findById(args.shelterId);
+        if (!shelter) throw new Error('Shelter not found');
+        const base = shelter.name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '');
+        const existing = await Shelter.findOne({ slug: base, _id: { $ne: shelter._id } });
+        const slug = existing ? `${base}-${shelter._id.toString().slice(-6)}` : base;
+        shelter.slug = slug;
+        await shelter.save();
+        return shelter;
+      },
+    },
+    updateShelterSeo: {
+      type: ShelterType,
+      args: {
+        shelterId: { type: GraphQLString },
+        slug: { type: GraphQLString },
+        logo: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        await requireShelterStaff(context, args.shelterId as string);
+        const shelter = await Shelter.findById(args.shelterId);
+        if (!shelter) throw new Error('Shelter not found');
+        if (args.slug !== undefined) {
+          const slugStr = args.slug as string;
+          const clean = slugStr.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-|-$/g, '');
+          const conflict = await Shelter.findOne({ slug: clean, _id: { $ne: shelter._id } });
+          if (conflict) throw new Error('Slug already in use');
+          shelter.slug = clean;
+        }
+        if (args.logo !== undefined) shelter.logo = args.logo as string;
+        await shelter.save();
+        return shelter;
+      },
+    },
+    bulkGenerateAnimalSlugs: {
+      type: GraphQLInt,
+      args: {
+        shelterId: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        await requireShelterStaff(context, args.shelterId as string);
+        const filter: Record<string, unknown> = { slug: { $in: ['', null] } };
+        if (args.shelterId) filter.shelterId = args.shelterId;
+        const animals = await Animal.find(filter);
+        let count = 0;
+        for (const animal of animals) {
+          const base = `${animal.name}-${animal.type}-${animal.breed}`
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '');
+          const existing = await Animal.findOne({ slug: base, _id: { $ne: animal._id } });
+          animal.slug = existing ? `${base}-${animal._id.toString().slice(-6)}` : base;
+          if (!animal.metaTitle) {
+            animal.metaTitle = `Adopt ${animal.name} - ${animal.breed} ${animal.type}`;
+          }
+          if (!animal.metaDescription) {
+            animal.metaDescription = animal.description.slice(0, 160);
+          }
+          await animal.save();
+          count += 1;
+        }
+        return count;
+      },
+    },
   }),
 });
 

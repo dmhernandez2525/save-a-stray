@@ -50,6 +50,8 @@ const ShelterType: GraphQLObjectType = new GraphQLObjectType({
     animalIdPrefix: { type: GraphQLString },
     verified: { type: GraphQLBoolean },
     verifiedAt: { type: GraphQLString },
+    slug: { type: GraphQLString },
+    logo: { type: GraphQLString },
     animals: {
       type: new GraphQLList(require("./animal_type").default),
       async resolve(parentValue: ShelterParentValue, _args, context: GraphQLContext) {

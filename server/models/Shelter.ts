@@ -69,6 +69,15 @@ const ShelterSchema = new Schema<ShelterDocument>({
   verifiedAt: {
     type: Date
   },
+  slug: {
+    type: String,
+    default: '',
+    index: true,
+  },
+  logo: {
+    type: String,
+    default: '',
+  },
   animals: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'animal'

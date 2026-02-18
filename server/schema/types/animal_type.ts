@@ -40,6 +40,10 @@ interface AnimalParentValue {
   intakeDate?: Date;
   intakeSource?: string;
   adoptionFee?: number;
+  slug?: string;
+  metaTitle?: string;
+  metaDescription?: string;
+  shelterId?: string;
   applications?: Array<string | Types.ObjectId>;
 }
 
@@ -76,6 +80,10 @@ const AnimalType: GraphQLObjectType = new GraphQLObjectType({
     },
     intakeSource: { type: GraphQLString },
     adoptionFee: { type: GraphQLFloat },
+    slug: { type: GraphQLString },
+    metaTitle: { type: GraphQLString },
+    metaDescription: { type: GraphQLString },
+    shelterId: { type: GraphQLID },
     lengthOfStay: {
       type: GraphQLInt,
       resolve(parent: AnimalParentValue) {
