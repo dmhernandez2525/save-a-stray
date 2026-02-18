@@ -101,6 +101,9 @@ import { RejectionTemplateDocument } from '../models/RejectionTemplate';
 import { AdopterProfileDocument } from '../models/AdopterProfile';
 import AdopterProfileType from './types/adopter_profile_type';
 import { MatchRecordDocument } from '../models/MatchRecord';
+import { AdoptionRecordDocument } from '../models/AdoptionRecord';
+import AdoptionRecordType from './types/adoption_record_type';
+import { PostAdoptionSurveyDocument } from '../models/PostAdoptionSurvey';
 import { ShelterSettingsDocument } from '../models/ShelterSettings';
 import ShelterSettingsType, {
   DayScheduleInput,
@@ -157,6 +160,8 @@ const ApplicationReviewModel = mongoose.model<ApplicationReviewDocument>('applic
 const RejectionTemplateModel = mongoose.model<RejectionTemplateDocument>('rejectionTemplate');
 const AdopterProfileModel = mongoose.model<AdopterProfileDocument>('adopterProfile');
 const MatchRecordModel = mongoose.model<MatchRecordDocument>('matchRecord');
+const AdoptionRecordModel = mongoose.model<AdoptionRecordDocument>('adoptionRecord');
+const PostAdoptionSurveyModel = mongoose.model<PostAdoptionSurveyDocument>('postAdoptionSurvey');
 const ShelterSettingsModel = mongoose.model<ShelterSettingsDocument>('shelterSettings');
 
 interface RegisterArgs {
@@ -3508,6 +3513,233 @@ const mutation = new GraphQLObjectType({
           { score: args.score, outcome: args.outcome },
           { upsert: true, new: true }
         );
+        return true;
+      },
+    },
+    createAdoptionRecord: {
+      type: AdoptionRecordType,
+      args: {
+        animalId: { type: GraphQLID },
+        adopterId: { type: GraphQLID },
+        shelterId: { type: GraphQLID },
+        applicationId: { type: GraphQLString },
+        feeAmount: { type: GraphQLFloat },
+        feeStatus: { type: GraphQLString },
+        notes: { type: GraphQLString },
+      },
+      async resolve(
+        _,
+        args: {
+          animalId: string; adopterId: string; shelterId: string;
+          applicationId?: string; feeAmount?: number; feeStatus?: string; notes?: string;
+        },
+        context: GraphQLContext
+      ) {
+        await requireShelterStaff(context, args.shelterId);
+
+        const adoptionDate = new Date();
+        // Schedule follow-ups at 1 week, 1 month, 6 months
+        const followUps = [
+          { type: '1_week', scheduledDate: new Date(adoptionDate.getTime() + 7 * 24 * 60 * 60 * 1000), status: 'pending' as const, notes: '' },
+          { type: '1_month', scheduledDate: new Date(adoptionDate.getTime() + 30 * 24 * 60 * 60 * 1000), status: 'pending' as const, notes: '' },
+          { type: '6_months', scheduledDate: new Date(adoptionDate.getTime() + 180 * 24 * 60 * 60 * 1000), status: 'pending' as const, notes: '' },
+        ];
+
+        const record = new AdoptionRecordModel({
+          animalId: args.animalId,
+          adopterId: args.adopterId,
+          shelterId: args.shelterId,
+          applicationId: args.applicationId ?? '',
+          adoptionDate,
+          feeAmount: args.feeAmount ?? 0,
+          feeStatus: args.feeStatus ?? 'pending',
+          followUps,
+          notes: args.notes ?? '',
+        });
+        await record.save();
+
+        // Update animal status to adopted
+        const animal = await Animal.findById(args.animalId);
+        if (animal && animal.status !== 'adopted') {
+          const fromStatus = animal.status;
+          animal.status = 'adopted';
+          await animal.save();
+          const historyEntry = new StatusHistoryModel({
+            animalId: args.animalId,
+            fromStatus,
+            toStatus: 'adopted',
+            changedBy: context.userId ?? '',
+            reason: 'Adoption completed',
+          });
+          await historyEntry.save();
+          await pubsub.publish(SUBSCRIPTION_EVENTS.ANIMAL_STATUS_CHANGED, {
+            animalStatusChanged: animal,
+          });
+        }
+
+        return record;
+      },
+    },
+    updateAdoptionFeeStatus: {
+      type: AdoptionRecordType,
+      args: {
+        _id: { type: GraphQLID },
+        feeStatus: { type: GraphQLString },
+        paymentIntentId: { type: GraphQLString },
+      },
+      async resolve(_, args: { _id: string; feeStatus: string; paymentIntentId?: string }, context: GraphQLContext) {
+        const record = await AdoptionRecordModel.findById(args._id);
+        if (!record) throw new Error('Adoption record not found');
+        await requireShelterStaff(context, record.shelterId);
+
+        record.feeStatus = args.feeStatus as typeof record.feeStatus;
+        if (args.paymentIntentId) record.paymentIntentId = args.paymentIntentId;
+        await record.save();
+        return record;
+      },
+    },
+    signAdoptionContract: {
+      type: AdoptionRecordType,
+      args: {
+        _id: { type: GraphQLID },
+        contractUrl: { type: GraphQLString },
+      },
+      async resolve(_, args: { _id: string; contractUrl: string }, context: GraphQLContext) {
+        requireAuth(context);
+        const record = await AdoptionRecordModel.findById(args._id);
+        if (!record) throw new Error('Adoption record not found');
+
+        record.contractUrl = args.contractUrl;
+        record.contractSignedAt = new Date();
+        await record.save();
+        return record;
+      },
+    },
+    generateAdoptionCertificate: {
+      type: AdoptionRecordType,
+      args: {
+        _id: { type: GraphQLID },
+        certificateUrl: { type: GraphQLString },
+      },
+      async resolve(_, args: { _id: string; certificateUrl: string }, context: GraphQLContext) {
+        const record = await AdoptionRecordModel.findById(args._id);
+        if (!record) throw new Error('Adoption record not found');
+        await requireShelterStaff(context, record.shelterId);
+
+        record.certificateUrl = args.certificateUrl;
+        await record.save();
+        return record;
+      },
+    },
+    completeFollowUp: {
+      type: AdoptionRecordType,
+      args: {
+        adoptionRecordId: { type: GraphQLID },
+        followUpId: { type: GraphQLID },
+        notes: { type: GraphQLString },
+        status: { type: GraphQLString },
+      },
+      async resolve(
+        _,
+        args: { adoptionRecordId: string; followUpId: string; notes?: string; status?: string },
+        context: GraphQLContext
+      ) {
+        const record = await AdoptionRecordModel.findById(args.adoptionRecordId);
+        if (!record) throw new Error('Adoption record not found');
+        await requireShelterStaff(context, record.shelterId);
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const followUp = record.followUps.find(
+          (f: any) => f._id?.toString() === args.followUpId
+        );
+        if (!followUp) throw new Error('Follow-up not found');
+
+        followUp.status = (args.status as 'completed' | 'skipped') ?? 'completed';
+        followUp.completedDate = new Date();
+        if (args.notes !== undefined) followUp.notes = args.notes;
+        await record.save();
+        return record;
+      },
+    },
+    recordAdoptionReturn: {
+      type: AdoptionRecordType,
+      args: {
+        _id: { type: GraphQLID },
+        returnReason: { type: GraphQLString },
+      },
+      async resolve(_, args: { _id: string; returnReason: string }, context: GraphQLContext) {
+        const record = await AdoptionRecordModel.findById(args._id);
+        if (!record) throw new Error('Adoption record not found');
+        await requireShelterStaff(context, record.shelterId);
+
+        record.returnDate = new Date();
+        record.returnReason = args.returnReason ?? '';
+        await record.save();
+
+        // Return animal to available
+        const animal = await Animal.findById(record.animalId);
+        if (animal && animal.status === 'adopted') {
+          animal.status = 'available';
+          await animal.save();
+          const historyEntry = new StatusHistoryModel({
+            animalId: record.animalId,
+            fromStatus: 'adopted',
+            toStatus: 'available',
+            changedBy: context.userId ?? '',
+            reason: `Returned: ${args.returnReason ?? 'No reason given'}`,
+          });
+          await historyEntry.save();
+        }
+
+        return record;
+      },
+    },
+    submitPostAdoptionSurvey: {
+      type: GraphQLBoolean,
+      args: {
+        adoptionRecordId: { type: GraphQLID },
+        animalId: { type: GraphQLID },
+        overallSatisfaction: { type: GraphQLInt },
+        animalAdjustment: { type: GraphQLInt },
+        shelterExperience: { type: GraphQLInt },
+        wouldRecommend: { type: GraphQLBoolean },
+        challenges: { type: GraphQLString },
+        positives: { type: GraphQLString },
+        additionalComments: { type: GraphQLString },
+      },
+      async resolve(
+        _,
+        args: {
+          adoptionRecordId: string; animalId: string;
+          overallSatisfaction: number; animalAdjustment: number; shelterExperience: number;
+          wouldRecommend?: boolean; challenges?: string; positives?: string; additionalComments?: string;
+        },
+        context: GraphQLContext
+      ) {
+        const adopterId = requireAuth(context);
+
+        const existing = await PostAdoptionSurveyModel.findOne({ adoptionRecordId: args.adoptionRecordId });
+        if (existing) throw new Error('Survey already submitted for this adoption');
+
+        for (const field of ['overallSatisfaction', 'animalAdjustment', 'shelterExperience'] as const) {
+          if (args[field] < 1 || args[field] > 5) {
+            throw new Error(`${field} must be between 1 and 5`);
+          }
+        }
+
+        const survey = new PostAdoptionSurveyModel({
+          adoptionRecordId: args.adoptionRecordId,
+          adopterId,
+          animalId: args.animalId,
+          overallSatisfaction: args.overallSatisfaction,
+          animalAdjustment: args.animalAdjustment,
+          shelterExperience: args.shelterExperience,
+          wouldRecommend: args.wouldRecommend ?? true,
+          challenges: args.challenges ?? '',
+          positives: args.positives ?? '',
+          additionalComments: args.additionalComments ?? '',
+        });
+        await survey.save();
         return true;
       },
     },
