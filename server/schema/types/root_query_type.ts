@@ -38,6 +38,7 @@ import AdoptionFeeType from './adoption_fee_type';
 import SpayNeuterType from './spay_neuter_type';
 import IntakeLogType from './intake_log_type';
 import OutcomeLogType from './outcome_log_type';
+import { paginationQueryFields } from './pagination_queries';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
 import { FosterDocument } from '../../models/Foster';
@@ -105,6 +106,7 @@ const OutcomeLogModel = mongoose.model<OutcomeLogDocument>('outcomeLog');
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
   fields: (): GraphQLFieldConfigMap<unknown, unknown> => ({
+    ...paginationQueryFields,
     users: {
       type: new GraphQLList(UserType),
       resolve() {

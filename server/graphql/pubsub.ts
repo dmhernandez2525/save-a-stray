@@ -1,9 +1,7 @@
 import { PubSub } from 'graphql-subscriptions';
+import { logger } from '../services/logger';
 
-type SubscriptionEvent =
-  | 'APPLICATION_STATUS_CHANGED'
-  | 'NEW_APPLICATION'
-  | 'ANIMAL_STATUS_CHANGED';
+type SubscriptionEvent = 'APPLICATION_STATUS_CHANGED' | 'NEW_APPLICATION' | 'ANIMAL_STATUS_CHANGED';
 
 export const SUBSCRIPTION_EVENTS: Record<SubscriptionEvent, SubscriptionEvent> = {
   APPLICATION_STATUS_CHANGED: 'APPLICATION_STATUS_CHANGED',
@@ -19,11 +17,11 @@ export const SUBSCRIPTION_EVENTS: Record<SubscriptionEvent, SubscriptionEvent> =
 //   import { RedisPubSub } from 'graphql-redis-subscriptions';
 //   const pubsub = new RedisPubSub({ publisher: new Redis(...), subscriber: new Redis(...) });
 if (process.env.NODE_ENV === 'production' && !process.env.REDIS_URL) {
-  console.warn(
-    '[PubSub] WARNING: Using in-memory PubSub in production. ' +
-    'Subscriptions will not work across multiple server instances. ' +
-    'Configure REDIS_URL for distributed PubSub.'
-  );
+  logger.warn('in_memory_pubsub_in_production', {
+    message:
+      'Using in-memory PubSub in production. Subscriptions will not work across ' +
+      'multiple server instances without REDIS_URL.',
+  });
 }
 
 export const pubsub = new PubSub();

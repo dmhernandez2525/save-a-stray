@@ -7,7 +7,7 @@ import {
   GraphQLID,
   GraphQLList,
   GraphQLInputObjectType,
-  GraphQLFieldConfigMap
+  GraphQLFieldConfigMap,
 } from 'graphql';
 import mongoose from 'mongoose';
 import UserType from './types/user_type';
@@ -65,12 +65,13 @@ import { IntakeLogDocument } from '../models/IntakeLog';
 import { OutcomeLogDocument } from '../models/OutcomeLog';
 import { pubsub, SUBSCRIPTION_EVENTS } from '../graphql/pubsub';
 import { GraphQLContext } from '../graphql/context';
+import { DateScalar, EmailScalar, URLScalar } from './scalars';
 import {
   requireAuth,
   requireShelterStaff,
   requireAdmin,
   requireSelf,
-  requireApplicationAccess
+  requireApplicationAccess,
 } from '../graphql/authorization';
 
 const User = mongoose.model<UserDocument>('user');
@@ -166,8 +167,8 @@ const TemplateFieldInput = new GraphQLInputObjectType({
     label: { type: GraphQLString },
     fieldType: { type: GraphQLString },
     required: { type: GraphQLBoolean },
-    options: { type: new GraphQLList(GraphQLString) }
-  }
+    options: { type: new GraphQLList(GraphQLString) },
+  },
 });
 
 const AnimalInput = new GraphQLInputObjectType({
@@ -181,65 +182,65 @@ const AnimalInput = new GraphQLInputObjectType({
     color: { type: GraphQLString },
     description: { type: GraphQLString },
     image: { type: GraphQLString },
-    video: { type: GraphQLString }
-  }
+    video: { type: GraphQLString },
+  },
 });
 
 const mutation = new GraphQLObjectType({
-  name: "Mutation",
+  name: 'Mutation',
   fields: (): GraphQLFieldConfigMap<unknown, GraphQLContext> => ({
     register: {
       type: UserType,
       args: {
         name: { type: GraphQLString },
-        email: { type: GraphQLString },
+        email: { type: EmailScalar },
         password: { type: GraphQLString },
         userRole: { type: GraphQLString },
         shelterId: { type: GraphQLString },
         shelterName: { type: GraphQLString },
         shelterLocation: { type: GraphQLString },
-        shelterPaymentEmail: { type: GraphQLString }
+        shelterPaymentEmail: { type: EmailScalar },
       },
       resolve(_, args: RegisterArgs) {
         return AuthService.register(args);
-      }
+      },
     },
     login: {
       type: UserType,
       args: {
-        email: { type: GraphQLString },
-        password: { type: GraphQLString }
+        email: { type: EmailScalar },
+        password: { type: GraphQLString },
       },
       resolve(_, args: LoginArgs) {
         return AuthService.login(args);
-      }
+      },
     },
     logout: {
       type: UserType,
       args: {
-        _id: { type: GraphQLID }
+        _id: { type: GraphQLID },
       },
       resolve(_, args: LogoutArgs) {
         return AuthService.logout(args);
-      }
+      },
     },
     verifyUser: {
       type: UserType,
       args: {
-        token: { type: GraphQLString }
+        token: { type: GraphQLString },
       },
       resolve(_, args: VerifyUserArgs) {
         return AuthService.verifyUser(args);
-      }
+      },
     },
     userId: {
       type: UserType,
       args: {
-        token: { type: GraphQLString }
+        token: { type: GraphQLString },
       },
       resolve(_, args: VerifyUserArgs) {
         return AuthService.userId(args);
-      }
+      },
     },
     newAnimal: {
       type: AnimalType,
@@ -256,7 +257,7 @@ const mutation = new GraphQLObjectType({
         video: { type: GraphQLString },
         status: { type: GraphQLString },
         applications: { type: GraphQLID },
-        shelterId: { type: GraphQLID }
+        shelterId: { type: GraphQLID },
       },
       async resolve(_, args: AnimalArgs & { shelterId?: string }, context: GraphQLContext) {
         // Require authentication and shelter staff access
@@ -265,17 +266,30 @@ const mutation = new GraphQLObjectType({
         } else {
           requireAuth(context);
         }
-        const { name, type, breed, age, sex, color, description, image, images, video, status } = args;
-        const newAnimal = new Animal({ name, type, breed: breed || '', age, sex, color, description, image, images: images || [], video, status: status || 'available' });
+        const { name, type, breed, age, sex, color, description, image, images, video, status } =
+          args;
+        const newAnimal = new Animal({
+          name,
+          type,
+          breed: breed || '',
+          age,
+          sex,
+          color,
+          description,
+          image,
+          images: images || [],
+          video,
+          status: status || 'available',
+        });
         await newAnimal.save();
         return newAnimal;
-      }
+      },
     },
     deleteAnimal: {
       type: AnimalType,
       args: {
         _id: { type: GraphQLID },
-        shelterId: { type: GraphQLID }
+        shelterId: { type: GraphQLID },
       },
       async resolve(_, args: { _id: string; shelterId?: string }, context: GraphQLContext) {
         // Find the animal to get the shelter it belongs to
@@ -293,7 +307,7 @@ const mutation = new GraphQLObjectType({
         }
 
         return Animal.deleteOne({ _id: args._id });
-      }
+      },
     },
     updateAnimal: {
       type: AnimalType,
@@ -310,10 +324,23 @@ const mutation = new GraphQLObjectType({
         images: { type: new GraphQLList(GraphQLString) },
         video: { type: GraphQLString },
         status: { type: GraphQLString },
-        applications: { type: GraphQLID }
+        applications: { type: GraphQLID },
       },
       async resolve(_, args: AnimalArgs & { _id: string }, context: GraphQLContext) {
-        const { _id, name, type, breed, age, sex, color, description, image, images, video, status } = args;
+        const {
+          _id,
+          name,
+          type,
+          breed,
+          age,
+          sex,
+          color,
+          description,
+          image,
+          images,
+          video,
+          status,
+        } = args;
         const animal = await Animal.findById(_id);
         if (!animal) return null;
 
@@ -338,13 +365,13 @@ const mutation = new GraphQLObjectType({
         if (status) animal.status = status as typeof animal.status;
         await animal.save();
         return animal;
-      }
+      },
     },
     updateAnimalStatus: {
       type: AnimalType,
       args: {
         _id: { type: GraphQLID },
-        status: { type: GraphQLString }
+        status: { type: GraphQLString },
       },
       async resolve(_, args: { _id: string; status: string }, context: GraphQLContext) {
         const animal = await Animal.findById(args._id);
@@ -361,17 +388,17 @@ const mutation = new GraphQLObjectType({
         animal.status = args.status as typeof animal.status;
         await animal.save();
         await pubsub.publish(SUBSCRIPTION_EVENTS.ANIMAL_STATUS_CHANGED, {
-          animalStatusChanged: animal
+          animalStatusChanged: animal,
         });
         return animal;
-      }
+      },
     },
     newApplication: {
       type: ApplicationType,
       args: {
         animalId: { type: GraphQLString },
         userId: { type: GraphQLString },
-        applicationData: { type: GraphQLString }
+        applicationData: { type: GraphQLString },
       },
       async resolve(_, args: ApplicationArgs, context: GraphQLContext) {
         // Users can only create applications for themselves
@@ -381,7 +408,13 @@ const mutation = new GraphQLObjectType({
         }
 
         const { animalId, userId, applicationData } = args;
-        const newApp = new Application({ animalId, userId, applicationData, status: 'submitted', submittedAt: new Date() });
+        const newApp = new Application({
+          animalId,
+          userId,
+          applicationData,
+          status: 'submitted',
+          submittedAt: new Date(),
+        });
         const animal = await Animal.findById(animalId);
         if (animal) {
           animal.applications.push(newApp._id);
@@ -390,17 +423,17 @@ const mutation = new GraphQLObjectType({
           const shelter = await Shelter.findOne({ animals: animal._id });
           await pubsub.publish(SUBSCRIPTION_EVENTS.NEW_APPLICATION, {
             newApplication: newApp,
-            newApplicationShelterId: shelter?._id.toString()
+            newApplicationShelterId: shelter?._id.toString(),
           });
           return newApp;
         }
         return null;
-      }
+      },
     },
     deleteApplication: {
       type: ApplicationType,
       args: {
-        _id: { type: GraphQLID }
+        _id: { type: GraphQLID },
       },
       async resolve(_, args: { _id: string }, context: GraphQLContext) {
         const application = await Application.findById(args._id);
@@ -418,14 +451,14 @@ const mutation = new GraphQLObjectType({
         );
 
         return Application.deleteOne({ _id: args._id });
-      }
+      },
     },
     editApplication: {
       type: ApplicationType,
       args: {
         _id: { type: GraphQLID },
         animalId: { type: GraphQLString },
-        applicationData: { type: GraphQLString }
+        applicationData: { type: GraphQLString },
       },
       async resolve(_, args: { _id: string; applicationData: string }, context: GraphQLContext) {
         const { _id, applicationData } = args;
@@ -438,13 +471,13 @@ const mutation = new GraphQLObjectType({
         application.applicationData = applicationData;
         await application.save();
         return application;
-      }
+      },
     },
     updateApplicationStatus: {
       type: ApplicationType,
       args: {
         _id: { type: GraphQLID },
-        status: { type: GraphQLString }
+        status: { type: GraphQLString },
       },
       async resolve(_, args: { _id: string; status: string }, context: GraphQLContext) {
         const application = await Application.findById(args._id);
@@ -462,10 +495,10 @@ const mutation = new GraphQLObjectType({
         application.status = args.status as typeof application.status;
         await application.save();
         await pubsub.publish(SUBSCRIPTION_EVENTS.APPLICATION_STATUS_CHANGED, {
-          applicationStatusChanged: application
+          applicationStatusChanged: application,
         });
         return application;
-      }
+      },
     },
     markNotificationRead: {
       type: NotificationType,
@@ -481,7 +514,7 @@ const mutation = new GraphQLObjectType({
         notification.read = true;
         await notification.save();
         return notification;
-      }
+      },
     },
     markAllNotificationsRead: {
       type: GraphQLString,
@@ -491,7 +524,7 @@ const mutation = new GraphQLObjectType({
         requireSelf(context, args.userId);
         await NotificationModel.updateMany({ userId: args.userId, read: false }, { read: true });
         return 'success';
-      }
+      },
     },
     createReview: {
       type: ReviewType,
@@ -499,9 +532,13 @@ const mutation = new GraphQLObjectType({
         userId: { type: GraphQLString },
         shelterId: { type: GraphQLString },
         rating: { type: GraphQLInt },
-        comment: { type: GraphQLString }
+        comment: { type: GraphQLString },
       },
-      async resolve(_, args: { userId: string; shelterId: string; rating: number; comment?: string }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: { userId: string; shelterId: string; rating: number; comment?: string },
+        context: GraphQLContext
+      ) {
         // Users can only create reviews as themselves
         requireSelf(context, args.userId);
 
@@ -509,22 +546,32 @@ const mutation = new GraphQLObjectType({
           userId: args.userId,
           shelterId: args.shelterId,
           rating: args.rating,
-          comment: args.comment || ''
+          comment: args.comment || '',
         });
         await review.save();
         return review;
-      }
+      },
     },
     addMedicalRecord: {
       type: AnimalType,
       args: {
         animalId: { type: GraphQLID },
-        date: { type: GraphQLString },
+        date: { type: DateScalar },
         recordType: { type: GraphQLString },
         description: { type: GraphQLString },
-        veterinarian: { type: GraphQLString }
+        veterinarian: { type: GraphQLString },
       },
-      async resolve(_, args: { animalId: string; date: string; recordType: string; description: string; veterinarian?: string }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: {
+          animalId: string;
+          date: Date;
+          recordType: string;
+          description: string;
+          veterinarian?: string;
+        },
+        context: GraphQLContext
+      ) {
         const animal = await Animal.findById(args.animalId);
         if (!animal) return null;
 
@@ -538,23 +585,27 @@ const mutation = new GraphQLObjectType({
 
         if (!animal.medicalRecords) animal.medicalRecords = [];
         animal.medicalRecords.push({
-          date: args.date,
+          date: args.date.toISOString(),
           recordType: args.recordType,
           description: args.description,
-          veterinarian: args.veterinarian || ''
+          veterinarian: args.veterinarian || '',
         });
         await animal.save();
         return animal;
-      }
+      },
     },
     updateUser: {
       type: UserType,
       args: {
         _id: { type: GraphQLID },
         name: { type: GraphQLString },
-        email: { type: GraphQLString }
+        email: { type: EmailScalar },
       },
-      async resolve(_, args: { _id: string; name?: string; email?: string }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: { _id: string; name?: string; email?: string },
+        context: GraphQLContext
+      ) {
         // Users can only update their own profile
         requireSelf(context, args._id);
 
@@ -566,13 +617,13 @@ const mutation = new GraphQLObjectType({
           return user;
         }
         return null;
-      }
+      },
     },
     addFavorite: {
       type: UserType,
       args: {
         userId: { type: GraphQLID },
-        animalId: { type: GraphQLID }
+        animalId: { type: GraphQLID },
       },
       async resolve(_, args: { userId: string; animalId: string }, context: GraphQLContext) {
         // Users can only modify their own favorites
@@ -580,23 +631,21 @@ const mutation = new GraphQLObjectType({
 
         const user = await User.findById(args.userId);
         if (user) {
-          const alreadyFavorited = user.favorites.some(
-            (id) => id.toString() === args.animalId
-          );
+          const alreadyFavorited = user.favorites.some((id) => id.toString() === args.animalId);
           if (!alreadyFavorited) {
-            user.favorites.push(args.animalId as unknown as typeof user.favorites[0]);
+            user.favorites.push(args.animalId as unknown as (typeof user.favorites)[0]);
             await user.save();
           }
           return user;
         }
         return null;
-      }
+      },
     },
     removeFavorite: {
       type: UserType,
       args: {
         userId: { type: GraphQLID },
-        animalId: { type: GraphQLID }
+        animalId: { type: GraphQLID },
       },
       async resolve(_, args: { userId: string; animalId: string }, context: GraphQLContext) {
         // Users can only modify their own favorites
@@ -611,40 +660,49 @@ const mutation = new GraphQLObjectType({
           return user;
         }
         return null;
-      }
+      },
     },
     newShelter: {
       type: ShelterType,
       args: {
         name: { type: GraphQLString },
         location: { type: GraphQLString },
-        paymentEmail: { type: GraphQLString },
+        paymentEmail: { type: EmailScalar },
         phone: { type: GraphQLString },
-        email: { type: GraphQLString },
-        website: { type: GraphQLString },
+        email: { type: EmailScalar },
+        website: { type: URLScalar },
         hours: { type: GraphQLString },
-        description: { type: GraphQLString }
+        description: { type: GraphQLString },
       },
       async resolve(_, args: ShelterArgs, context: GraphQLContext) {
         // Only authenticated users can create shelters
         requireAuth(context);
 
         const { name, location, paymentEmail, phone, email, website, hours, description } = args;
-        const newShelter = new Shelter({ name, location, paymentEmail, phone, email, website, hours, description });
+        const newShelter = new Shelter({
+          name,
+          location,
+          paymentEmail,
+          phone,
+          email,
+          website,
+          hours,
+          description,
+        });
         await newShelter.save();
         return newShelter;
-      }
+      },
     },
     deleteShelter: {
       type: ShelterType,
       args: {
-        _id: { type: GraphQLID }
+        _id: { type: GraphQLID },
       },
       async resolve(_, args: { _id: string }, context: GraphQLContext) {
         // Only admins can delete shelters
         requireAdmin(context);
         return Shelter.deleteOne({ _id: args._id });
-      }
+      },
     },
     editShelter: {
       type: ShelterType,
@@ -653,42 +711,54 @@ const mutation = new GraphQLObjectType({
         name: { type: GraphQLString },
         location: { type: GraphQLString },
         users: { type: GraphQLString },
-        paymentEmail: { type: GraphQLString },
+        paymentEmail: { type: EmailScalar },
         phone: { type: GraphQLString },
-        email: { type: GraphQLString },
-        website: { type: GraphQLString },
+        email: { type: EmailScalar },
+        website: { type: URLScalar },
         hours: { type: GraphQLString },
         description: { type: GraphQLString },
-        animals: { type: GraphQLString }
+        animals: { type: GraphQLString },
       },
       async resolve(_, args: ShelterArgs & { _id: string }, context: GraphQLContext) {
         // Only shelter staff can edit their shelter
         await requireShelterStaff(context, args._id);
 
-        const { _id, name, location, users, paymentEmail, phone, email, website, hours, description, animals } = args;
+        const {
+          _id,
+          name,
+          location,
+          users,
+          paymentEmail,
+          phone,
+          email,
+          website,
+          hours,
+          description,
+          animals,
+        } = args;
         const shelter = await Shelter.findById(_id);
         if (shelter) {
           shelter.name = name;
           shelter.location = location;
-          if (users) shelter.users = users as unknown as (typeof shelter.users);
+          if (users) shelter.users = users as unknown as typeof shelter.users;
           shelter.paymentEmail = paymentEmail;
           if (phone !== undefined) shelter.phone = phone;
           if (email !== undefined) shelter.email = email;
           if (website !== undefined) shelter.website = website;
           if (hours !== undefined) shelter.hours = hours;
           if (description !== undefined) shelter.description = description;
-          if (animals) shelter.animals = animals as unknown as (typeof shelter.animals);
+          if (animals) shelter.animals = animals as unknown as typeof shelter.animals;
           await shelter.save();
           return shelter;
         }
         return null;
-      }
+      },
     },
     addShelterStaff: {
       type: ShelterType,
       args: {
         shelterId: { type: GraphQLID },
-        email: { type: GraphQLString }
+        email: { type: EmailScalar },
       },
       async resolve(_, args: { shelterId: string; email: string }, context: GraphQLContext) {
         // Only shelter staff can add new staff
@@ -698,23 +768,21 @@ const mutation = new GraphQLObjectType({
         if (!shelter) return null;
         const user = await User.findOne({ email: args.email });
         if (!user) throw new Error('User not found with that email');
-        const alreadyStaff = shelter.users.some(
-          (id) => id.toString() === user._id.toString()
-        );
+        const alreadyStaff = shelter.users.some((id) => id.toString() === user._id.toString());
         if (alreadyStaff) throw new Error('User is already staff');
-        shelter.users.push(user._id as unknown as typeof shelter.users[0]);
+        shelter.users.push(user._id as unknown as (typeof shelter.users)[0]);
         user.userRole = 'shelter';
         user.shelterId = shelter._id as unknown as typeof user.shelterId;
         await user.save();
         await shelter.save();
         return shelter;
-      }
+      },
     },
     removeShelterStaff: {
       type: ShelterType,
       args: {
         shelterId: { type: GraphQLID },
-        userId: { type: GraphQLID }
+        userId: { type: GraphQLID },
       },
       async resolve(_, args: { shelterId: string; userId: string }, context: GraphQLContext) {
         // Only shelter staff can remove staff
@@ -733,7 +801,7 @@ const mutation = new GraphQLObjectType({
         }
         await shelter.save();
         return shelter;
-      }
+      },
     },
     createEvent: {
       type: EventType,
@@ -741,12 +809,24 @@ const mutation = new GraphQLObjectType({
         shelterId: { type: GraphQLID },
         title: { type: GraphQLString },
         description: { type: GraphQLString },
-        date: { type: GraphQLString },
-        endDate: { type: GraphQLString },
+        date: { type: DateScalar },
+        endDate: { type: DateScalar },
         location: { type: GraphQLString },
-        eventType: { type: GraphQLString }
+        eventType: { type: GraphQLString },
       },
-      async resolve(_, args: { shelterId: string; title: string; description?: string; date: string; endDate?: string; location?: string; eventType?: string }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: {
+          shelterId: string;
+          title: string;
+          description?: string;
+          date: Date;
+          endDate?: Date;
+          location?: string;
+          eventType?: string;
+        },
+        context: GraphQLContext
+      ) {
         // Only shelter staff can create events
         await requireShelterStaff(context, args.shelterId);
 
@@ -754,14 +834,14 @@ const mutation = new GraphQLObjectType({
           shelterId: args.shelterId,
           title: args.title,
           description: args.description || '',
-          date: new Date(args.date),
-          endDate: args.endDate ? new Date(args.endDate) : undefined,
+          date: args.date,
+          endDate: args.endDate,
           location: args.location || '',
-          eventType: args.eventType || 'other'
+          eventType: args.eventType || 'other',
         });
         await event.save();
         return event;
-      }
+      },
     },
     deleteEvent: {
       type: EventType,
@@ -774,7 +854,7 @@ const mutation = new GraphQLObjectType({
         await requireShelterStaff(context, event.shelterId.toString());
 
         return EventModel.findByIdAndDelete(args._id);
-      }
+      },
     },
     createDonation: {
       type: DonationType,
@@ -783,11 +863,26 @@ const mutation = new GraphQLObjectType({
         userId: { type: GraphQLString },
         donorName: { type: GraphQLString },
         amount: { type: GraphQLFloat },
-        message: { type: GraphQLString }
+        message: { type: GraphQLString },
       },
-      async resolve(_, args: { shelterId: string; userId?: string; donorName: string; amount: number; message?: string }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: {
+          shelterId: string;
+          userId?: string;
+          donorName: string;
+          amount: number;
+          message?: string;
+        },
+        context: GraphQLContext
+      ) {
         // Donations can be anonymous (no auth required) but if userId is provided, verify it matches
-        if (args.userId && context.userId && args.userId !== context.userId && context.userRole !== 'admin') {
+        if (
+          args.userId &&
+          context.userId &&
+          args.userId !== context.userId &&
+          context.userRole !== 'admin'
+        ) {
           throw new Error('Cannot create donation for another user');
         }
 
@@ -814,11 +909,11 @@ const mutation = new GraphQLObjectType({
           userId: args.userId || '',
           donorName: args.donorName.trim(),
           amount: args.amount,
-          message: args.message?.trim() || ''
+          message: args.message?.trim() || '',
         });
         await donation.save();
         return donation;
-      }
+      },
     },
     createFoster: {
       type: FosterType,
@@ -827,12 +922,25 @@ const mutation = new GraphQLObjectType({
         animalId: { type: GraphQLID },
         userId: { type: GraphQLString },
         fosterName: { type: GraphQLString },
-        fosterEmail: { type: GraphQLString },
-        startDate: { type: GraphQLString },
-        endDate: { type: GraphQLString },
-        notes: { type: GraphQLString }
+        fosterEmail: { type: EmailScalar },
+        startDate: { type: DateScalar },
+        endDate: { type: DateScalar },
+        notes: { type: GraphQLString },
       },
-      async resolve(_, args: { shelterId: string; animalId: string; userId?: string; fosterName: string; fosterEmail?: string; startDate: string; endDate?: string; notes?: string }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: {
+          shelterId: string;
+          animalId: string;
+          userId?: string;
+          fosterName: string;
+          fosterEmail?: string;
+          startDate: Date;
+          endDate?: Date;
+          notes?: string;
+        },
+        context: GraphQLContext
+      ) {
         // Only shelter staff can create foster records
         await requireShelterStaff(context, args.shelterId);
 
@@ -842,24 +950,28 @@ const mutation = new GraphQLObjectType({
           userId: args.userId || '',
           fosterName: args.fosterName,
           fosterEmail: args.fosterEmail || '',
-          startDate: new Date(args.startDate),
-          endDate: args.endDate ? new Date(args.endDate) : undefined,
+          startDate: args.startDate,
+          endDate: args.endDate,
           status: 'active',
-          notes: args.notes || ''
+          notes: args.notes || '',
         });
         await foster.save();
         return foster;
-      }
+      },
     },
     updateFosterStatus: {
       type: FosterType,
       args: {
         _id: { type: GraphQLID },
         status: { type: GraphQLString },
-        endDate: { type: GraphQLString },
-        notes: { type: GraphQLString }
+        endDate: { type: DateScalar },
+        notes: { type: GraphQLString },
       },
-      async resolve(_, args: { _id: string; status?: string; endDate?: string; notes?: string }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: { _id: string; status?: string; endDate?: Date; notes?: string },
+        context: GraphQLContext
+      ) {
         const foster = await FosterModel.findById(args._id);
         if (!foster) return null;
 
@@ -867,11 +979,11 @@ const mutation = new GraphQLObjectType({
         await requireShelterStaff(context, foster.shelterId.toString());
 
         if (args.status) foster.status = args.status as typeof foster.status;
-        if (args.endDate) foster.endDate = new Date(args.endDate);
+        if (args.endDate) foster.endDate = args.endDate;
         if (args.notes !== undefined) foster.notes = args.notes;
         await foster.save();
         return foster;
-      }
+      },
     },
     createSavedSearch: {
       type: SavedSearchType,
@@ -884,9 +996,23 @@ const mutation = new GraphQLObjectType({
         color: { type: GraphQLString },
         status: { type: GraphQLString },
         minAge: { type: GraphQLInt },
-        maxAge: { type: GraphQLInt }
+        maxAge: { type: GraphQLInt },
       },
-      async resolve(_, args: { userId: string; name: string; type?: string; breed?: string; sex?: string; color?: string; status?: string; minAge?: number; maxAge?: number }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: {
+          userId: string;
+          name: string;
+          type?: string;
+          breed?: string;
+          sex?: string;
+          color?: string;
+          status?: string;
+          minAge?: number;
+          maxAge?: number;
+        },
+        context: GraphQLContext
+      ) {
         // Users can only create saved searches for themselves
         requireSelf(context, args.userId);
 
@@ -901,11 +1027,11 @@ const mutation = new GraphQLObjectType({
         const savedSearch = new SavedSearchModel({
           userId: args.userId,
           name: args.name,
-          filters
+          filters,
         });
         await savedSearch.save();
         return savedSearch;
-      }
+      },
     },
     deleteSavedSearch: {
       type: SavedSearchType,
@@ -918,7 +1044,7 @@ const mutation = new GraphQLObjectType({
         requireSelf(context, savedSearch.userId.toString());
 
         return SavedSearchModel.findByIdAndDelete(args._id);
-      }
+      },
     },
     logActivity: {
       type: ActivityLogType,
@@ -927,9 +1053,19 @@ const mutation = new GraphQLObjectType({
         action: { type: GraphQLString },
         entityType: { type: GraphQLString },
         entityId: { type: GraphQLString },
-        description: { type: GraphQLString }
+        description: { type: GraphQLString },
       },
-      async resolve(_, args: { shelterId: string; action: string; entityType: string; entityId?: string; description: string }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: {
+          shelterId: string;
+          action: string;
+          entityType: string;
+          entityId?: string;
+          description: string;
+        },
+        context: GraphQLContext
+      ) {
         // Only shelter staff can log activity
         await requireShelterStaff(context, args.shelterId);
 
@@ -938,17 +1074,17 @@ const mutation = new GraphQLObjectType({
           action: args.action,
           entityType: args.entityType,
           entityId: args.entityId || '',
-          description: args.description
+          description: args.description,
         });
         await log.save();
         return log;
-      }
+      },
     },
     verifyShelter: {
       type: ShelterType,
       args: {
         shelterId: { type: GraphQLID },
-        verified: { type: GraphQLBoolean }
+        verified: { type: GraphQLBoolean },
       },
       async resolve(_, args: { shelterId: string; verified: boolean }, context: GraphQLContext) {
         // Only admins can verify shelters
@@ -962,32 +1098,45 @@ const mutation = new GraphQLObjectType({
           return shelter;
         }
         return null;
-      }
+      },
     },
     createApplicationTemplate: {
       type: ApplicationTemplateType,
       args: {
         shelterId: { type: GraphQLID },
         name: { type: GraphQLString },
-        fields: { type: new GraphQLList(TemplateFieldInput) }
+        fields: { type: new GraphQLList(TemplateFieldInput) },
       },
-      async resolve(_, args: { shelterId: string; name: string; fields: Array<{ label: string; fieldType: string; required?: boolean; options?: string[] }> }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: {
+          shelterId: string;
+          name: string;
+          fields: Array<{
+            label: string;
+            fieldType: string;
+            required?: boolean;
+            options?: string[];
+          }>;
+        },
+        context: GraphQLContext
+      ) {
         // Only shelter staff can create templates
         await requireShelterStaff(context, args.shelterId);
 
         const template = new ApplicationTemplateModel({
           shelterId: args.shelterId,
           name: args.name,
-          fields: (args.fields || []).map(f => ({
+          fields: (args.fields || []).map((f) => ({
             label: f.label,
             fieldType: f.fieldType,
             required: f.required || false,
-            options: f.options || []
-          }))
+            options: f.options || [],
+          })),
         });
         await template.save();
         return template;
-      }
+      },
     },
     deleteApplicationTemplate: {
       type: ApplicationTemplateType,
@@ -1000,15 +1149,32 @@ const mutation = new GraphQLObjectType({
         await requireShelterStaff(context, template.shelterId.toString());
 
         return ApplicationTemplateModel.findByIdAndDelete(args._id);
-      }
+      },
     },
     bulkCreateAnimals: {
       type: new GraphQLList(AnimalType),
       args: {
         animals: { type: new GraphQLList(AnimalInput) },
-        shelterId: { type: GraphQLID }
+        shelterId: { type: GraphQLID },
       },
-      async resolve(_, args: { animals: Array<{ name: string; type: string; breed?: string; age: number; sex: string; color: string; description: string; image?: string; video?: string }>; shelterId?: string }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: {
+          animals: Array<{
+            name: string;
+            type: string;
+            breed?: string;
+            age: number;
+            sex: string;
+            color: string;
+            description: string;
+            image?: string;
+            video?: string;
+          }>;
+          shelterId?: string;
+        },
+        context: GraphQLContext
+      ) {
         // Require shelter staff access if shelterId is provided
         if (args.shelterId) {
           await requireShelterStaff(context, args.shelterId);
@@ -1028,7 +1194,7 @@ const mutation = new GraphQLObjectType({
             description: animalData.description,
             image: animalData.image || '',
             video: animalData.video || '',
-            status: 'available'
+            status: 'available',
           });
           await newAnimal.save();
           created.push(newAnimal);
@@ -1037,13 +1203,13 @@ const mutation = new GraphQLObjectType({
           const shelter = await Shelter.findById(args.shelterId);
           if (shelter) {
             for (const animal of created) {
-              shelter.animals.push(animal._id as unknown as typeof shelter.animals[0]);
+              shelter.animals.push(animal._id as unknown as (typeof shelter.animals)[0]);
             }
             await shelter.save();
           }
         }
         return created;
-      }
+      },
     },
     createSuccessStory: {
       type: SuccessStoryType,
@@ -1053,9 +1219,20 @@ const mutation = new GraphQLObjectType({
         animalType: { type: GraphQLString },
         title: { type: GraphQLString },
         story: { type: GraphQLString },
-        image: { type: GraphQLString }
+        image: { type: GraphQLString },
       },
-      async resolve(_, args: { userId: string; animalName: string; animalType: string; title: string; story: string; image?: string }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: {
+          userId: string;
+          animalName: string;
+          animalType: string;
+          title: string;
+          story: string;
+          image?: string;
+        },
+        context: GraphQLContext
+      ) {
         // Users can only create stories as themselves
         requireSelf(context, args.userId);
 
@@ -1067,11 +1244,11 @@ const mutation = new GraphQLObjectType({
           title,
           story,
           image: image || '',
-          createdAt: new Date()
+          createdAt: new Date(),
         });
         await successStory.save();
         return successStory;
-      }
+      },
     },
     registerTerminalReader: {
       type: TerminalReaderType,
@@ -1079,9 +1256,13 @@ const mutation = new GraphQLObjectType({
         shelterId: { type: GraphQLID },
         registrationCode: { type: GraphQLString },
         label: { type: GraphQLString },
-        location: { type: GraphQLString }
+        location: { type: GraphQLString },
       },
-      async resolve(_, args: { shelterId: string; registrationCode: string; label: string; location?: string }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: { shelterId: string; registrationCode: string; label: string; location?: string },
+        context: GraphQLContext
+      ) {
         // Only shelter staff can register terminal readers
         await requireShelterStaff(context, args.shelterId);
 
@@ -1098,7 +1279,7 @@ const mutation = new GraphQLObjectType({
         const reader = await stripeTerminal.registerReader({
           registrationCode: args.registrationCode,
           label: args.label,
-          location: args.location
+          location: args.location,
         });
 
         const terminalReader = new TerminalReaderModel({
@@ -1109,16 +1290,16 @@ const mutation = new GraphQLObjectType({
           serialNumber: reader.serial_number || '',
           location: args.location || '',
           status: 'online',
-          registeredAt: new Date()
+          registeredAt: new Date(),
         });
         await terminalReader.save();
         return terminalReader;
-      }
+      },
     },
     deleteTerminalReader: {
       type: TerminalReaderType,
       args: {
-        _id: { type: GraphQLID }
+        _id: { type: GraphQLID },
       },
       async resolve(_, args: { _id: string }, context: GraphQLContext) {
         const reader = await TerminalReaderModel.findById(args._id);
@@ -1130,7 +1311,7 @@ const mutation = new GraphQLObjectType({
         await stripeTerminal.deleteReader(reader.stripeReaderId);
         await TerminalReaderModel.deleteOne({ _id: args._id });
         return reader;
-      }
+      },
     },
     createTerminalPaymentIntent: {
       type: PaymentIntentType,
@@ -1139,9 +1320,19 @@ const mutation = new GraphQLObjectType({
         readerId: { type: GraphQLString },
         amount: { type: GraphQLInt },
         currency: { type: GraphQLString },
-        description: { type: GraphQLString }
+        description: { type: GraphQLString },
       },
-      async resolve(_, args: { shelterId: string; readerId: string; amount: number; currency?: string; description?: string }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: {
+          shelterId: string;
+          readerId: string;
+          amount: number;
+          currency?: string;
+          description?: string;
+        },
+        context: GraphQLContext
+      ) {
         // Only shelter staff can create payment intents
         await requireShelterStaff(context, args.shelterId);
 
@@ -1162,7 +1353,7 @@ const mutation = new GraphQLObjectType({
           readerId: args.readerId,
           amount: args.amount,
           currency: args.currency,
-          description: args.description
+          description: args.description,
         });
 
         return {
@@ -1171,9 +1362,9 @@ const mutation = new GraphQLObjectType({
           currency: paymentIntent.currency,
           status: paymentIntent.status,
           description: paymentIntent.description || '',
-          clientSecret: paymentIntent.client_secret || ''
+          clientSecret: paymentIntent.client_secret || '',
         };
-      }
+      },
     },
     sendMessage: {
       type: MessageType,
@@ -1181,9 +1372,13 @@ const mutation = new GraphQLObjectType({
         senderId: { type: GraphQLString },
         recipientId: { type: GraphQLString },
         shelterId: { type: GraphQLString },
-        content: { type: GraphQLString }
+        content: { type: GraphQLString },
       },
-      async resolve(_, args: { senderId: string; recipientId: string; shelterId: string; content: string }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: { senderId: string; recipientId: string; shelterId: string; content: string },
+        context: GraphQLContext
+      ) {
         // Users can only send messages as themselves
         requireSelf(context, args.senderId);
 
@@ -1211,20 +1406,24 @@ const mutation = new GraphQLObjectType({
           shelterId: args.shelterId,
           content: args.content.trim(),
           read: false,
-          createdAt: new Date()
+          createdAt: new Date(),
         });
         await message.save();
         return message;
-      }
+      },
     },
     markMessagesRead: {
       type: GraphQLBoolean,
       args: {
         shelterId: { type: GraphQLString },
         userId: { type: GraphQLString },
-        readerId: { type: GraphQLString }
+        readerId: { type: GraphQLString },
       },
-      async resolve(_, args: { shelterId: string; userId: string; readerId: string }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: { shelterId: string; userId: string; readerId: string },
+        context: GraphQLContext
+      ) {
         // Only the recipient can mark messages as read
         requireSelf(context, args.readerId);
 
@@ -1233,36 +1432,43 @@ const mutation = new GraphQLObjectType({
             shelterId: args.shelterId,
             senderId: args.userId,
             recipientId: args.readerId,
-            read: false
+            read: false,
           },
           { $set: { read: true } }
         );
         return true;
-      }
+      },
     },
     addVolunteer: {
       type: VolunteerType,
       args: {
         shelterId: { type: GraphQLID },
         name: { type: GraphQLString },
-        email: { type: GraphQLString },
+        email: { type: EmailScalar },
         phone: { type: GraphQLString },
         skills: { type: new GraphQLList(GraphQLString) },
         availability: { type: GraphQLString },
-        notes: { type: GraphQLString }
+        notes: { type: GraphQLString },
       },
-      async resolve(_, args: { shelterId: string; name: string; email?: string; phone?: string; skills?: string[]; availability?: string; notes?: string }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: {
+          shelterId: string;
+          name: string;
+          email?: string;
+          phone?: string;
+          skills?: string[];
+          availability?: string;
+          notes?: string;
+        },
+        context: GraphQLContext
+      ) {
         // Only shelter staff can add volunteers
         await requireShelterStaff(context, args.shelterId);
 
         // Validate required fields
         if (!args.shelterId || !args.name || !args.name.trim()) {
           throw new Error('Shelter ID and volunteer name are required');
-        }
-
-        // Validate email format if provided
-        if (args.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(args.email)) {
-          throw new Error('Invalid email format');
         }
 
         // Validate skills limit
@@ -1280,17 +1486,17 @@ const mutation = new GraphQLObjectType({
           status: 'pending',
           startDate: new Date(),
           totalHours: 0,
-          notes: args.notes || ''
+          notes: args.notes || '',
         });
         await volunteer.save();
         return volunteer;
-      }
+      },
     },
     updateVolunteerStatus: {
       type: VolunteerType,
       args: {
         _id: { type: GraphQLID },
-        status: { type: GraphQLString }
+        status: { type: GraphQLString },
       },
       async resolve(_, args: { _id: string; status: string }, context: GraphQLContext) {
         const volunteer = await VolunteerModel.findById(args._id);
@@ -1302,13 +1508,13 @@ const mutation = new GraphQLObjectType({
         volunteer.status = args.status as typeof volunteer.status;
         await volunteer.save();
         return volunteer;
-      }
+      },
     },
     logVolunteerHours: {
       type: VolunteerType,
       args: {
         _id: { type: GraphQLID },
-        hours: { type: GraphQLInt }
+        hours: { type: GraphQLInt },
       },
       async resolve(_, args: { _id: string; hours: number }, context: GraphQLContext) {
         // Validate hours
@@ -1330,7 +1536,7 @@ const mutation = new GraphQLObjectType({
         volunteer.totalHours += args.hours;
         await volunteer.save();
         return volunteer;
-      }
+      },
     },
     addBehaviorNote: {
       type: BehaviorNoteType,
@@ -1340,16 +1546,20 @@ const mutation = new GraphQLObjectType({
         noteType: { type: GraphQLString },
         severity: { type: GraphQLString },
         content: { type: GraphQLString },
-        author: { type: GraphQLString }
+        author: { type: GraphQLString },
       },
-      async resolve(_, args: {
-        animalId: string;
-        shelterId: string;
-        noteType: string;
-        severity: string;
-        content: string;
-        author?: string;
-      }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: {
+          animalId: string;
+          shelterId: string;
+          noteType: string;
+          severity: string;
+          content: string;
+          author?: string;
+        },
+        context: GraphQLContext
+      ) {
         // Only shelter staff can add behavior notes
         await requireShelterStaff(context, args.shelterId);
 
@@ -1369,16 +1579,16 @@ const mutation = new GraphQLObjectType({
           content: args.content,
           author: args.author || '',
           resolved: false,
-          createdAt: new Date()
+          createdAt: new Date(),
         });
         await note.save();
         return note;
-      }
+      },
     },
     resolveBehaviorNote: {
       type: BehaviorNoteType,
       args: {
-        _id: { type: GraphQLID }
+        _id: { type: GraphQLID },
       },
       async resolve(_, args: { _id: string }, context: GraphQLContext) {
         const note = await BehaviorNoteModel.findById(args._id);
@@ -1393,7 +1603,7 @@ const mutation = new GraphQLObjectType({
         note.resolvedAt = new Date();
         await note.save();
         return note;
-      }
+      },
     },
     createAnnouncement: {
       type: AnnouncementType,
@@ -1402,15 +1612,19 @@ const mutation = new GraphQLObjectType({
         title: { type: GraphQLString },
         content: { type: GraphQLString },
         category: { type: GraphQLString },
-        author: { type: GraphQLString }
+        author: { type: GraphQLString },
       },
-      async resolve(_, args: {
-        shelterId: string;
-        title: string;
-        content: string;
-        category: string;
-        author?: string;
-      }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: {
+          shelterId: string;
+          title: string;
+          content: string;
+          category: string;
+          author?: string;
+        },
+        context: GraphQLContext
+      ) {
         // Only shelter staff can create announcements
         await requireShelterStaff(context, args.shelterId);
 
@@ -1432,16 +1646,16 @@ const mutation = new GraphQLObjectType({
           author: args.author || '',
           pinned: false,
           active: true,
-          createdAt: new Date()
+          createdAt: new Date(),
         });
         await announcement.save();
         return announcement;
-      }
+      },
     },
     toggleAnnouncementPin: {
       type: AnnouncementType,
       args: {
-        _id: { type: GraphQLID }
+        _id: { type: GraphQLID },
       },
       async resolve(_, args: { _id: string }, context: GraphQLContext) {
         const announcement = await AnnouncementModel.findById(args._id);
@@ -1455,12 +1669,12 @@ const mutation = new GraphQLObjectType({
         announcement.pinned = !announcement.pinned;
         await announcement.save();
         return announcement;
-      }
+      },
     },
     deleteAnnouncement: {
       type: AnnouncementType,
       args: {
-        _id: { type: GraphQLID }
+        _id: { type: GraphQLID },
       },
       async resolve(_, args: { _id: string }, context: GraphQLContext) {
         const announcement = await AnnouncementModel.findById(args._id);
@@ -1470,7 +1684,7 @@ const mutation = new GraphQLObjectType({
         await requireShelterStaff(context, announcement.shelterId.toString());
 
         return AnnouncementModel.findByIdAndDelete(args._id);
-      }
+      },
     },
     registerMicrochip: {
       type: MicrochipType,
@@ -1478,9 +1692,13 @@ const mutation = new GraphQLObjectType({
         animalId: { type: GraphQLID },
         shelterId: { type: GraphQLID },
         chipNumber: { type: GraphQLString },
-        manufacturer: { type: GraphQLString }
+        manufacturer: { type: GraphQLString },
       },
-      async resolve(_, args: { animalId: string; shelterId: string; chipNumber: string; manufacturer?: string }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: { animalId: string; shelterId: string; chipNumber: string; manufacturer?: string },
+        context: GraphQLContext
+      ) {
         // Only shelter staff can register microchips
         await requireShelterStaff(context, args.shelterId);
 
@@ -1498,17 +1716,17 @@ const mutation = new GraphQLObjectType({
           manufacturer: args.manufacturer || '',
           status: 'registered',
           registrationDate: new Date(),
-          createdAt: new Date()
+          createdAt: new Date(),
         });
         await microchip.save();
         return microchip;
-      }
+      },
     },
     updateMicrochipStatus: {
       type: MicrochipType,
       args: {
         _id: { type: GraphQLID },
-        status: { type: GraphQLString }
+        status: { type: GraphQLString },
       },
       async resolve(_, args: { _id: string; status: string }, context: GraphQLContext) {
         const microchip = await MicrochipModel.findById(args._id);
@@ -1520,7 +1738,7 @@ const mutation = new GraphQLObjectType({
         microchip.status = args.status as typeof microchip.status;
         await microchip.save();
         return microchip;
-      }
+      },
     },
     addWeightRecord: {
       type: WeightRecordType,
@@ -1529,9 +1747,13 @@ const mutation = new GraphQLObjectType({
         shelterId: { type: GraphQLID },
         weight: { type: GraphQLFloat },
         unit: { type: GraphQLString },
-        notes: { type: GraphQLString }
+        notes: { type: GraphQLString },
       },
-      async resolve(_, args: { animalId: string; shelterId: string; weight: number; unit: string; notes?: string }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: { animalId: string; shelterId: string; weight: number; unit: string; notes?: string },
+        context: GraphQLContext
+      ) {
         // Only shelter staff can add weight records
         await requireShelterStaff(context, args.shelterId);
 
@@ -1548,11 +1770,11 @@ const mutation = new GraphQLObjectType({
           unit: args.unit || 'lbs',
           notes: args.notes || '',
           recordedAt: new Date(),
-          createdAt: new Date()
+          createdAt: new Date(),
         });
         await record.save();
         return record;
-      }
+      },
     },
     addVaccination: {
       type: VaccinationType,
@@ -1560,12 +1782,24 @@ const mutation = new GraphQLObjectType({
         animalId: { type: GraphQLID },
         shelterId: { type: GraphQLID },
         vaccineName: { type: GraphQLString },
-        dateAdministered: { type: GraphQLString },
-        nextDueDate: { type: GraphQLString },
+        dateAdministered: { type: DateScalar },
+        nextDueDate: { type: DateScalar },
         veterinarian: { type: GraphQLString },
-        notes: { type: GraphQLString }
+        notes: { type: GraphQLString },
       },
-      async resolve(_, args: { animalId: string; shelterId: string; vaccineName: string; dateAdministered: string; nextDueDate?: string; veterinarian?: string; notes?: string }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: {
+          animalId: string;
+          shelterId: string;
+          vaccineName: string;
+          dateAdministered: Date;
+          nextDueDate?: Date;
+          veterinarian?: string;
+          notes?: string;
+        },
+        context: GraphQLContext
+      ) {
         // Only shelter staff can add vaccinations
         await requireShelterStaff(context, args.shelterId);
 
@@ -1581,17 +1815,17 @@ const mutation = new GraphQLObjectType({
           veterinarian: args.veterinarian || '',
           status: 'completed',
           notes: args.notes || '',
-          createdAt: new Date()
+          createdAt: new Date(),
         });
         await vaccination.save();
         return vaccination;
-      }
+      },
     },
     updateVaccinationStatus: {
       type: VaccinationType,
       args: {
         _id: { type: GraphQLID },
-        status: { type: GraphQLString }
+        status: { type: GraphQLString },
       },
       async resolve(_, args: { _id: string; status: string }, context: GraphQLContext) {
         const vaccination = await VaccinationModel.findById(args._id);
@@ -1603,7 +1837,7 @@ const mutation = new GraphQLObjectType({
         vaccination.status = args.status as typeof vaccination.status;
         await vaccination.save();
         return vaccination;
-      }
+      },
     },
     createAdoptionFee: {
       type: AdoptionFeeType,
@@ -1613,9 +1847,20 @@ const mutation = new GraphQLObjectType({
         baseFee: { type: GraphQLFloat },
         seniorDiscount: { type: GraphQLFloat },
         specialNeedsDiscount: { type: GraphQLFloat },
-        description: { type: GraphQLString }
+        description: { type: GraphQLString },
       },
-      async resolve(_, args: { shelterId: string; animalType: string; baseFee: number; seniorDiscount?: number; specialNeedsDiscount?: number; description?: string }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: {
+          shelterId: string;
+          animalType: string;
+          baseFee: number;
+          seniorDiscount?: number;
+          specialNeedsDiscount?: number;
+          description?: string;
+        },
+        context: GraphQLContext
+      ) {
         // Only shelter staff can create adoption fees
         await requireShelterStaff(context, args.shelterId);
 
@@ -1630,11 +1875,11 @@ const mutation = new GraphQLObjectType({
           specialNeedsDiscount: args.specialNeedsDiscount || 0,
           description: args.description || '',
           active: true,
-          createdAt: new Date()
+          createdAt: new Date(),
         });
         await fee.save();
         return fee;
-      }
+      },
     },
     updateAdoptionFee: {
       type: AdoptionFeeType,
@@ -1643,9 +1888,19 @@ const mutation = new GraphQLObjectType({
         baseFee: { type: GraphQLFloat },
         seniorDiscount: { type: GraphQLFloat },
         specialNeedsDiscount: { type: GraphQLFloat },
-        active: { type: GraphQLBoolean }
+        active: { type: GraphQLBoolean },
       },
-      async resolve(_, args: { _id: string; baseFee?: number; seniorDiscount?: number; specialNeedsDiscount?: number; active?: boolean }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: {
+          _id: string;
+          baseFee?: number;
+          seniorDiscount?: number;
+          specialNeedsDiscount?: number;
+          active?: boolean;
+        },
+        context: GraphQLContext
+      ) {
         const fee = await AdoptionFeeModel.findById(args._id);
         if (!fee) throw new Error('Adoption fee not found');
 
@@ -1654,11 +1909,12 @@ const mutation = new GraphQLObjectType({
 
         if (args.baseFee !== undefined) fee.baseFee = args.baseFee;
         if (args.seniorDiscount !== undefined) fee.seniorDiscount = args.seniorDiscount;
-        if (args.specialNeedsDiscount !== undefined) fee.specialNeedsDiscount = args.specialNeedsDiscount;
+        if (args.specialNeedsDiscount !== undefined)
+          fee.specialNeedsDiscount = args.specialNeedsDiscount;
         if (args.active !== undefined) fee.active = args.active;
         await fee.save();
         return fee;
-      }
+      },
     },
     updateSpayNeuter: {
       type: SpayNeuterType,
@@ -1666,12 +1922,24 @@ const mutation = new GraphQLObjectType({
         animalId: { type: GraphQLID },
         shelterId: { type: GraphQLID },
         status: { type: GraphQLString },
-        scheduledDate: { type: GraphQLString },
-        completedDate: { type: GraphQLString },
+        scheduledDate: { type: DateScalar },
+        completedDate: { type: DateScalar },
         veterinarian: { type: GraphQLString },
-        notes: { type: GraphQLString }
+        notes: { type: GraphQLString },
       },
-      async resolve(_, args: { animalId: string; shelterId: string; status: string; scheduledDate?: string; completedDate?: string; veterinarian?: string; notes?: string }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: {
+          animalId: string;
+          shelterId: string;
+          status: string;
+          scheduledDate?: Date;
+          completedDate?: Date;
+          veterinarian?: string;
+          notes?: string;
+        },
+        context: GraphQLContext
+      ) {
         // Only shelter staff can update spay/neuter records
         await requireShelterStaff(context, args.shelterId);
 
@@ -1681,17 +1949,17 @@ const mutation = new GraphQLObjectType({
             animalId: args.animalId,
             shelterId: args.shelterId,
             status: args.status,
-            createdAt: new Date()
+            createdAt: new Date(),
           });
         }
         record.status = args.status as typeof record.status;
-        if (args.scheduledDate) record.scheduledDate = new Date(args.scheduledDate);
-        if (args.completedDate) record.completedDate = new Date(args.completedDate);
+        if (args.scheduledDate) record.scheduledDate = args.scheduledDate;
+        if (args.completedDate) record.completedDate = args.completedDate;
         if (args.veterinarian) record.veterinarian = args.veterinarian;
         if (args.notes) record.notes = args.notes;
         await record.save();
         return record;
-      }
+      },
     },
     createIntakeLog: {
       type: IntakeLogType,
@@ -1699,13 +1967,26 @@ const mutation = new GraphQLObjectType({
         animalId: { type: GraphQLID },
         shelterId: { type: GraphQLID },
         intakeType: { type: GraphQLString },
-        intakeDate: { type: GraphQLString },
+        intakeDate: { type: DateScalar },
         source: { type: GraphQLString },
         condition: { type: GraphQLString },
         notes: { type: GraphQLString },
-        createdBy: { type: GraphQLString }
+        createdBy: { type: GraphQLString },
       },
-      async resolve(_, args: { animalId: string; shelterId: string; intakeType: string; intakeDate: string; source?: string; condition?: string; notes?: string; createdBy?: string }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: {
+          animalId: string;
+          shelterId: string;
+          intakeType: string;
+          intakeDate: Date;
+          source?: string;
+          condition?: string;
+          notes?: string;
+          createdBy?: string;
+        },
+        context: GraphQLContext
+      ) {
         // Only shelter staff can create intake logs
         await requireShelterStaff(context, args.shelterId);
 
@@ -1718,11 +1999,11 @@ const mutation = new GraphQLObjectType({
           condition: args.condition || '',
           notes: args.notes || '',
           createdBy: args.createdBy || '',
-          createdAt: new Date()
+          createdAt: new Date(),
         });
         await log.save();
         return log;
-      }
+      },
     },
     createOutcomeLog: {
       type: OutcomeLogType,
@@ -1730,12 +2011,24 @@ const mutation = new GraphQLObjectType({
         animalId: { type: GraphQLID },
         shelterId: { type: GraphQLID },
         outcomeType: { type: GraphQLString },
-        outcomeDate: { type: GraphQLString },
+        outcomeDate: { type: DateScalar },
         destination: { type: GraphQLString },
         notes: { type: GraphQLString },
-        createdBy: { type: GraphQLString }
+        createdBy: { type: GraphQLString },
       },
-      async resolve(_, args: { animalId: string; shelterId: string; outcomeType: string; outcomeDate: string; destination?: string; notes?: string; createdBy?: string }, context: GraphQLContext) {
+      async resolve(
+        _,
+        args: {
+          animalId: string;
+          shelterId: string;
+          outcomeType: string;
+          outcomeDate: Date;
+          destination?: string;
+          notes?: string;
+          createdBy?: string;
+        },
+        context: GraphQLContext
+      ) {
         // Only shelter staff can create outcome logs
         await requireShelterStaff(context, args.shelterId);
 
@@ -1747,13 +2040,13 @@ const mutation = new GraphQLObjectType({
           destination: args.destination || '',
           notes: args.notes || '',
           createdBy: args.createdBy || '',
-          createdAt: new Date()
+          createdAt: new Date(),
         });
         await log.save();
         return log;
-      }
-    }
-  })
+      },
+    },
+  }),
 });
 
 export default mutation;

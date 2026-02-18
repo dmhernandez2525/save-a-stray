@@ -11,24 +11,24 @@ jest.mock('mongoose', () => {
         user: {
           find: jest.fn().mockResolvedValue([]),
           findOne: jest.fn().mockResolvedValue(null),
-          findById: jest.fn().mockResolvedValue(null)
+          findById: jest.fn().mockResolvedValue(null),
         },
         animal: {
           find: jest.fn().mockResolvedValue([]),
-          findById: jest.fn().mockResolvedValue(null)
+          findById: jest.fn().mockResolvedValue(null),
         },
         shelter: {
           find: jest.fn().mockResolvedValue([]),
-          findById: jest.fn().mockResolvedValue(null)
+          findById: jest.fn().mockResolvedValue(null),
         },
         application: {
           find: jest.fn().mockResolvedValue([]),
-          findById: jest.fn().mockResolvedValue(null)
-        }
+          findById: jest.fn().mockResolvedValue(null),
+        },
       };
       return mockModels[modelName] || {};
     }),
-    Schema: originalModule.Schema
+    Schema: originalModule.Schema,
   };
 });
 
@@ -39,20 +39,20 @@ jest.mock('passport', () => ({
   deserializeUser: jest.fn(),
   initialize: jest.fn().mockReturnValue((req, res, next) => next()),
   session: jest.fn().mockReturnValue((req, res, next) => next()),
-  authenticate: jest.fn().mockReturnValue((req, res, next) => next())
+  authenticate: jest.fn().mockReturnValue((req, res, next) => next()),
 }));
 
 // Mock passport-facebook
 jest.mock('passport-facebook', () => ({
-  Strategy: jest.fn().mockImplementation(() => ({}))
+  Strategy: jest.fn().mockImplementation(() => ({})),
 }));
 
 // Mock config keys
 jest.mock('../config/keys', () => ({
   MONGO_URI: 'mongodb://mock-db',
-  secretOrKey: 'test-secret',
+  secretOrKey: 'test-secret-with-at-least-32-characters',
   fbookClient: 'mock-fb-client',
-  fbookKey: 'mock-fb-key'
+  fbookKey: 'mock-fb-key',
 }));
 
 // Mock auth service
@@ -62,7 +62,7 @@ jest.mock('../server/services/auth', () => ({
   logout: jest.fn(),
   verifyUser: jest.fn(),
   facebookRegister: jest.fn(),
-  userId: jest.fn()
+  userId: jest.fn(),
 }));
 
 describe('API Integration Tests', () => {
@@ -87,7 +87,7 @@ describe('API Integration Tests', () => {
         .post('/graphql')
         .set('Content-Type', 'application/json')
         .send({
-          query: '{ __typename }'
+          query: '{ __typename }',
         });
 
       // GraphQL endpoint should be accessible
@@ -107,7 +107,7 @@ describe('API Integration Tests', () => {
                 }
               }
             }
-          `
+          `,
         });
 
       expect(response.status).toBeLessThan(500);
@@ -118,7 +118,7 @@ describe('API Integration Tests', () => {
         .post('/graphql')
         .set('Content-Type', 'application/json')
         .send({
-          query: '{ __typename }'
+          query: '{ __typename }',
         });
 
       expect(response.headers['content-type']).toMatch(/json/);
@@ -131,7 +131,7 @@ describe('API Integration Tests', () => {
         .post('/graphql')
         .set('Content-Type', 'application/json')
         .send({
-          query: '{ __typename }'
+          query: '{ __typename }',
         });
 
       expect(response.headers['access-control-allow-origin']).toBeDefined();
@@ -168,7 +168,7 @@ describe('API Integration Tests', () => {
         .post('/graphql')
         .set('Content-Type', 'application/json')
         .send({
-          query: 'this is not valid graphql'
+          query: 'this is not valid graphql',
         });
 
       expect(response.status).toBeLessThan(500);
@@ -227,7 +227,7 @@ describe('GraphQL Schema Tests', () => {
     const fields = RootQueryType.getFields();
     const findAnimalsArgs = fields.findAnimals.args;
 
-    const argNames = findAnimalsArgs.map(arg => arg.name);
+    const argNames = findAnimalsArgs.map((arg) => arg.name);
     expect(argNames).toContain('type');
     expect(argNames).toContain('breed');
     expect(argNames).toContain('sex');
@@ -243,7 +243,7 @@ describe('GraphQL Schema Tests', () => {
     const fields = RootQueryType.getFields();
     const findAnimalsArgs = fields.findAnimals.args;
 
-    const argNames = findAnimalsArgs.map(arg => arg.name);
+    const argNames = findAnimalsArgs.map((arg) => arg.name);
     expect(argNames).toContain('limit');
     expect(argNames).toContain('offset');
   });
@@ -253,7 +253,7 @@ describe('GraphQL Schema Tests', () => {
     const mutationFields = schema._mutationType.getFields();
 
     expect(mutationFields.updateAnimalStatus).toBeDefined();
-    const args = mutationFields.updateAnimalStatus.args.map(a => a.name);
+    const args = mutationFields.updateAnimalStatus.args.map((a) => a.name);
     expect(args).toContain('_id');
     expect(args).toContain('status');
   });
@@ -272,11 +272,11 @@ describe('GraphQL Schema Tests', () => {
     expect(mutationFields.addFavorite).toBeDefined();
     expect(mutationFields.removeFavorite).toBeDefined();
 
-    const addArgs = mutationFields.addFavorite.args.map(a => a.name);
+    const addArgs = mutationFields.addFavorite.args.map((a) => a.name);
     expect(addArgs).toContain('userId');
     expect(addArgs).toContain('animalId');
 
-    const removeArgs = mutationFields.removeFavorite.args.map(a => a.name);
+    const removeArgs = mutationFields.removeFavorite.args.map((a) => a.name);
     expect(removeArgs).toContain('userId');
     expect(removeArgs).toContain('animalId');
   });
@@ -286,7 +286,7 @@ describe('GraphQL Schema Tests', () => {
     const fields = RootQueryType.getFields();
 
     expect(fields.userFavorites).toBeDefined();
-    const args = fields.userFavorites.args.map(a => a.name);
+    const args = fields.userFavorites.args.map((a) => a.name);
     expect(args).toContain('userId');
   });
 
@@ -311,7 +311,7 @@ describe('GraphQL Schema Tests', () => {
     const mutationFields = schema._mutationType.getFields();
 
     expect(mutationFields.updateApplicationStatus).toBeDefined();
-    const args = mutationFields.updateApplicationStatus.args.map(a => a.name);
+    const args = mutationFields.updateApplicationStatus.args.map((a) => a.name);
     expect(args).toContain('_id');
     expect(args).toContain('status');
   });
@@ -321,7 +321,7 @@ describe('GraphQL Schema Tests', () => {
     const fields = RootQueryType.getFields();
 
     expect(fields.shelterApplications).toBeDefined();
-    const args = fields.shelterApplications.args.map(a => a.name);
+    const args = fields.shelterApplications.args.map((a) => a.name);
     expect(args).toContain('shelterId');
   });
 
@@ -330,7 +330,7 @@ describe('GraphQL Schema Tests', () => {
     const fields = RootQueryType.getFields();
 
     expect(fields.userApplications).toBeDefined();
-    const args = fields.userApplications.args.map(a => a.name);
+    const args = fields.userApplications.args.map((a) => a.name);
     expect(args).toContain('userId');
   });
 
@@ -345,10 +345,10 @@ describe('GraphQL Schema Tests', () => {
     const schema = require('../server/schema/schema').default;
     const mutationFields = schema._mutationType.getFields();
 
-    const newAnimalArgs = mutationFields.newAnimal.args.map(a => a.name);
+    const newAnimalArgs = mutationFields.newAnimal.args.map((a) => a.name);
     expect(newAnimalArgs).toContain('images');
 
-    const updateAnimalArgs = mutationFields.updateAnimal.args.map(a => a.name);
+    const updateAnimalArgs = mutationFields.updateAnimal.args.map((a) => a.name);
     expect(updateAnimalArgs).toContain('images');
   });
 
@@ -357,7 +357,7 @@ describe('GraphQL Schema Tests', () => {
     const mutationFields = schema._mutationType.getFields();
 
     expect(mutationFields.register).toBeDefined();
-    const args = mutationFields.register.args.map(a => a.name);
+    const args = mutationFields.register.args.map((a) => a.name);
     expect(args).toContain('name');
     expect(args).toContain('email');
     expect(args).toContain('password');
@@ -394,7 +394,7 @@ describe('GraphQL Schema Tests', () => {
     const mutationFields = schema._mutationType.getFields();
 
     expect(mutationFields.createSuccessStory).toBeDefined();
-    const args = mutationFields.createSuccessStory.args.map(a => a.name);
+    const args = mutationFields.createSuccessStory.args.map((a) => a.name);
     expect(args).toContain('userId');
     expect(args).toContain('animalName');
     expect(args).toContain('animalType');
@@ -421,7 +421,7 @@ describe('GraphQL Schema Tests', () => {
     const fields = RootQueryType.getFields();
 
     expect(fields.userNotifications).toBeDefined();
-    const args = fields.userNotifications.args.map(a => a.name);
+    const args = fields.userNotifications.args.map((a) => a.name);
     expect(args).toContain('userId');
   });
 
@@ -450,7 +450,7 @@ describe('GraphQL Schema Tests', () => {
     const fields = RootQueryType.getFields();
 
     expect(fields.shelterReviews).toBeDefined();
-    const args = fields.shelterReviews.args.map(a => a.name);
+    const args = fields.shelterReviews.args.map((a) => a.name);
     expect(args).toContain('shelterId');
   });
 
@@ -459,7 +459,7 @@ describe('GraphQL Schema Tests', () => {
     const mutationFields = schema._mutationType.getFields();
 
     expect(mutationFields.createReview).toBeDefined();
-    const args = mutationFields.createReview.args.map(a => a.name);
+    const args = mutationFields.createReview.args.map((a) => a.name);
     expect(args).toContain('userId');
     expect(args).toContain('shelterId');
     expect(args).toContain('rating');
@@ -489,7 +489,7 @@ describe('GraphQL Schema Tests', () => {
     const mutationFields = schema._mutationType.getFields();
 
     expect(mutationFields.addMedicalRecord).toBeDefined();
-    const args = mutationFields.addMedicalRecord.args.map(a => a.name);
+    const args = mutationFields.addMedicalRecord.args.map((a) => a.name);
     expect(args).toContain('animalId');
     expect(args).toContain('date');
     expect(args).toContain('recordType');
@@ -502,7 +502,7 @@ describe('GraphQL Schema Tests', () => {
     const mutationFields = schema._mutationType.getFields();
 
     expect(mutationFields.updateUser).toBeDefined();
-    const args = mutationFields.updateUser.args.map(a => a.name);
+    const args = mutationFields.updateUser.args.map((a) => a.name);
     expect(args).toContain('_id');
     expect(args).toContain('name');
     expect(args).toContain('email');
@@ -523,7 +523,7 @@ describe('GraphQL Schema Tests', () => {
     const schema = require('../server/schema/schema').default;
     const mutationFields = schema._mutationType.getFields();
 
-    const editArgs = mutationFields.editShelter.args.map(a => a.name);
+    const editArgs = mutationFields.editShelter.args.map((a) => a.name);
     expect(editArgs).toContain('phone');
     expect(editArgs).toContain('email');
     expect(editArgs).toContain('website');
@@ -535,7 +535,7 @@ describe('GraphQL Schema Tests', () => {
     const schema = require('../server/schema/schema').default;
     const mutationFields = schema._mutationType.getFields();
 
-    const newArgs = mutationFields.newShelter.args.map(a => a.name);
+    const newArgs = mutationFields.newShelter.args.map((a) => a.name);
     expect(newArgs).toContain('phone');
     expect(newArgs).toContain('email');
     expect(newArgs).toContain('website');
@@ -548,7 +548,7 @@ describe('GraphQL Schema Tests', () => {
     const fields = RootQueryType.getFields();
 
     expect(fields.similarAnimals).toBeDefined();
-    const args = fields.similarAnimals.args.map(a => a.name);
+    const args = fields.similarAnimals.args.map((a) => a.name);
     expect(args).toContain('animalId');
     expect(args).toContain('limit');
   });
@@ -558,7 +558,7 @@ describe('GraphQL Schema Tests', () => {
     const fields = RootQueryType.getFields();
 
     expect(fields.shelterAnalytics).toBeDefined();
-    const args = fields.shelterAnalytics.args.map(a => a.name);
+    const args = fields.shelterAnalytics.args.map((a) => a.name);
     expect(args).toContain('shelterId');
   });
 
@@ -584,9 +584,7 @@ describe('GraphQL Schema Tests', () => {
     const fields = RootQueryType.getFields();
     expect(fields.shelterStaff).toBeDefined();
     expect(fields.shelterStaff.args).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ name: 'shelterId' })
-      ])
+      expect.arrayContaining([expect.objectContaining({ name: 'shelterId' })])
     );
   });
 
@@ -594,7 +592,7 @@ describe('GraphQL Schema Tests', () => {
     const mutation = require('../server/schema/mutations').default;
     const fields = mutation.getFields();
     expect(fields.addShelterStaff).toBeDefined();
-    const argNames = fields.addShelterStaff.args.map(a => a.name);
+    const argNames = fields.addShelterStaff.args.map((a) => a.name);
     expect(argNames).toContain('shelterId');
     expect(argNames).toContain('email');
   });
@@ -603,7 +601,7 @@ describe('GraphQL Schema Tests', () => {
     const mutation = require('../server/schema/mutations').default;
     const fields = mutation.getFields();
     expect(fields.removeShelterStaff).toBeDefined();
-    const argNames = fields.removeShelterStaff.args.map(a => a.name);
+    const argNames = fields.removeShelterStaff.args.map((a) => a.name);
     expect(argNames).toContain('shelterId');
     expect(argNames).toContain('userId');
   });
@@ -626,7 +624,7 @@ describe('GraphQL Schema Tests', () => {
     const mutation = require('../server/schema/mutations').default;
     const fields = mutation.getFields();
     expect(fields.bulkCreateAnimals).toBeDefined();
-    const argNames = fields.bulkCreateAnimals.args.map(a => a.name);
+    const argNames = fields.bulkCreateAnimals.args.map((a) => a.name);
     expect(argNames).toContain('animals');
     expect(argNames).toContain('shelterId');
   });
@@ -641,7 +639,7 @@ describe('GraphQL Schema Tests', () => {
   it('should have AnimalInput type with required fields', () => {
     const mutation = require('../server/schema/mutations').default;
     const fields = mutation.getFields();
-    const animalsArg = fields.bulkCreateAnimals.args.find(a => a.name === 'animals');
+    const animalsArg = fields.bulkCreateAnimals.args.find((a) => a.name === 'animals');
     expect(animalsArg).toBeDefined();
   });
 
@@ -663,9 +661,7 @@ describe('GraphQL Schema Tests', () => {
     const fields = RootQueryType.getFields();
     expect(fields.shelterEvents).toBeDefined();
     expect(fields.shelterEvents.args).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ name: 'shelterId' })
-      ])
+      expect.arrayContaining([expect.objectContaining({ name: 'shelterId' })])
     );
   });
 
@@ -673,7 +669,7 @@ describe('GraphQL Schema Tests', () => {
     const mutation = require('../server/schema/mutations').default;
     const fields = mutation.getFields();
     expect(fields.createEvent).toBeDefined();
-    const argNames = fields.createEvent.args.map(a => a.name);
+    const argNames = fields.createEvent.args.map((a) => a.name);
     expect(argNames).toContain('shelterId');
     expect(argNames).toContain('title');
     expect(argNames).toContain('date');
@@ -686,7 +682,7 @@ describe('GraphQL Schema Tests', () => {
     const mutation = require('../server/schema/mutations').default;
     const fields = mutation.getFields();
     expect(fields.deleteEvent).toBeDefined();
-    const argNames = fields.deleteEvent.args.map(a => a.name);
+    const argNames = fields.deleteEvent.args.map((a) => a.name);
     expect(argNames).toContain('_id');
   });
 
@@ -706,9 +702,7 @@ describe('GraphQL Schema Tests', () => {
     const fields = RootQueryType.getFields();
     expect(fields.shelterDonations).toBeDefined();
     expect(fields.shelterDonations.args).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ name: 'shelterId' })
-      ])
+      expect.arrayContaining([expect.objectContaining({ name: 'shelterId' })])
     );
   });
 
@@ -716,7 +710,7 @@ describe('GraphQL Schema Tests', () => {
     const mutation = require('../server/schema/mutations').default;
     const fields = mutation.getFields();
     expect(fields.createDonation).toBeDefined();
-    const argNames = fields.createDonation.args.map(a => a.name);
+    const argNames = fields.createDonation.args.map((a) => a.name);
     expect(argNames).toContain('shelterId');
     expect(argNames).toContain('donorName');
     expect(argNames).toContain('amount');
@@ -835,7 +829,8 @@ describe('GraphQL Schema Tests', () => {
   });
 
   it('should have ApplicationTemplateType with correct fields', () => {
-    const ApplicationTemplateType = require('../server/schema/types/application_template_type').default;
+    const ApplicationTemplateType =
+      require('../server/schema/types/application_template_type').default;
     const fields = ApplicationTemplateType.getFields();
     expect(fields._id).toBeDefined();
     expect(fields.shelterId).toBeDefined();
@@ -864,7 +859,8 @@ describe('GraphQL Schema Tests', () => {
 
   it('should return ApplicationTemplateType from createApplicationTemplate mutation', () => {
     const mutation = require('../server/schema/mutations').default;
-    const ApplicationTemplateType = require('../server/schema/types/application_template_type').default;
+    const ApplicationTemplateType =
+      require('../server/schema/types/application_template_type').default;
     const fields = mutation.getFields();
     expect(fields.createApplicationTemplate.type).toBe(ApplicationTemplateType);
   });
@@ -1068,7 +1064,7 @@ describe('Volunteer Management API', () => {
     const fields = mutation.getFields();
     expect(fields.addVolunteer).toBeDefined();
     expect(fields.addVolunteer.args).toBeDefined();
-    const argNames = fields.addVolunteer.args.map(a => a.name);
+    const argNames = fields.addVolunteer.args.map((a) => a.name);
     expect(argNames).toContain('shelterId');
     expect(argNames).toContain('name');
     expect(argNames).toContain('email');
@@ -1082,7 +1078,7 @@ describe('Volunteer Management API', () => {
     const mutation = require('../server/schema/mutations').default;
     const fields = mutation.getFields();
     expect(fields.updateVolunteerStatus).toBeDefined();
-    const argNames = fields.updateVolunteerStatus.args.map(a => a.name);
+    const argNames = fields.updateVolunteerStatus.args.map((a) => a.name);
     expect(argNames).toContain('_id');
     expect(argNames).toContain('status');
   });
@@ -1091,7 +1087,7 @@ describe('Volunteer Management API', () => {
     const mutation = require('../server/schema/mutations').default;
     const fields = mutation.getFields();
     expect(fields.logVolunteerHours).toBeDefined();
-    const argNames = fields.logVolunteerHours.args.map(a => a.name);
+    const argNames = fields.logVolunteerHours.args.map((a) => a.name);
     expect(argNames).toContain('_id');
     expect(argNames).toContain('hours');
   });
