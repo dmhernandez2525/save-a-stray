@@ -304,8 +304,11 @@ export const COAT_COLORS = ['black', 'white', 'brown', 'golden', 'red', 'cream',
 export const COAT_LENGTHS = ['short', 'medium', 'long', 'hairless', 'wire'] as const;
 
 export function analyzeCoat(colors: string[], pattern?: string, length?: string): CoatAnalysis {
+  if (colors.length === 0) {
+    return { primaryColor: 'unknown', pattern: 'unknown', length: length || 'medium' };
+  }
   return {
-    primaryColor: colors[0] || 'unknown',
+    primaryColor: colors[0],
     secondaryColor: colors.length > 1 ? colors[1] : undefined,
     pattern: pattern || (colors.length > 2 ? 'tricolor' : colors.length > 1 ? 'bicolor' : 'solid'),
     length: length || 'medium',
@@ -342,6 +345,14 @@ export function estimateAge(features: {
 
   if (features.muscleTone === 'lean') { maxMonths = Math.min(maxMonths, 36); }
   else if (features.muscleTone === 'soft') { minMonths = Math.max(minMonths, 48); }
+
+  // Ensure min never exceeds max from conflicting signals
+  if (minMonths > maxMonths) {
+    const mid = Math.round((minMonths + maxMonths) / 2);
+    minMonths = mid;
+    maxMonths = mid;
+    confidence = Math.max(20, confidence - 20);
+  }
 
   confidence = Math.min(90, confidence);
 

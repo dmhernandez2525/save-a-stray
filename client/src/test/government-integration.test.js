@@ -155,7 +155,13 @@ describe('Government Integration', () => {
 
     it('should close incident', () => {
       const inc = createIncident('nuisance', 'citizen1', { address: 'Park', lat: 45.5, lng: -122.6 }, 'Noise');
-      expect(closeIncident(inc).status).toBe('closed');
+      const resolved = resolveIncident(inc, 'Resolved noise complaint');
+      expect(closeIncident(resolved).status).toBe('closed');
+    });
+
+    it('should reject closing non-resolved incident', () => {
+      const inc = createIncident('nuisance', 'citizen1', { address: 'Park', lat: 45.5, lng: -122.6 }, 'Noise');
+      expect(() => closeIncident(inc)).toThrow('Can only close resolved incidents');
     });
   });
 

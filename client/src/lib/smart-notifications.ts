@@ -185,7 +185,7 @@ export function identifyReengagementCandidates(
   const now = Date.now();
   return users
     .map(user => {
-      const inactiveDays = Math.floor((now - new Date(user.lastActiveAt).getTime()) / (86400000));
+      const inactiveDays = Math.max(0, Math.floor((now - new Date(user.lastActiveAt).getTime()) / (86400000)));
       return {
         userId: user.userId,
         lastActiveAt: user.lastActiveAt,
@@ -255,7 +255,10 @@ export function buildDigest(
 ): { items: DigestItem[]; totalCount: number; hasMore: boolean } {
   const sorted = [...items].sort((a, b) => {
     const priorityOrder: Record<NotificationPriority, number> = { critical: 0, high: 1, medium: 2, low: 3 };
-    return (priorityOrder[a.priority] ?? 3) - (priorityOrder[b.priority] ?? 3);
+    const pDiff = (priorityOrder[a.priority] ?? 3) - (priorityOrder[b.priority] ?? 3);
+    if (pDiff !== 0) return pDiff;
+    // Secondary sort by timestamp (newest first) for stability
+    return b.timestamp.localeCompare(a.timestamp);
   });
 
   const selected = sorted.slice(0, maxItems);

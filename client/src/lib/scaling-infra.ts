@@ -213,6 +213,13 @@ export function createRateLimiter(config: RateLimiterConfig): {
         windows.set(key, entry);
       }
 
+      // Periodic cleanup of expired entries to prevent memory leaks
+      if (windows.size > 1000) {
+        for (const [k, v] of windows) {
+          if (now - v.start >= config.windowMs) windows.delete(k);
+        }
+      }
+
       entry.count++;
       const allowed = entry.count <= config.maxRequests;
       const remaining = Math.max(0, config.maxRequests - entry.count);

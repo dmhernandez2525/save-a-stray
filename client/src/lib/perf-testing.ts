@@ -46,12 +46,16 @@ export interface TimingResult {
   timestamp: number;
 }
 
+const MAX_MEASUREMENTS = 10000;
 const measurements: TimingResult[] = [];
 
 export function startMeasure(name: string): () => number {
   const start = performance.now();
   return () => {
     const duration = Math.round((performance.now() - start) * 100) / 100;
+    if (measurements.length >= MAX_MEASUREMENTS) {
+      measurements.splice(0, Math.floor(MAX_MEASUREMENTS / 4));
+    }
     measurements.push({ name, duration, timestamp: Date.now() });
     return duration;
   };
@@ -163,6 +167,10 @@ export function analyzeBundles(chunks: BundleChunk[]): {
   largestChunk: string;
   chunkCount: number;
 } {
+  if (chunks.length === 0) {
+    return { totalSizeKb: 0, initialSizeKb: 0, asyncSizeKb: 0, largestChunk: '', chunkCount: 0 };
+  }
+
   const totalSizeKb = chunks.reduce((s, c) => s + c.sizeKb, 0);
   const initial = chunks.filter(c => !c.isAsync);
   const async = chunks.filter(c => c.isAsync);

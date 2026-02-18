@@ -132,6 +132,8 @@ export function formatReportForSubmission(report: RegulatoryReport): string {
       `Average Length of Stay,${d.averageLengthOfStay}`,
       `Spay/Neuter Count,${d.spayNeuterCount}`,
       `Vaccination Count,${d.vaccinationCount}`,
+      ...Object.entries(d.intakeBySpecies).map(([species, count]) => `Intake - ${species},${count}`),
+      ...Object.entries(d.outcomeBySpecies).map(([species, count]) => `Outcome - ${species},${count}`),
     ];
     return lines.join('\n');
   }
@@ -202,6 +204,7 @@ export function resolveIncident(incident: IncidentReport, resolution: string): I
 }
 
 export function closeIncident(incident: IncidentReport): IncidentReport {
+  if (incident.status !== 'resolved') throw new Error('Can only close resolved incidents');
   return { ...incident, status: 'closed' };
 }
 

@@ -138,6 +138,7 @@ export function modifyRecurringAmount(donation: RecurringDonation, newAmount: nu
 }
 
 export function chargeRecurring(donation: RecurringDonation): RecurringDonation {
+  if (donation.status !== 'active') throw new Error('Can only charge active subscriptions');
   const now = new Date();
   const next = calculateNextChargeDate(now, donation.frequency);
   return {
@@ -213,6 +214,7 @@ export function activateCampaign(campaign: Campaign): Campaign {
 }
 
 export function recordCampaignDonation(campaign: Campaign, amount: number): Campaign {
+  if (campaign.status !== 'active') throw new Error('Can only accept donations on active campaigns');
   const raised = campaign.raisedAmount + amount;
   const status = raised >= campaign.goalAmount ? 'completed' : campaign.status;
   return { ...campaign, raisedAmount: raised, donorCount: campaign.donorCount + 1, status };

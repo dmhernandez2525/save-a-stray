@@ -190,12 +190,19 @@ export function buildReport(config: ReportConfig, metrics: ReportMetric[]): Gene
 /**
  * Export a report's metrics as CSV string.
  */
+function escapeCsvField(value: string): string {
+  if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
 export function exportReportAsCsv(report: GeneratedReport): string {
   const headers = ['Metric', 'Value', 'Unit', 'Trend', 'Change %'];
   const rows = report.metrics.map(m => [
-    m.name,
+    escapeCsvField(m.name),
     String(m.value),
-    m.unit,
+    escapeCsvField(m.unit),
     m.trend ?? '',
     m.changePercent !== undefined ? String(m.changePercent) : '',
   ]);
@@ -255,13 +262,24 @@ export function getScheduledReports(): ScheduledReport[] {
 export function calculateNextRun(frequency: string, fromDate?: Date): string {
   const from = fromDate || new Date();
   const next = new Date(from);
+  const originalDay = next.getDate();
 
   const frequencyMap: Record<string, () => void> = {
     daily: () => next.setDate(next.getDate() + 1),
     weekly: () => next.setDate(next.getDate() + 7),
-    monthly: () => next.setMonth(next.getMonth() + 1),
-    quarterly: () => next.setMonth(next.getMonth() + 3),
-    annually: () => next.setFullYear(next.getFullYear() + 1),
+    monthly: () => {
+      next.setMonth(next.getMonth() + 1);
+      // Clamp to last day of target month if overflow occurred (e.g. Jan 31 -> Feb 28)
+      if (next.getDate() !== originalDay) next.setDate(0);
+    },
+    quarterly: () => {
+      next.setMonth(next.getMonth() + 3);
+      if (next.getDate() !== originalDay) next.setDate(0);
+    },
+    annually: () => {
+      next.setFullYear(next.getFullYear() + 1);
+      if (next.getDate() !== originalDay) next.setDate(0);
+    },
   };
 
   const handler = frequencyMap[frequency];

@@ -144,7 +144,12 @@ export function previewImport(content: string, maxRows: number = 5): {
   }
 
   const lines = content.split(/\r?\n/).filter(line => line.trim());
-  if (lines.length < 2) return { headers: [], rows: [], totalRows: 0, format };
+  if (lines.length === 0) return { headers: [], rows: [], totalRows: 0, format };
+
+  // Return headers even for header-only CSVs (no data rows)
+  if (lines.length === 1) {
+    return { headers: parseCsvLine(lines[0]), rows: [], totalRows: 0, format };
+  }
 
   const headers = parseCsvLine(lines[0]);
   const dataLines = lines.slice(1);
@@ -217,7 +222,8 @@ export function downloadContent(content: string, filename: string, mimeType: str
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  // Delay revocation so the browser has time to start the download
+  setTimeout(() => URL.revokeObjectURL(url), 100);
 }
 
 export function formatFileSize(bytes: number): string {
@@ -248,7 +254,8 @@ export function convertToFormat(
       return escapeCsvField(String(val));
     }).join(',')
   );
-  return [header, ...rows].join('\n');
+  // UTF-8 BOM for Excel compatibility
+  return '\uFEFF' + [header, ...rows].join('\n');
 }
 
 // ── Import/Export History ─────────────────────────────────────
