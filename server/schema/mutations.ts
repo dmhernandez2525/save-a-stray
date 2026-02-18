@@ -87,6 +87,13 @@ import StatusHistoryType from './types/status_history_type';
 import { MediaAssetDocument } from '../models/MediaAsset';
 import { DashboardLayoutDocument } from '../models/DashboardLayout';
 import DashboardLayoutType from './types/dashboard_layout_type';
+import { StaffInvitationDocument } from '../models/StaffInvitation';
+import StaffInvitationType from './types/staff_invitation_type';
+import { ShelterStaffRoleDocument } from '../models/ShelterStaffRole';
+import ShelterStaffRoleType from './types/shelter_staff_role_type';
+import { InternalNoteDocument } from '../models/InternalNote';
+import InternalNoteType from './types/internal_note_type';
+import crypto from 'crypto';
 import MediaAssetType from './types/media_asset_type';
 import UploadSignatureType from './types/upload_signature_type';
 import { generateUploadSignature, deleteImage, getThumbnailUrl, getMediumUrl, isValidVideoUrl } from '../services/cloudinary';
@@ -127,6 +134,9 @@ const OutcomeLogModel = mongoose.model<OutcomeLogDocument>('outcomeLog');
 const StatusHistoryModel = mongoose.model<StatusHistoryDocument>('statusHistory');
 const MediaAssetModel = mongoose.model<MediaAssetDocument>('mediaAsset');
 const DashboardLayoutModel = mongoose.model<DashboardLayoutDocument>('dashboardLayout');
+const StaffInvitationModel = mongoose.model<StaffInvitationDocument>('staffInvitation');
+const ShelterStaffRoleModel = mongoose.model<ShelterStaffRoleDocument>('shelterStaffRole');
+const InternalNoteModel = mongoose.model<InternalNoteDocument>('internalNote');
 
 interface RegisterArgs {
   name: string;
@@ -2552,6 +2562,173 @@ const mutation = new GraphQLObjectType({
       args: { url: { type: GraphQLString } },
       resolve(_, args: { url: string }) {
         return isValidVideoUrl(args.url);
+      },
+    },
+    inviteStaff: {
+      type: StaffInvitationType,
+      args: {
+        shelterId: { type: GraphQLID },
+        email: { type: EmailScalar },
+        role: { type: GraphQLString },
+      },
+      async resolve(_, args: { shelterId: string; email: string; role: string }, context: GraphQLContext) {
+        await requireShelterStaff(context, args.shelterId);
+        const validRoles = ['admin', 'staff', 'volunteer', 'readonly'];
+        if (!validRoles.includes(args.role)) {
+          throw new Error(`Invalid role. Must be one of: ${validRoles.join(', ')}`);
+        }
+        const existing = await StaffInvitationModel.findOne({
+          shelterId: args.shelterId,
+          email: args.email,
+          status: 'pending',
+        });
+        if (existing) throw new Error('An invitation is already pending for this email');
+
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 7);
+
+        const invitation = new StaffInvitationModel({
+          shelterId: args.shelterId,
+          email: args.email,
+          role: args.role,
+          invitedBy: context.userId ?? '',
+          token,
+          expiresAt,
+        });
+        await invitation.save();
+        return invitation;
+      },
+    },
+    acceptStaffInvitation: {
+      type: ShelterStaffRoleType,
+      args: { token: { type: GraphQLString } },
+      async resolve(_, args: { token: string }, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        const invitation = await StaffInvitationModel.findOne({ token: args.token, status: 'pending' });
+        if (!invitation) throw new Error('Invalid or expired invitation');
+        if (new Date() > invitation.expiresAt) {
+          invitation.status = 'expired';
+          await invitation.save();
+          throw new Error('Invitation has expired');
+        }
+
+        invitation.status = 'accepted';
+        await invitation.save();
+
+        const staffRole = await ShelterStaffRoleModel.findOneAndUpdate(
+          { shelterId: invitation.shelterId, userId },
+          { role: invitation.role, assignedBy: invitation.invitedBy },
+          { upsert: true, new: true }
+        );
+
+        // Also add user to shelter.users if not already there
+        const shelter = await Shelter.findById(invitation.shelterId);
+        if (shelter) {
+          const alreadyStaff = shelter.users.some(id => id.toString() === userId);
+          if (!alreadyStaff) {
+            shelter.users.push(userId as unknown as (typeof shelter.users)[0]);
+            await shelter.save();
+          }
+        }
+
+        const user = await User.findById(userId);
+        if (user && user.userRole !== 'admin') {
+          user.userRole = 'shelter';
+          user.shelterId = invitation.shelterId as unknown as typeof user.shelterId;
+          await user.save();
+        }
+
+        return staffRole;
+      },
+    },
+    updateStaffRole: {
+      type: ShelterStaffRoleType,
+      args: {
+        shelterId: { type: GraphQLID },
+        userId: { type: GraphQLID },
+        role: { type: GraphQLString },
+      },
+      async resolve(_, args: { shelterId: string; userId: string; role: string }, context: GraphQLContext) {
+        await requireShelterStaff(context, args.shelterId);
+        const validRoles = ['admin', 'staff', 'volunteer', 'readonly'];
+        if (!validRoles.includes(args.role)) {
+          throw new Error(`Invalid role. Must be one of: ${validRoles.join(', ')}`);
+        }
+        const staffRole = await ShelterStaffRoleModel.findOneAndUpdate(
+          { shelterId: args.shelterId, userId: args.userId },
+          { role: args.role, assignedBy: context.userId ?? '' },
+          { upsert: true, new: true }
+        );
+        return staffRole;
+      },
+    },
+    assignAnimalToStaff: {
+      type: ShelterStaffRoleType,
+      args: {
+        shelterId: { type: GraphQLID },
+        userId: { type: GraphQLID },
+        animalId: { type: GraphQLID },
+      },
+      async resolve(_, args: { shelterId: string; userId: string; animalId: string }, context: GraphQLContext) {
+        await requireShelterStaff(context, args.shelterId);
+        const staffRole = await ShelterStaffRoleModel.findOne({ shelterId: args.shelterId, userId: args.userId });
+        if (!staffRole) throw new Error('Staff member not found');
+        if (!staffRole.assignedAnimals.includes(args.animalId)) {
+          staffRole.assignedAnimals.push(args.animalId);
+          await staffRole.save();
+        }
+        return staffRole;
+      },
+    },
+    unassignAnimalFromStaff: {
+      type: ShelterStaffRoleType,
+      args: {
+        shelterId: { type: GraphQLID },
+        userId: { type: GraphQLID },
+        animalId: { type: GraphQLID },
+      },
+      async resolve(_, args: { shelterId: string; userId: string; animalId: string }, context: GraphQLContext) {
+        await requireShelterStaff(context, args.shelterId);
+        const staffRole = await ShelterStaffRoleModel.findOne({ shelterId: args.shelterId, userId: args.userId });
+        if (!staffRole) throw new Error('Staff member not found');
+        staffRole.assignedAnimals = staffRole.assignedAnimals.filter(id => id !== args.animalId);
+        await staffRole.save();
+        return staffRole;
+      },
+    },
+    addInternalNote: {
+      type: InternalNoteType,
+      args: {
+        shelterId: { type: GraphQLID },
+        entityType: { type: GraphQLString },
+        entityId: { type: GraphQLString },
+        content: { type: GraphQLString },
+      },
+      async resolve(_, args: { shelterId: string; entityType: string; entityId?: string; content: string }, context: GraphQLContext) {
+        await requireShelterStaff(context, args.shelterId);
+        if (!args.content || args.content.length > 5000) {
+          throw new Error('Content is required and must be less than 5000 characters');
+        }
+        const note = new InternalNoteModel({
+          shelterId: args.shelterId,
+          entityType: args.entityType || 'general',
+          entityId: args.entityId || '',
+          content: args.content,
+          author: context.userId ?? '',
+        });
+        await note.save();
+        return note;
+      },
+    },
+    deleteInternalNote: {
+      type: InternalNoteType,
+      args: { _id: { type: GraphQLID } },
+      async resolve(_, args: { _id: string }, context: GraphQLContext) {
+        const note = await InternalNoteModel.findById(args._id);
+        if (!note) return null;
+        await requireShelterStaff(context, note.shelterId);
+        return InternalNoteModel.findByIdAndDelete(args._id);
       },
     },
     saveDashboardLayout: {

@@ -27,8 +27,11 @@ import AuthSession from './AuthSession';
 import StatusHistory from './StatusHistory';
 import MediaAsset from './MediaAsset';
 import DashboardLayout from './DashboardLayout';
+import StaffInvitation from './StaffInvitation';
+import ShelterStaffRole from './ShelterStaffRole';
+import InternalNote from './InternalNote';
 
-export { User, Animal, Application, Shelter, SuccessStory, Review, Notification, Event, Donation, Foster, SavedSearch, ApplicationTemplate, ActivityLog, TerminalReader, Message, Volunteer, BehaviorNote, Announcement, Microchip, WeightRecord, Vaccination, AdoptionFee, SpayNeuter, IntakeLog, OutcomeLog, AuthSession, StatusHistory, MediaAsset, DashboardLayout };
+export { User, Animal, Application, Shelter, SuccessStory, Review, Notification, Event, Donation, Foster, SavedSearch, ApplicationTemplate, ActivityLog, TerminalReader, Message, Volunteer, BehaviorNote, Announcement, Microchip, WeightRecord, Vaccination, AdoptionFee, SpayNeuter, IntakeLog, OutcomeLog, AuthSession, StatusHistory, MediaAsset, DashboardLayout, StaffInvitation, ShelterStaffRole, InternalNote };
 
 // Also import models to ensure they are registered with Mongoose
 import './User';
@@ -60,3 +63,6 @@ import './AuthSession';
 import './StatusHistory';
 import './MediaAsset';
 import './DashboardLayout';
+import './StaffInvitation';
+import './ShelterStaffRole';
+import './InternalNote';
