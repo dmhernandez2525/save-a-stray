@@ -7,6 +7,7 @@ import {
   GraphQLString,
   GraphQLInt,
   GraphQLFloat,
+  GraphQLBoolean,
   GraphQLFieldConfigMap
 } from 'graphql';
 import { isMongoConnected, mockAnimals, filterMockAnimals, mockPlatformStats, mockSuccessStories } from '../../mockData';
@@ -38,6 +39,7 @@ import AdoptionFeeType from './adoption_fee_type';
 import SpayNeuterType from './spay_neuter_type';
 import IntakeLogType from './intake_log_type';
 import OutcomeLogType from './outcome_log_type';
+import AnimalTimelineEntryType from './animal_timeline_type';
 import { paginationQueryFields } from './pagination_queries';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
@@ -138,12 +140,24 @@ const RootQueryType = new GraphQLObjectType({
         color: { type: GraphQLString },
         name: { type: GraphQLString },
         status: { type: GraphQLString },
+        size: { type: GraphQLString },
+        energyLevel: { type: GraphQLString },
+        goodWithKids: { type: GraphQLBoolean },
+        goodWithDogs: { type: GraphQLBoolean },
+        goodWithCats: { type: GraphQLBoolean },
+        houseTrained: { type: GraphQLBoolean },
         minAge: { type: GraphQLInt },
         maxAge: { type: GraphQLInt },
         limit: { type: GraphQLInt },
         offset: { type: GraphQLInt }
       },
-      resolve(_, args: { type?: string; breed?: string; sex?: string; color?: string; name?: string; status?: string; minAge?: number; maxAge?: number; limit?: number; offset?: number }) {
+      resolve(_, args: {
+        type?: string; breed?: string; sex?: string; color?: string; name?: string;
+        status?: string; size?: string; energyLevel?: string;
+        goodWithKids?: boolean; goodWithDogs?: boolean; goodWithCats?: boolean;
+        houseTrained?: boolean;
+        minAge?: number; maxAge?: number; limit?: number; offset?: number;
+      }) {
         // Return mock data if MongoDB is not connected
         if (!isMongoConnected()) {
           return filterMockAnimals(args);
@@ -153,6 +167,12 @@ const RootQueryType = new GraphQLObjectType({
         if (args.breed) filter.breed = { $regex: args.breed, $options: 'i' };
         if (args.sex) filter.sex = args.sex;
         if (args.status) filter.status = args.status;
+        if (args.size) filter.size = args.size;
+        if (args.energyLevel) filter.energyLevel = args.energyLevel;
+        if (args.goodWithKids !== undefined) filter.goodWithKids = args.goodWithKids;
+        if (args.goodWithDogs !== undefined) filter.goodWithDogs = args.goodWithDogs;
+        if (args.goodWithCats !== undefined) filter.goodWithCats = args.goodWithCats;
+        if (args.houseTrained !== undefined) filter.houseTrained = args.houseTrained;
         if (args.color) filter.color = { $regex: args.color, $options: 'i' };
         if (args.name) filter.name = { $regex: args.name, $options: 'i' };
         if (args.minAge !== undefined || args.maxAge !== undefined) {
@@ -540,6 +560,123 @@ const RootQueryType = new GraphQLObjectType({
       args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
       resolve(_, args: { shelterId: string }) {
         return OutcomeLogModel.find({ shelterId: args.shelterId }).sort({ outcomeDate: -1 });
+      }
+    },
+    animalTimeline: {
+      type: new GraphQLList(AnimalTimelineEntryType),
+      args: { animalId: { type: new GraphQLNonNull(GraphQLID) } },
+      async resolve(_, args: { animalId: string }) {
+        const entries: Array<{ _id: string; eventType: string; date: string; title: string; description: string; author: string }> = [];
+
+        const [intakeLogs, outcomeLogs, behaviorNotes, weightRecords, vaccinations, spayNeuter] = await Promise.all([
+          IntakeLogModel.find({ animalId: args.animalId }),
+          OutcomeLogModel.find({ animalId: args.animalId }),
+          BehaviorNoteModel.find({ animalId: args.animalId }),
+          WeightRecordModel.find({ animalId: args.animalId }),
+          VaccinationModel.find({ animalId: args.animalId }),
+          SpayNeuterModel.findOne({ animalId: args.animalId }),
+        ]);
+
+        for (const log of intakeLogs) {
+          entries.push({
+            _id: log._id.toString(),
+            eventType: 'intake',
+            date: log.intakeDate?.toISOString() ?? log.createdAt?.toISOString() ?? '',
+            title: `Intake: ${log.intakeType}`,
+            description: [log.source, log.condition, log.intakeNotes].filter(Boolean).join(' - '),
+            author: log.receivedBy ?? '',
+          });
+        }
+
+        for (const log of outcomeLogs) {
+          entries.push({
+            _id: log._id.toString(),
+            eventType: 'outcome',
+            date: log.outcomeDate?.toISOString() ?? log.createdAt?.toISOString() ?? '',
+            title: `Outcome: ${log.outcomeType}`,
+            description: [log.destination, log.outcomeNotes].filter(Boolean).join(' - '),
+            author: log.processedBy ?? '',
+          });
+        }
+
+        for (const note of behaviorNotes) {
+          entries.push({
+            _id: note._id.toString(),
+            eventType: 'behavior',
+            date: note.createdAt?.toISOString() ?? '',
+            title: `Behavior: ${note.noteType} (${note.severity})`,
+            description: note.content ?? '',
+            author: note.author ?? '',
+          });
+        }
+
+        for (const record of weightRecords) {
+          entries.push({
+            _id: record._id.toString(),
+            eventType: 'weight',
+            date: record.recordedAt?.toISOString() ?? '',
+            title: `Weight: ${record.weight} ${record.unit}`,
+            description: record.notes ?? '',
+            author: record.recordedBy ?? '',
+          });
+        }
+
+        for (const vax of vaccinations) {
+          entries.push({
+            _id: vax._id.toString(),
+            eventType: 'vaccination',
+            date: vax.administeredDate?.toISOString() ?? vax.createdAt?.toISOString() ?? '',
+            title: `Vaccination: ${vax.vaccineName}`,
+            description: vax.notes ?? '',
+            author: vax.administeredBy ?? '',
+          });
+        }
+
+        if (spayNeuter) {
+          const dateStr = spayNeuter.completedDate?.toISOString()
+            ?? spayNeuter.scheduledDate?.toISOString()
+            ?? spayNeuter.createdAt?.toISOString()
+            ?? '';
+          entries.push({
+            _id: spayNeuter._id.toString(),
+            eventType: 'spay_neuter',
+            date: dateStr,
+            title: `Spay/Neuter: ${spayNeuter.status}`,
+            description: spayNeuter.notes ?? '',
+            author: spayNeuter.veterinarian ?? '',
+          });
+        }
+
+        // Also include medical records from the animal itself
+        const animal = await Animal.findById(args.animalId);
+        if (animal?.medicalRecords) {
+          for (const record of animal.medicalRecords) {
+            entries.push({
+              _id: record._id?.toString() ?? '',
+              eventType: 'medical',
+              date: record.date ?? '',
+              title: `Medical: ${record.recordType}`,
+              description: record.description ?? '',
+              author: record.veterinarian ?? '',
+            });
+          }
+        }
+
+        // Sort by date descending (newest first)
+        entries.sort((a, b) => {
+          const dateA = a.date ? new Date(a.date).getTime() : 0;
+          const dateB = b.date ? new Date(b.date).getTime() : 0;
+          return dateB - dateA;
+        });
+
+        return entries;
+      }
+    },
+    animalBehaviorNotes: {
+      type: new GraphQLList(BehaviorNoteType),
+      args: { animalId: { type: new GraphQLNonNull(GraphQLID) } },
+      resolve(_, args: { animalId: string }) {
+        return BehaviorNoteModel.find({ animalId: args.animalId }).sort({ createdAt: -1 });
       }
     }
   })

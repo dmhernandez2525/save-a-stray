@@ -52,8 +52,54 @@ const AnimalSchema = new Schema<AnimalDocument>({
   },
   status: {
     type: String,
-    enum: ['available', 'pending', 'adopted'],
+    enum: ['available', 'pending', 'adopted', 'hold', 'fostered', 'transferred', 'deceased'],
     default: 'available'
+  },
+  size: {
+    type: String,
+    enum: ['small', 'medium', 'large', 'extra-large'],
+  },
+  temperament: {
+    type: String,
+    default: ''
+  },
+  energyLevel: {
+    type: String,
+    enum: ['low', 'moderate', 'high'],
+  },
+  houseTrained: {
+    type: Boolean,
+  },
+  goodWithKids: {
+    type: Boolean,
+  },
+  goodWithDogs: {
+    type: Boolean,
+  },
+  goodWithCats: {
+    type: Boolean,
+  },
+  personalityTraits: {
+    type: [String],
+    default: [],
+  },
+  specialNeeds: {
+    type: String,
+    default: ''
+  },
+  microchipId: {
+    type: String,
+    default: ''
+  },
+  intakeDate: {
+    type: Date,
+  },
+  intakeSource: {
+    type: String,
+    default: ''
+  },
+  adoptionFee: {
+    type: Number,
   },
   medicalRecords: [{
     date: { type: String, required: true },
@@ -66,6 +112,10 @@ const AnimalSchema = new Schema<AnimalDocument>({
     ref: 'application'
   }]
 });
+
+AnimalSchema.index({ type: 1, status: 1 });
+AnimalSchema.index({ breed: 1 });
+AnimalSchema.index({ intakeDate: 1 });
 
 const Animal: Model<AnimalDocument> = mongoose.model<AnimalDocument>('animal', AnimalSchema);
 

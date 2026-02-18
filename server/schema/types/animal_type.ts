@@ -5,6 +5,8 @@ import {
   GraphQLID,
   GraphQLList,
   GraphQLInt,
+  GraphQLFloat,
+  GraphQLBoolean,
   GraphQLFieldConfigMap
 } from 'graphql';
 import MedicalRecordType from './medical_record_type';
@@ -21,9 +23,23 @@ interface AnimalParentValue {
   sex: string;
   color: string;
   image: string;
+  images?: string[];
   video: string;
   description: string;
   status: string;
+  size?: string;
+  temperament?: string;
+  energyLevel?: string;
+  houseTrained?: boolean;
+  goodWithKids?: boolean;
+  goodWithDogs?: boolean;
+  goodWithCats?: boolean;
+  personalityTraits?: string[];
+  specialNeeds?: string;
+  microchipId?: string;
+  intakeDate?: Date;
+  intakeSource?: string;
+  adoptionFee?: number;
   applications?: Array<string | Types.ObjectId>;
 }
 
@@ -42,6 +58,24 @@ const AnimalType: GraphQLObjectType = new GraphQLObjectType({
     video: { type: GraphQLString },
     description: { type: GraphQLString },
     status: { type: GraphQLString },
+    size: { type: GraphQLString },
+    temperament: { type: GraphQLString },
+    energyLevel: { type: GraphQLString },
+    houseTrained: { type: GraphQLBoolean },
+    goodWithKids: { type: GraphQLBoolean },
+    goodWithDogs: { type: GraphQLBoolean },
+    goodWithCats: { type: GraphQLBoolean },
+    personalityTraits: { type: new GraphQLList(GraphQLString) },
+    specialNeeds: { type: GraphQLString },
+    microchipId: { type: GraphQLString },
+    intakeDate: {
+      type: GraphQLString,
+      resolve(parent: AnimalParentValue) {
+        return parent.intakeDate ? new Date(parent.intakeDate).toISOString() : null;
+      },
+    },
+    intakeSource: { type: GraphQLString },
+    adoptionFee: { type: GraphQLFloat },
     medicalRecords: { type: new GraphQLList(MedicalRecordType) },
     applications: {
       type: new GraphQLList(require("./application_type").default),
