@@ -38,6 +38,22 @@ export interface OrientationItem {
   required: boolean;
 }
 
+export interface BlackoutDate {
+  start: Date;
+  end: Date;
+  reason: string;
+}
+
+export interface FosterPreferences {
+  preferredSizes: string[];
+  preferredAgeRange: string;
+  acceptsMedicalNeeds: boolean;
+  acceptsBehavioralNeeds: boolean;
+  maxDuration: number;
+  preferredDuration: number;
+  emergencyAvailable: boolean;
+}
+
 export interface FosterProfileDocument extends Document {
   userId: string;
   shelterId: string;
@@ -58,6 +74,10 @@ export interface FosterProfileDocument extends Document {
   backgroundCheckDate?: Date;
   totalAnimalsHelped: number;
   currentAnimalCount: number;
+  availableFrom?: Date;
+  availableUntil?: Date;
+  blackoutDates: BlackoutDate[];
+  preferences: FosterPreferences;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -116,6 +136,22 @@ const OrientationItemSchema = new Schema({
   required: { type: Boolean, default: true },
 }, { _id: true });
 
+const BlackoutDateSchema = new Schema({
+  start: { type: Date, required: true },
+  end: { type: Date, required: true },
+  reason: { type: String, default: '' },
+}, { _id: true });
+
+const FosterPreferencesSchema = new Schema({
+  preferredSizes: { type: [String], default: [] },
+  preferredAgeRange: { type: String, default: 'any' },
+  acceptsMedicalNeeds: { type: Boolean, default: false },
+  acceptsBehavioralNeeds: { type: Boolean, default: false },
+  maxDuration: { type: Number, default: 90 },
+  preferredDuration: { type: Number, default: 14 },
+  emergencyAvailable: { type: Boolean, default: false },
+}, { _id: false });
+
 const FosterProfileSchema = new Schema<FosterProfileDocument>({
   userId: {
     type: String,
@@ -164,6 +200,16 @@ const FosterProfileSchema = new Schema<FosterProfileDocument>({
   backgroundCheckDate: { type: Date },
   totalAnimalsHelped: { type: Number, default: 0 },
   currentAnimalCount: { type: Number, default: 0 },
+  availableFrom: { type: Date },
+  availableUntil: { type: Date },
+  blackoutDates: {
+    type: [BlackoutDateSchema],
+    default: [],
+  },
+  preferences: {
+    type: FosterPreferencesSchema,
+    default: () => ({}),
+  },
   createdAt: {
     type: Date,
     default: Date.now,

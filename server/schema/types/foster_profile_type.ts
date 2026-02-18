@@ -51,6 +51,23 @@ interface OrientationItemParent {
   required: boolean;
 }
 
+interface BlackoutDateParent {
+  _id?: string;
+  start: Date;
+  end: Date;
+  reason: string;
+}
+
+interface FosterPreferencesParent {
+  preferredSizes: string[];
+  preferredAgeRange: string;
+  acceptsMedicalNeeds: boolean;
+  acceptsBehavioralNeeds: boolean;
+  maxDuration: number;
+  preferredDuration: number;
+  emergencyAvailable: boolean;
+}
+
 interface FosterProfileParent {
   _id?: string;
   userId: string;
@@ -72,6 +89,10 @@ interface FosterProfileParent {
   backgroundCheckDate?: Date;
   totalAnimalsHelped: number;
   currentAnimalCount: number;
+  availableFrom?: Date;
+  availableUntil?: Date;
+  blackoutDates: BlackoutDateParent[];
+  preferences: FosterPreferencesParent;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -125,6 +146,35 @@ const FosterReferenceType = new GraphQLObjectType({
   }),
 });
 
+const BlackoutDateType = new GraphQLObjectType({
+  name: 'BlackoutDateType',
+  fields: (): GraphQLFieldConfigMap<BlackoutDateParent, unknown> => ({
+    _id: { type: GraphQLID },
+    start: {
+      type: GraphQLString,
+      resolve(parent) { return parent.start?.toISOString(); },
+    },
+    end: {
+      type: GraphQLString,
+      resolve(parent) { return parent.end?.toISOString(); },
+    },
+    reason: { type: GraphQLString },
+  }),
+});
+
+const FosterPreferencesType = new GraphQLObjectType({
+  name: 'FosterPreferencesType',
+  fields: (): GraphQLFieldConfigMap<FosterPreferencesParent, unknown> => ({
+    preferredSizes: { type: new GraphQLList(GraphQLString) },
+    preferredAgeRange: { type: GraphQLString },
+    acceptsMedicalNeeds: { type: GraphQLBoolean },
+    acceptsBehavioralNeeds: { type: GraphQLBoolean },
+    maxDuration: { type: GraphQLInt },
+    preferredDuration: { type: GraphQLInt },
+    emergencyAvailable: { type: GraphQLBoolean },
+  }),
+});
+
 const OrientationItemType = new GraphQLObjectType({
   name: 'OrientationItemType',
   fields: (): GraphQLFieldConfigMap<OrientationItemParent, unknown> => ({
@@ -167,6 +217,16 @@ const FosterProfileType = new GraphQLObjectType({
     },
     totalAnimalsHelped: { type: GraphQLInt },
     currentAnimalCount: { type: GraphQLInt },
+    availableFrom: {
+      type: GraphQLString,
+      resolve(parent) { return parent.availableFrom?.toISOString(); },
+    },
+    availableUntil: {
+      type: GraphQLString,
+      resolve(parent) { return parent.availableUntil?.toISOString(); },
+    },
+    blackoutDates: { type: new GraphQLList(BlackoutDateType) },
+    preferences: { type: FosterPreferencesType },
     createdAt: {
       type: GraphQLString,
       resolve(parent) { return parent.createdAt?.toISOString(); },
@@ -209,6 +269,28 @@ export const FosterReferenceInput = new GraphQLInputObjectType({
     email: { type: GraphQLString },
     phone: { type: GraphQLString },
     relationship: { type: GraphQLString },
+  },
+});
+
+export const BlackoutDateInput = new GraphQLInputObjectType({
+  name: 'BlackoutDateInput',
+  fields: {
+    start: { type: GraphQLString },
+    end: { type: GraphQLString },
+    reason: { type: GraphQLString },
+  },
+});
+
+export const FosterPreferencesInput = new GraphQLInputObjectType({
+  name: 'FosterPreferencesInput',
+  fields: {
+    preferredSizes: { type: new GraphQLList(GraphQLString) },
+    preferredAgeRange: { type: GraphQLString },
+    acceptsMedicalNeeds: { type: GraphQLBoolean },
+    acceptsBehavioralNeeds: { type: GraphQLBoolean },
+    maxDuration: { type: GraphQLInt },
+    preferredDuration: { type: GraphQLInt },
+    emergencyAvailable: { type: GraphQLBoolean },
   },
 });
 

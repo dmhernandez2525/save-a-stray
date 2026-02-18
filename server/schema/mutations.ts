@@ -109,7 +109,12 @@ import FosterProfileType, {
   HousingDetailInput,
   PetExperienceInput,
   FosterReferenceInput,
+  BlackoutDateInput,
+  FosterPreferencesInput,
 } from './types/foster_profile_type';
+import { FosterPlacementDocument } from '../models/FosterPlacement';
+import FosterPlacementType from './types/foster_placement_type';
+import { calculateFosterMatchScore } from '../services/foster-matching';
 import { ShelterSettingsDocument } from '../models/ShelterSettings';
 import ShelterSettingsType, {
   DayScheduleInput,
@@ -170,6 +175,7 @@ const AdoptionRecordModel = mongoose.model<AdoptionRecordDocument>('adoptionReco
 const PostAdoptionSurveyModel = mongoose.model<PostAdoptionSurveyDocument>('postAdoptionSurvey');
 const ShelterSettingsModel = mongoose.model<ShelterSettingsDocument>('shelterSettings');
 const FosterProfileModel = mongoose.model<FosterProfileDocument>('fosterProfile');
+const FosterPlacementModel = mongoose.model<FosterPlacementDocument>('fosterPlacement');
 
 interface RegisterArgs {
   name: string;
@@ -4051,6 +4057,248 @@ const mutation = new GraphQLObjectType({
         }
         await profile.save();
         return profile;
+      },
+    },
+
+    // F5.2 - Foster Matching
+    updateFosterAvailability: {
+      type: FosterProfileType,
+      args: {
+        shelterId: { type: GraphQLString },
+        availableFrom: { type: GraphQLString },
+        availableUntil: { type: GraphQLString },
+        blackoutDates: { type: new GraphQLList(BlackoutDateInput) },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        const profile = await FosterProfileModel.findOne({
+          userId,
+          shelterId: args.shelterId as string,
+        });
+        if (!profile) throw new Error('Foster profile not found');
+        if (args.availableFrom) profile.availableFrom = new Date(args.availableFrom as string);
+        if (args.availableUntil) profile.availableUntil = new Date(args.availableUntil as string);
+        if (args.blackoutDates) {
+          const dates = args.blackoutDates as Array<{ start: string; end: string; reason?: string }>;
+          profile.blackoutDates = dates.map(d => ({
+            start: new Date(d.start),
+            end: new Date(d.end),
+            reason: d.reason ?? '',
+          }));
+        }
+        await profile.save();
+        return profile;
+      },
+    },
+    updateFosterPreferences: {
+      type: FosterProfileType,
+      args: {
+        shelterId: { type: GraphQLString },
+        preferences: { type: FosterPreferencesInput },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        const profile = await FosterProfileModel.findOne({
+          userId,
+          shelterId: args.shelterId as string,
+        });
+        if (!profile) throw new Error('Foster profile not found');
+        const prefs = args.preferences as Record<string, unknown>;
+        if (prefs.preferredSizes) profile.preferences.preferredSizes = prefs.preferredSizes as string[];
+        if (prefs.preferredAgeRange !== undefined) profile.preferences.preferredAgeRange = prefs.preferredAgeRange as string;
+        if (prefs.acceptsMedicalNeeds !== undefined) profile.preferences.acceptsMedicalNeeds = prefs.acceptsMedicalNeeds as boolean;
+        if (prefs.acceptsBehavioralNeeds !== undefined) profile.preferences.acceptsBehavioralNeeds = prefs.acceptsBehavioralNeeds as boolean;
+        if (prefs.maxDuration !== undefined) profile.preferences.maxDuration = prefs.maxDuration as number;
+        if (prefs.preferredDuration !== undefined) profile.preferences.preferredDuration = prefs.preferredDuration as number;
+        if (prefs.emergencyAvailable !== undefined) profile.preferences.emergencyAvailable = prefs.emergencyAvailable as boolean;
+        await profile.save();
+        return profile;
+      },
+    },
+    requestFosterPlacement: {
+      type: FosterPlacementType,
+      args: {
+        shelterId: { type: GraphQLString },
+        fosterProfileId: { type: GraphQLString },
+        animalId: { type: GraphQLString },
+        isEmergency: { type: GraphQLBoolean },
+        priority: { type: GraphQLInt },
+        expectedDuration: { type: GraphQLInt },
+        notes: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const shelterId = args.shelterId as string;
+        requireShelterStaff(context, shelterId);
+        const profile = await FosterProfileModel.findById(args.fosterProfileId);
+        if (!profile) throw new Error('Foster profile not found');
+        if (profile.status !== 'active') throw new Error('Foster is not active');
+        if (profile.currentAnimalCount >= profile.maxAnimals) {
+          throw new Error('Foster is at capacity');
+        }
+        const animal = await Animal.findById(args.animalId);
+        if (!animal) throw new Error('Animal not found');
+        const match = calculateFosterMatchScore(profile, animal);
+        const placement = new FosterPlacementModel({
+          shelterId,
+          fosterProfileId: args.fosterProfileId,
+          userId: profile.userId,
+          animalId: args.animalId,
+          status: 'requested',
+          isEmergency: args.isEmergency ?? false,
+          priority: args.priority ?? 0,
+          requestedBy: context.userId ?? '',
+          expectedDuration: args.expectedDuration ?? 14,
+          matchScore: match.score,
+          matchFactors: new Map(Object.entries(match.factors)),
+          notes: (args.notes as string) ?? '',
+        });
+        await placement.save();
+        return placement;
+      },
+    },
+    respondToFosterPlacement: {
+      type: FosterPlacementType,
+      args: {
+        placementId: { type: GraphQLString },
+        accept: { type: GraphQLBoolean },
+        notes: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        const userId = requireAuth(context);
+        const placement = await FosterPlacementModel.findById(args.placementId);
+        if (!placement) throw new Error('Placement not found');
+        if (placement.userId !== userId) throw new Error('Not authorized');
+        if (placement.status !== 'requested') throw new Error('Placement is not in requested state');
+        if (args.accept) {
+          placement.status = 'accepted';
+          placement.acceptedAt = new Date();
+        } else {
+          placement.status = 'cancelled';
+        }
+        if (args.notes) placement.notes = args.notes as string;
+        await placement.save();
+        return placement;
+      },
+    },
+    startFosterPlacement: {
+      type: FosterPlacementType,
+      args: {
+        placementId: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const placement = await FosterPlacementModel.findById(args.placementId);
+        if (!placement) throw new Error('Placement not found');
+        requireShelterStaff(context, placement.shelterId);
+        if (placement.status !== 'accepted') throw new Error('Placement must be accepted first');
+        placement.status = 'active';
+        placement.startDate = new Date();
+        await placement.save();
+        const profile = await FosterProfileModel.findById(placement.fosterProfileId);
+        if (profile) {
+          profile.currentAnimalCount += 1;
+          await profile.save();
+        }
+        return placement;
+      },
+    },
+    completeFosterPlacement: {
+      type: FosterPlacementType,
+      args: {
+        placementId: { type: GraphQLString },
+        returnReason: { type: GraphQLString },
+        notes: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const placement = await FosterPlacementModel.findById(args.placementId);
+        if (!placement) throw new Error('Placement not found');
+        requireShelterStaff(context, placement.shelterId);
+        if (placement.status !== 'active') throw new Error('Placement is not active');
+        placement.status = 'completed';
+        placement.endDate = new Date();
+        if (args.returnReason) placement.returnReason = args.returnReason as string;
+        if (args.notes) placement.notes = args.notes as string;
+        await placement.save();
+        const profile = await FosterProfileModel.findById(placement.fosterProfileId);
+        if (profile) {
+          profile.currentAnimalCount = Math.max(0, profile.currentAnimalCount - 1);
+          profile.totalAnimalsHelped += 1;
+          await profile.save();
+        }
+        return placement;
+      },
+    },
+    submitCompatibilityAssessment: {
+      type: FosterPlacementType,
+      args: {
+        placementId: { type: GraphQLString },
+        assessments: {
+          type: new GraphQLList(new GraphQLInputObjectType({
+            name: 'CompatibilityAssessmentInput',
+            fields: {
+              criterion: { type: GraphQLString },
+              score: { type: GraphQLInt },
+              notes: { type: GraphQLString },
+            },
+          })),
+        },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const placement = await FosterPlacementModel.findById(args.placementId);
+        if (!placement) throw new Error('Placement not found');
+        requireShelterStaff(context, placement.shelterId);
+        const assessments = args.assessments as Array<{ criterion: string; score: number; notes?: string }>;
+        placement.compatibilityAssessment = assessments.map(a => ({
+          criterion: a.criterion,
+          score: a.score,
+          notes: a.notes ?? '',
+        }));
+        await placement.save();
+        return placement;
+      },
+    },
+    createEmergencyPlacement: {
+      type: FosterPlacementType,
+      args: {
+        shelterId: { type: GraphQLString },
+        animalId: { type: GraphQLString },
+        notes: { type: GraphQLString },
+      },
+      async resolve(_parent: unknown, args: Record<string, unknown>, context: GraphQLContext) {
+        requireAuth(context);
+        const shelterId = args.shelterId as string;
+        requireShelterStaff(context, shelterId);
+        const animal = await Animal.findById(args.animalId);
+        if (!animal) throw new Error('Animal not found');
+        const profiles = await FosterProfileModel.find({
+          shelterId,
+          status: 'active',
+          'preferences.emergencyAvailable': true,
+        });
+        const available = profiles.filter(p => p.currentAnimalCount < p.maxAnimals);
+        if (available.length === 0) throw new Error('No emergency foster homes available');
+        const scored = available
+          .map(p => ({ profile: p, match: calculateFosterMatchScore(p, animal) }))
+          .sort((a, b) => b.match.score - a.match.score);
+        const best = scored[0];
+        const placement = new FosterPlacementModel({
+          shelterId,
+          fosterProfileId: best.profile._id.toString(),
+          userId: best.profile.userId,
+          animalId: args.animalId,
+          status: 'requested',
+          isEmergency: true,
+          priority: 10,
+          requestedBy: context.userId ?? '',
+          matchScore: best.match.score,
+          matchFactors: new Map(Object.entries(best.match.factors)),
+          notes: (args.notes as string) ?? '',
+        });
+        await placement.save();
+        return placement;
       },
     },
   }),
