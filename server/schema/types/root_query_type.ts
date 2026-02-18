@@ -54,6 +54,8 @@ import { InternalNoteDocument } from '../../models/InternalNote';
 import InternalNoteType from './internal_note_type';
 import { KennelAssignmentDocument } from '../../models/KennelAssignment';
 import KennelAssignmentType from './kennel_assignment_type';
+import { ShelterSettingsDocument } from '../../models/ShelterSettings';
+import ShelterSettingsType from './shelter_settings_type';
 import { paginationQueryFields } from './pagination_queries';
 import { EventDocument } from '../../models/Event';
 import { DonationDocument } from '../../models/Donation';
@@ -125,6 +127,7 @@ const StaffInvitationModel = mongoose.model<StaffInvitationDocument>('staffInvit
 const ShelterStaffRoleModel = mongoose.model<ShelterStaffRoleDocument>('shelterStaffRole');
 const InternalNoteModel = mongoose.model<InternalNoteDocument>('internalNote');
 const KennelAssignmentModel = mongoose.model<KennelAssignmentDocument>('kennelAssignment');
+const ShelterSettingsModel = mongoose.model<ShelterSettingsDocument>('shelterSettings');
 
 const RootQueryType = new GraphQLObjectType({
   name: "RootQueryType",
@@ -1128,6 +1131,46 @@ const RootQueryType = new GraphQLObjectType({
             percentage: total > 0 ? Math.round((count / total) * 1000) / 10 : 0,
           }))
           .sort((a, b) => b.count - a.count);
+      }
+    },
+    shelterSettings: {
+      type: ShelterSettingsType,
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      async resolve(_, args: { shelterId: string }) {
+        let settings = await ShelterSettingsModel.findOne({ shelterId: args.shelterId });
+        if (!settings) {
+          settings = new ShelterSettingsModel({ shelterId: args.shelterId });
+          await settings.save();
+        }
+        return settings;
+      }
+    },
+    exportShelterData: {
+      type: GraphQLString,
+      args: { shelterId: { type: new GraphQLNonNull(GraphQLID) } },
+      async resolve(_, args: { shelterId: string }) {
+        const [shelter, settings, animals, applications] = await Promise.all([
+          Shelter.findById(args.shelterId),
+          ShelterSettingsModel.findOne({ shelterId: args.shelterId }),
+          Shelter.findById(args.shelterId).then(s => {
+            if (!s || !s.animals || s.animals.length === 0) return [];
+            return Animal.find({ _id: { $in: s.animals } });
+          }),
+          Shelter.findById(args.shelterId).then(s => {
+            if (!s || !s.animals || s.animals.length === 0) return [];
+            const ids = s.animals.map(id => id.toString());
+            return Application.find({ animalId: { $in: ids } });
+          }),
+        ]);
+
+        const exportData = {
+          exportedAt: new Date().toISOString(),
+          shelter: shelter?.toObject() ?? null,
+          settings: settings?.toObject() ?? null,
+          animalCount: animals.length,
+          applicationCount: applications.length,
+        };
+        return JSON.stringify(exportData);
       }
     },
     findNearbyAnimals: {
