@@ -112,7 +112,7 @@ export class SaveAStrayApi {
   }
 
   async getShelters(pagination?: PaginationParams): Promise<PaginatedResponse<Record<string, unknown>>> {
-    return this.request('/shelters', pagination);
+    return this.request('/shelters', pagination ? { ...pagination } : undefined);
   }
 
   async getShelter(id: string): Promise<SingleResponse<Record<string, unknown>>> {
@@ -124,11 +124,11 @@ export class SaveAStrayApi {
   }
 
   async getEvents(pagination?: PaginationParams): Promise<PaginatedResponse<Record<string, unknown>>> {
-    return this.request('/events', pagination);
+    return this.request('/events', pagination ? { ...pagination } : undefined);
   }
 
   async getSuccessStories(pagination?: PaginationParams): Promise<PaginatedResponse<Record<string, unknown>>> {
-    return this.request('/success-stories', pagination);
+    return this.request('/success-stories', pagination ? { ...pagination } : undefined);
   }
 
   async getStats(): Promise<SingleResponse<Record<string, unknown>>> {

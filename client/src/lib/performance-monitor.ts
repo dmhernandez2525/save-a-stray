@@ -116,7 +116,7 @@ function checkBudget(budget: PerformanceBudget): void {
     violations.push(`CLS: ${collectedMetrics.cls.toFixed(3)} (budget: ${budget.cls})`);
   }
 
-  if (violations.length > 0 && process.env.NODE_ENV === 'development') {
+  if (violations.length > 0 && import.meta.env.DEV) {
     console.warn('[Performance Budget Exceeded]', violations.join(', '));
   }
 }
